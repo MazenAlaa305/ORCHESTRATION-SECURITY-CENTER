@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import ErrorBoundary from './ErrorBoundary';
 import TabNavigation from './TabNavigation';
 import MetricCard from './MetricCard';
+import ReportGenerator from './ReportGenerator';
 import '../gradient-styles.css';
 
 ChartJS.register(
@@ -428,9 +429,7 @@ const ReportsTab = ({ handleSchedule }) => {
                 <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
                     <h3 className="text-lg font-bold mb-4">Generate Report</h3>
                     <p className="text-gray-400 mb-4">Create a comprehensive security assessment report</p>
-                    <button className="px-6 py-3 bg-gradient-to-r from-[#bf00ff] to-[#00f2ff] hover:opacity-90 rounded-lg font-semibold w-full">
-                        Generate PDF Report
-                    </button>
+                    <ReportGenerator />
                 </div>
 
                 <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">

@@ -30,8 +30,12 @@ const ReportGenerator = () => {
     };
 
     return (
-        <button onClick={handleGenerate} disabled={generating}>
-            {generating ? 'Generating...' : 'Generate Professional Report'}
+        <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="px-6 py-3 bg-gradient-to-r from-[#bf00ff] to-[#00f2ff] hover:opacity-90 rounded-lg font-semibold w-full disabled:opacity-50"
+        >
+            {generating ? 'Generating Report...' : 'Generate PDF Report'}
         </button>
     );
 };

@@ -2,6 +2,9 @@ from gvm.connections import UnixSocketConnection, TLSConnection
 from gvm.protocols.gmp import Gmp
 from gvm.xml import pretty_print
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GVMConnector:
     """
@@ -22,7 +25,7 @@ class GVMConnector:
         # Open connection and authenticate
         self.gmp = connection.open()
         self.gmp.authenticate(self.username, self.password)
-        print(f"✅ Logged in to GVM at {self.hostname}")
+        logger.info(f"✅ Logged in to GVM at {self.hostname}")
 
     def get_version(self):
         """Test: Fetch GMP protocol version."""
@@ -46,10 +49,10 @@ if __name__ == '__main__':
         connector.connect_and_login()
         
         version = connector.get_version()
-        print(f"GVM GMP Version: {version}")
+        logger.info(f"GVM GMP Version: {version}")
         
     except Exception as e:
-        print(f"❌ Connection or Authentication Failed: {e}")
+        logger.error(f"❌ Connection or Authentication Failed: {e}")
     finally:
         if 'connector' in locals():
             connector.close()

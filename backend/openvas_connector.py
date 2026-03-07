@@ -7,6 +7,9 @@ from gvm.transforms import EtreeTransform
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OpenVASConnector:
     def __init__(self, host=None, port=None, username=None, password=None):
@@ -26,10 +29,10 @@ class OpenVASConnector:
             
             # Authenticate
             self.gmp.authenticate(self.username, self.password)
-            print(f"[+] Connected to OpenVAS at {self.host}:{self.port}")
+            logger.info(f"[+] Connected to OpenVAS at {self.host}:{self.port}")
             return True
         except Exception as e:
-            print(f"[!] Failed to connect to OpenVAS: {e}")
+            logger.error(f"[!] Failed to connect to OpenVAS: {e}")
             return False
 
     def disconnect(self):
@@ -58,7 +61,7 @@ class OpenVASConnector:
         
         response = self.gmp.create_target(name=name, hosts=[hosts])
         target_id = response.get('id')
-        print(f"[+] Created target '{name}' with ID: {target_id}")
+        logger.info(f"[+] Created target '{name}' with ID: {target_id}")
         return target_id
 
     def create_task(self, name, target_id, scanner_id=None, config_id=None):
@@ -95,7 +98,7 @@ class OpenVASConnector:
             scanner_id=scanner_id
         )
         task_id = response.get('id')
-        print(f"[+] Created task '{name}' with ID: {task_id}")
+        logger.info(f"[+] Created task '{name}' with ID: {task_id}")
         return task_id
 
     def start_scan(self, task_id):
@@ -105,7 +108,7 @@ class OpenVASConnector:
         
         response = self.gmp.start_task(task_id)
         report_id = response.xpath('report_id')[0].text
-        print(f"[+] Started scan task {task_id}, report ID: {report_id}")
+        logger.info(f"[+] Started scan task {task_id}, report ID: {report_id}")
         return report_id
 
     def get_task_status(self, task_id):
@@ -170,7 +173,7 @@ class OpenVASConnector:
             
             return task_id
         except Exception as e:
-            print(f"[!] Error during scan: {e}")
+            logger.error(f"[!] Error during scan: {e}")
             return None
         finally:
             self.disconnect()
