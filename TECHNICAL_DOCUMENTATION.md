@@ -20,29 +20,22 @@ Before diving into the code, you must have the environment running. found 404 us
     git clone https://github.com/omarkapil/the-dashboard-project-.git
     cd the-dashboard-project-
     ```
-2. **Environment Configuration**:
-   Create a `.env` file in the `backend/` directory:
-   ```env
-   PROJECT_NAME="found 404"
-   SECRET_KEY="your-super-secret-key"
-   POSTGRES_SERVER=db
-   POSTGRES_USER=postgres
-   POSTGRES_PASSWORD=postgres
-   POSTGRES_DB=found404
-   GEMINI_API_KEY="AIzaSy..." # Your Google AI Key
-   ```
-3. **Launch the Core Infrastructure**:
+### 2. Zero-Config Installation
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/omarkapil/the-dashboard-project-.git
+    cd the-dashboard-project-
+    ```
+2. **Launch Everything (One Command)**:
    ```bash
    docker-compose up -d --build
    ```
-   *This starts PostgreSQL, Redis, the FastAPI Backend, and the Celery Worker.*
+   *This automatically uses the pre-configured `.env` file, initializes the PostgreSQL database, Redis, Celery workers, and the FastAPI engine.*
 
-4. **Initialize the Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+3. **Open the Dashboard**:
+   - Backend API: `http://localhost:8000`
+   - Frontend: `http://localhost:5173`
+   *(Ensure you have run `npm install && npm run dev` in the `frontend/` folder if running outside of Docker).*
 
 ---
 
