@@ -29,15 +29,15 @@ Imagine a world-class orchestra. You have a **violinist** (Nmap), a **cellist** 
 
 ```mermaid
 gantt
-    title The "Security Analyst Fatigue" Problem
+    title "The Security Analyst Fatigue Problem"
     dateFormat  X
     axisFormat %s
     section Daily Workflow
-    Silo'd Tool Login        :a1, 0, 10
-    Context Switching        :a2, 10, 35
-    Manual Log Correlation   :a3, 35, 70
-    False Positive Filtering :a4, 70, 90
-    Actual Security Response :crit, a5, 90, 100
+    "Siloed Tool Login"        :a1, 0, 10
+    "Context Switching"        :a2, 10, 35
+    "Manual Log Correlation"   :a3, 35, 70
+    "False Positive Filtering" :a4, 70, 90
+    "Actual Security Response" :crit, a5, 90, 100
 ```
 
 - **90% of Time** is wasted jumping between tabs and trying to connect the dots.
@@ -49,24 +49,24 @@ gantt
 **The Hub-and-Spoke Model:** A deep dive into the engine.
 
 ```mermaid
-graph TB
+flowchart TB
     subgraph "External Sensors (The Ears)"
-        Wazuh[Wazuh Agent]
-        Network[Network Traffic]
+        Wazuh["Wazuh Agent"]
+        Network["Network Traffic"]
     end
 
     subgraph "Orchestration Core (The Brain)"
         direction TB
-        Main[FastAPI Gateway]
-        Queue[Redis/Celery Queue]
-        LLM[Gemini AI Reasoning]
-        DB[(PostgreSQL State)]
+        Main["FastAPI Gateway"]
+        Queue["Redis/Celery Queue"]
+        LLM["Gemini AI Reasoning"]
+        DB[("PostgreSQL State")]
     end
 
     subgraph "Active Scanners (The Hands)"
-        Nmap[Nmap Discovery]
-        Nuclei[Nuclei Templates]
-        GVM[OpenVAS Engine]
+        Nmap["Nmap Discovery"]
+        Nuclei["Nuclei Templates"]
+        GVM["OpenVAS Engine"]
     end
 
     Wazuh --> Main
@@ -75,7 +75,7 @@ graph TB
     Nmap & Nuclei & GVM --> Main
     Main <--> LLM
     Main --> DB
-    Main --> UI[React Topology Dashboard]
+    Main --> UI["React Topology Dashboard"]
 ```
 
 - **Real-time Processing:** Every event is processed as a separate "Task" to ensure no threat is missed.
@@ -125,11 +125,11 @@ sequenceDiagram
 **Turning "Technical Noise" into "Business Wisdom":**
 
 ```mermaid
-graph LR
-    Raw[Raw Scan Data: CVE-2023-...] --> Agent[Gemini 1.5 Pro]
-    Agent --> Context{Context Check}
-    Context -->|Critical Asset| Out1[Urgently Patch: This is your DB!]
-    Context -->|Dev Machine| Out2[Informal Alert: Low priority]
+flowchart LR
+    Raw["Raw Scan Data: CVE-2023-..."] --> Agent["Gemini 1.5 Pro"]
+    Agent --> Context{"Context Check"}
+    Context -->|Critical Asset| Out1["Urgently Patch: This is your DB!"]
+    Context -->|Dev Machine| Out2["Informal Alert: Low priority"]
 ```
 
 - **Human-Like Filtering:** The AI asks: *Is this vulnerability actually exploitable in this specific network configuration?*
@@ -188,13 +188,13 @@ graph LR
 ## Slide 14: Use Case: Advanced Intrusion Response
 
 ```mermaid
-graph TD
-    A[Suspicious Login on Web Server] --> B[Wazuh Sends Alert to Found 404]
-    B --> C[Orchestrator Triggers Deep Nuclei Scan]
-    C --> D[Gemini Analyzes: It's a Credential Stuffing Attack]
-    D --> E[Found 404 Notifications: Slack/Email Alert]
-    D --> F[n8n Automation: Blocks attacker IP on Gateway]
-    F --> G[Health Status: Node Returns to Blue/Safe]
+flowchart TD
+    A["Suspicious Login on Web Server"] --> B["Wazuh Sends Alert to Found 404"]
+    B --> C["Orchestrator Triggers Deep Nuclei Scan"]
+    C --> D["Gemini Analyzes: Credential Stuffing Attack"]
+    D --> E["Found 404 Notifications: Slack/Email Alert"]
+    D --> F["n8n Automation: Blocks attacker IP on Gateway"]
+    F --> G["Health Status: Node Returns to Blue/Safe"]
 ```
 
 ---
