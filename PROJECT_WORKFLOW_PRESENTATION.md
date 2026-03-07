@@ -1,60 +1,84 @@
-# found 404: Operational Workflow Presentation
+# found 404: Granular Operational Workflow
 
-## 1. High-Level Data Flow
-This flowchart illustrates the lifecycle of a security scan, from user initiation to AI-driven insights.
+## 1. Master System Flowchart
+This diagram represents the entire lifecycle of the **found 404** intelligence platform, from the moment a user signs in to the final SIEM/SOAR automated response.
 
 ```mermaid
 graph TD
-    User["User (Dashboard)"] -- "1. Start Scan (CIDR)" --> API["FastAPI Backend"]
-    API -- "2. Queue Task" --> Redis["Redis Queue"]
-    Redis -- "3. Pickup Task" --> Celery["Celery Worker"]
-    
-    subgraph "Execution Phase"
-        Celery -- "4a. Discover" --> Nmap["Nmap Discovery"]
-        Celery -- "4b. Analyze" --> Nuclei["Nuclei Scanner"]
-        Celery -- "4c. Deep Scan" --> OpenVAS["OpenVAS Engine"]
+    %% User Interaction Layer
+    User((User)) -->|1. Authenticate| Login[AuthContext / Login UI]
+    Login -->|2. Access| Dash[Dashboard.jsx]
+    Dash -->|3. Input CIDR| ScanBtn[ScanButton.jsx]
+
+    %% API & Backend Orchestration
+    ScanBtn -->|4. POST /api/v1/scans| FastAPI[FastAPI Main Engine]
+    FastAPI -->|5. Create Record| DB[(PostgreSQL)]
+    FastAPI -->|6. Dispatch Task| Redis{Redis Broker}
+    Redis -->|7. Consume| Worker[Celery Worker]
+
+    %% Security Execution Layer (Parallel Scans)
+    subgraph "Execution Layer (The Scanners)"
+        Worker -->|8a. Network| Nmap[Nmap Discovery]
+        Worker -->|8b. Vulns| Nuclei[Nuclei Templates]
+        Worker -->|8c. Deep Scan| OpenVAS[GVM Engine]
     end
+
+    %% Data Synthesis and AI Reasoning
+    Nmap & Nuclei & OpenVAS -->|9. Raw Logs| Orchestrator[Agent Orchestrator]
+    Orchestrator -->|10. Ask for Reasoning| Gemini[[Gemini Pro AI]]
+    Gemini --o|11. Analyze| Orchestrator
     
-    Nmap & Nuclei & OpenVAS -- "5. Raw Results" --> Agent["AI Intelligence Agent"]
+    Orchestrator -->|12. Calculate Stress| RiskEngine[Risk Score Engine]
     
-    subgraph "Reasoning Phase (Gemini)"
-        Agent -- "6a. Triage" --> Clean["Clean Findings"]
-        Agent -- "6b. Explain" --> Docs["Simplified Advice"]
+    %% Storage & UI Update
+    RiskEngine -->|13. Update Results| DB
+    DB -->|14. Poll / GET scans| Dash
+    Dash -->|15. Render| Topology[D3.js Network Topology]
+
+    %% Real-time Monitoring & SOAR
+    subgraph "SIEM/SOAR Loop"
+        Sensors[Wazuh Agents] -->|Live Logs| ES[(Elasticsearch)]
+        ES -->|Alerts| SOAR[n8n Automation]
+        SOAR -->|Remediate| Nodes[Target Infrastructure]
     end
-    
-    Clean & Docs -- "7. Save" --> DB[(PostgreSQL)]
-    DB -- "8. Refresh" --> UI["React Topology Graph"]
 ```
 
 ---
 
-## 2. The Intelligence Cycle
-found 404 operates on a continuous feedback loop of security intelligence.
+## 2. Step-by-Step Technical Logic
 
-### Phase 1: Neural Discovery
-The system doesn't just scan; it **maps**. It identifies the operating system, open ports, and service versions of every device in the network segment.
+### Step 1: Authentication & Entry
+The user authenticates via the **AuthContext** in the frontend. Once verified, the **React Router** loads the `Dashboard.jsx`, which serves as the "Command Center".
 
-### Phase 2: Autonomous Reasoning
-The **Gemini AI Agent** acts as a senior security researcher. It reads raw logs (e.g., an SMB vulnerability log) and translates it into:
-- **What it is**: "Your Windows PC has an open door for WannaCry ransomware."
-- **Why it matters**: "This is a critical threat to your financial data."
-- **How to fix**: "Apply the MS17-010 security patch immediately."
+### Step 2: Scan Initialization
+When the user enters a target (e.g., `172.18.0.0/24`) and clicks **Scan**:
+- The frontend sends an asynchronous `POST` request to the FastAPI backend.
+- The backend immediately creates a **Scan Object** in PostgreSQL with a `QUEUED` status.
+- This ensures the UI remains responsive and doesn't "freeze" while waiting.
 
-### Phase 3: Risk Visualization
-Findings are synthesized into a **Risk Score (0-100)** and a **Network Topology Graph**. This allows security teams to see exactly where the "hot spots" are in their infrastructure at a glance.
+### Step 3: Background Orchestration
+FastAPI sends a message to **Redis**. The **Celery Worker** (a background process) picks up the message and begins the heavy lifting:
+- **Nmap**: Maps the network topology, identifies OS (Windows vs Linux), and finds open ports.
+- **Nuclei/OpenVAS**: Performs deep vulnerability analysis against discovered services.
 
----
+### Step 4: AI Intelligence & Reasoning
+This is where **found 404** differs from standard scanners. Raw scan logs are sent to the **Agent Orchestrator**:
+- It sends the data to **Google Gemini**.
+- Gemini performs "Post-Scan Reasoning" to filter out false positives.
+- It translates technical strings (e.g., `CVE-2017-0144`) into human-readable advice.
 
-## 3. SIEM & SOAR Integration (The Modern Stack)
-For real-time protection, the platform integrates with:
-- **Wazuh**: Endpoint detection and response.
-- **Elasticsearch**: Centralized logging.
-- **n8n**: Automated response playbooks (e.g., automatically blocking a detected malicious IP).
+### Step 5: Risk Calculation
+The **Risk Engine** takes the AI insights and calculates a score (0-100) based on:
+- **Asset Criticality**: Is this a core server or a guest laptop?
+- **Vulnerability Density**: How many critical vs. low findings were found?
 
----
+### Step 6: UI Update & Topology Rendering
+The frontend polls the backend every 3 seconds. Once the status hits `COMPLETED`:
+- The **D3-powered Network Topology** graph is updated.
+- Each node is color-coded by its risk level (Red for Critical, Blue for Safe).
+- The user can click any node to see the **AI-generated remediation steps**.
 
-## 4. Visualizing the Lab
-When running the Virtual Lab, the workflow expands to include:
-1. **Lab Gateway**: Simulating a corporate perimeter.
-2. **Internal Nodes**: Diverse OS environments (Ubuntu, Windows) with "planted" vulnerabilities for training.
-3. **Attacker Perspective**: The dashboard provides the same view an attacker would have, but for defensive purposes.
+### Step 7: Continuous SIEM Monitoring
+While scans are periodic, **Wazuh** and **n8n** run continuously:
+- If a live intrusion is detected on a node, it appears in the **Live Activity Feed**.
+- **n8n** can trigger "Playbooks" to block the attacker's IP address automatically.
