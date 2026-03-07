@@ -1,15 +1,16 @@
-FROM node:20-alpine as build
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json .
-COPY vite.config.js .
+# Install dependencies first for better caching
+COPY package.json package-lock.json* ./
 RUN npm install
 
+# Copy the rest of the files
 COPY . .
-RUN npm run build
 
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Expose Vite's default port
+EXPOSE 5173
+
+# Start the development server with host mapping
+CMD ["npm", "run", "dev", "--", "--host"]

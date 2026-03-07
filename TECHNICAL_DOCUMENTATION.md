@@ -29,7 +29,7 @@ Before diving into the code, you must have the environment running. found 404 us
 3. **Open the Dashboard**:
    - Backend API: `http://localhost:8000`
    - Frontend: `http://localhost:5173`
-   *(Ensure you have run `npm install && npm run dev` in the `frontend/` folder if running outside of Docker).*
+   *(All services start automatically with the Docker command).*
 
 ---
 
