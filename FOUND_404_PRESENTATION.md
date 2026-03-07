@@ -149,7 +149,7 @@ graph LR
 
 ---
 
-## Slide 10: Found 404 vs. SIEM Ecosystems
+## Found 404 vs. SIEM Ecosystems
 | Feature | Traditional SIEM (Splunk/ELK) | Found 404 (Modern Orchestrator) |
 | :--- | :--- | :--- |
 | **Detection** | Historical Logs Only | Active Probing + Live Logs |
@@ -159,7 +159,7 @@ graph LR
 
 ---
 
-## Slide 11: Found 404 vs. SOAR Automation
+## Found 404 vs. SOAR Automation
 | Feature | Traditional SOAR (Cortex/Palo Alto) | Found 404 (Autonomous Agents) |
 | :--- | :--- | :--- |
 | **Playbooks** | Rigid "If/Then" Scripts | Dynamic Generative Reasoning |
