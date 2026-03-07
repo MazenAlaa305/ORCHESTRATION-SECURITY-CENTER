@@ -21,7 +21,8 @@ import VulnerabilitiesList from '../components/OpenVAS/VulnerabilitiesList';
 import { LayoutDashboard, History, Settings, Activity, Network, FileText, Target, Bug, Brain, Scan as ScanIcon } from 'lucide-react';
 
 const Dashboard = () => {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('overview'); // Main Category
+    const [activeSubTab, setActiveSubTab] = useState('overview'); // Sub Category
     const [refreshKey, setRefreshKey] = useState(0);
     const [latestScan, setLatestScan] = useState(null);
     const [selectedScanId, setSelectedScanId] = useState(null);
@@ -38,21 +39,18 @@ const Dashboard = () => {
 
                 if (runningScan) {
                     setIsScanning(true);
-                    // If we weren't already polling, start polling more frequently
                     if (!pollInterval) {
                         pollInterval = setInterval(checkScanStatus, 3000);
                     }
                 } else {
-                    // No running scan found. 
-                    // If we were previously scanning, it means it just finished!
                     if (isScanning) {
                         setIsScanning(false);
                         clearInterval(pollInterval);
                         pollInterval = null;
 
-                        // AUTO-REDIRECT to Network Tab
                         setRefreshKey(prev => prev + 1);
-                        setActiveTab('network');
+                        setActiveTab('threat-center');
+                        setActiveSubTab('network');
                     }
                 }
             } catch (error) {
@@ -62,10 +60,9 @@ const Dashboard = () => {
         };
 
         checkScanStatus();
-        // Trigger Risk Analysis to ensure dashboard is fresh
         dashboardService.refreshRiskScores().catch(console.error);
 
-        const initialInterval = setInterval(checkScanStatus, 10000); // Check every 10s normally
+        const initialInterval = setInterval(checkScanStatus, 10000);
 
         return () => {
             clearInterval(initialInterval);
@@ -76,22 +73,47 @@ const Dashboard = () => {
     const handleScanStarted = () => {
         setIsScanning(true);
         setTimeout(() => setRefreshKey(prev => prev + 1), 1000);
-        setActiveTab('history');
+        setActiveTab('operations');
+        setActiveSubTab('history');
     };
 
-    const tabs = [
-        { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
-        { id: 'scanner', label: 'Scanner', icon: <ScanIcon className="h-4 w-4" /> },
-        { id: 'targets', label: 'Targets', icon: <Target className="h-4 w-4" /> },
-        { id: 'vulnerabilities', label: 'Vulnerabilities', icon: <Bug className="h-4 w-4" /> },
-        { id: 'ai-console', label: 'AI Console', icon: <Brain className="h-4 w-4" /> },
-        { id: 'network', label: 'Network', icon: <Network className="h-4 w-4" /> },
-        { id: 'history', label: 'History', icon: <History className="h-4 w-4" /> },
-        { id: 'reports', label: 'Reports', icon: <FileText className="h-4 w-4" /> },
-        { id: 'siem', label: 'SIEM (Live)', icon: <Activity className="h-4 w-4" /> },
-        { id: 'active', label: 'Feeds', icon: <Activity className="h-4 w-4" /> },
-        { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
+    // --- NEW SIMPLIFIED TAB STRUCTURE ---
+    const mainTabs = [
+        { id: 'overview', label: 'Command Center', icon: <LayoutDashboard className="h-4 w-4" /> },
+        { id: 'operations', label: 'Operations', icon: <ScanIcon className="h-4 w-4" /> },
+        { id: 'threat-center', label: 'Threat Center', icon: <Activity className="h-4 w-4" /> },
+        { id: 'ai-brain', label: 'AI Brain', icon: <Brain className="h-4 w-4" /> },
+        { id: 'system', label: 'System', icon: <Settings className="h-4 w-4" /> },
     ];
+
+    // Helper to render SubTabs
+    const renderSubTabs = (subTabData) => (
+        <div className="flex bg-gray-900/50 p-1 rounded-lg w-fit mb-6 border border-gray-800">
+            {subTabData.map(tab => (
+                <button
+                    key={tab.id}
+                    onClick={() => setActiveSubTab(tab.id)}
+                    className={`px-4 py-2 text-xs font-bold transition-all rounded-md flex items-center gap-2 ${activeSubTab === tab.id
+                        ? 'bg-cyber-accent text-white shadow-md'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                        }`}
+                >
+                    {tab.icon}
+                    {tab.label}
+                </button>
+            ))}
+        </div>
+    );
+
+    // Auto-set default SubTab when Main Tab changes
+    const handleMainTabChange = (tabId) => {
+        setActiveTab(tabId);
+        if (tabId === 'overview') setActiveSubTab('overview');
+        if (tabId === 'operations') setActiveSubTab('scanner');
+        if (tabId === 'threat-center') setActiveSubTab('siem');
+        if (tabId === 'ai-brain') setActiveSubTab('ai-console');
+        if (tabId === 'system') setActiveSubTab('reports');
+    };
 
     return (
         <Layout>
@@ -111,14 +133,14 @@ const Dashboard = () => {
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                 <div>
                     <div className="flex items-center gap-2 mb-3">
                         <div className="h-1 w-8 bg-cyber-accent rounded-full"></div>
                         <span className="text-[10px] font-black text-cyber-accent uppercase tracking-[0.4em]">found 404 // Core Node</span>
                     </div>
-                    <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic">
-                        Command <span className="text-cyber-accent underline decoration-cyber-accent/30 underline-offset-8">Center</span>
+                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase italic">
+                        Security <span className="text-cyber-accent underline decoration-cyber-accent/30 underline-offset-8">Hub</span>
                     </h1>
                     <p className="text-gray-500 mt-4 text-xs font-black tracking-widest uppercase opacity-60">AI-Driven Autonomous Security Orchestration</p>
                 </div>
@@ -130,135 +152,143 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+            {/* MAIN NAVIGATION TABS */}
+            <Tabs tabs={mainTabs} activeTab={activeTab} onChange={handleMainTabChange} />
 
+            {/* 1. OVERVIEW (Command Center) */}
             {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
-                    {/* Health Score */}
-                    <RiskScore score={latestScan?.risk_score || 0} />
+                <div className="animate-fade-in">
+                    {renderSubTabs([
+                        { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+                        { id: 'active', label: 'Live Feeds', icon: <Activity className="h-4 w-4" /> }
+                    ])}
 
-                    {/* Scan Button & Quick Stats */}
-                    <div className="flex flex-col gap-6">
-                        <ScanButton onScanStarted={handleScanStarted} />
-                        <div className="glass-card p-6 flex flex-col justify-center flex-grow relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Bug className="h-12 w-12 text-cyber-neon" />
+                    {activeSubTab === 'overview' && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+                            <RiskScore score={latestScan?.risk_score || 0} />
+
+                            <div className="flex flex-col gap-6">
+                                <ScanButton onScanStarted={handleScanStarted} />
+                                <div className="glass-card p-6 flex flex-col justify-center flex-grow relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Bug className="h-12 w-12 text-cyber-neon" />
+                                    </div>
+                                    <h3 className="text-gray-400 text-xs uppercase tracking-[0.2em] mb-1 font-bold">Vulnerability Count</h3>
+                                    <p className="text-5xl font-black text-white">{latestScan?.vulnerabilities?.length || 0}</p>
+                                    <p className="text-cyber-neon/60 text-[10px] mt-2 font-mono tracking-tighter">TOTAL FINDINGS DETECTED</p>
+                                </div>
                             </div>
-                            <h3 className="text-gray-400 text-xs uppercase tracking-[0.2em] mb-1 font-bold">Vulnerability Count</h3>
-                            <p className="text-5xl font-black text-white">{latestScan?.vulnerabilities?.length || 0}</p>
-                            <p className="text-cyber-neon/60 text-[10px] mt-2 font-mono tracking-tighter">TOTAL FINDINGS DETECTED</p>
+
+                            <div className="md:row-span-2 h-full">
+                                <ActionCenter />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Action Center - Self-fetching now */}
-                    <div className="md:row-span-2 h-full">
-                        <ActionCenter />
-                    </div>
-
-                    {/* History */}
-                    <div className="md:col-span-2">
-                        <ScanHistory refresh={refreshKey} limit={5} />
-                    </div>
+                    {activeSubTab === 'active' && <ActivityFeed refresh={refreshKey} />}
                 </div>
             )}
 
-            {activeTab === 'scanner' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
-                    {/* Left Column: Controls */}
-                    <div className="md:col-span-1 flex flex-col gap-6">
-                        <OpenVasScanButton onScanStarted={(data) => {
-                            setRefreshKey(prev => prev + 1);
-                            // Optionally set latest scan immediately if data contains it
-                        }} />
-                        <div className="h-[300px]">
-                            <Scheduler />
-                        </div>
-                    </div>
-
-                    {/* Right Column: Risk Visualization */}
-                    <div className="md:col-span-2 h-[450px]">
-                        {/* We need some aggregated risk data here. simpler to just pass dummy for now or aggregations from latest scan */}
-                        <RiskChart data={
-                            latestScan?.vulnerabilities?.reduce((acc, v) => {
-                                const sev = v.severity || 'LOW';
-                                acc[sev] = (acc[sev] || 0) + 1;
-                                return acc;
-                            }, {})
-                        } />
-                    </div>
-
-                    {/* Bottom Row: Results */}
-                    <div className="md:col-span-3 mt-6">
-                        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                            <Bug className="h-5 w-5 text-cyber-neon" />
-                            Scan Results
-                            {latestScan && <span className="text-xs text-gray-500 font-mono ml-2">ID: {latestScan.configuration?.openvas_task_id || 'LOCAL'}</span>}
-                        </h3>
-                        {/* Pass the OpenVAS Task ID if available, otherwise it shows empty or error */}
-                        <VulnerabilitiesList taskId={latestScan?.configuration?.openvas_task_id} />
-                    </div>
-                </div>
-            )}
-
-            {activeTab === 'targets' && (
-                <TargetsManager onScanStarted={handleScanStarted} />
-            )}
-
-            {activeTab === 'vulnerabilities' && (
-                <VulnerabilitiesPanel refresh={refreshKey} />
-            )}
-
-            {activeTab === 'ai-console' && (
-                <div className="space-y-6 animate-fade-in">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Brain className="h-6 w-6 text-purple-400" />
-                            <h3 className="text-xl font-bold text-white">AI Agent Activity</h3>
-                        </div>
-                        <select
-                            value={selectedScanId || ''}
-                            onChange={(e) => setSelectedScanId(e.target.value)}
-                            className="px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
-                        >
-                            <option value="">Select a scan...</option>
-                            {/* This would be populated with scans */}
-                        </select>
-                    </div>
-                    <AgentLogViewer scanId={selectedScanId} />
-                </div>
-            )}
-
-            {activeTab === 'network' && (
-                <NetworkTopology refresh={refreshKey} />
-            )}
-
-            {activeTab === 'history' && (
+            {/* 2. OPERATIONS */}
+            {activeTab === 'operations' && (
                 <div className="animate-fade-in">
-                    <ScanHistory refresh={refreshKey} />
+                    {renderSubTabs([
+                        { id: 'scanner', label: 'Scanner', icon: <ScanIcon className="h-4 w-4" /> },
+                        { id: 'targets', label: 'Targets', icon: <Target className="h-4 w-4" /> },
+                        { id: 'history', label: 'History', icon: <History className="h-4 w-4" /> }
+                    ])}
+
+                    {activeSubTab === 'scanner' && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+                            <div className="md:col-span-1 flex flex-col gap-6">
+                                <OpenVasScanButton onScanStarted={(data) => setRefreshKey(prev => prev + 1)} />
+                                <div className="h-[300px]"><Scheduler /></div>
+                            </div>
+                            <div className="md:col-span-2 h-[450px]">
+                                <RiskChart data={
+                                    latestScan?.vulnerabilities?.reduce((acc, v) => {
+                                        const sev = v.severity || 'LOW';
+                                        acc[sev] = (acc[sev] || 0) + 1;
+                                        return acc;
+                                    }, {})
+                                } />
+                            </div>
+                            <div className="md:col-span-3 mt-6">
+                                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                                    <Bug className="h-5 w-5 text-cyber-neon" />
+                                    Current Scan Results
+                                </h3>
+                                <VulnerabilitiesList taskId={latestScan?.configuration?.openvas_task_id} />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSubTab === 'targets' && <TargetsManager onScanStarted={handleScanStarted} />}
+
+                    {activeSubTab === 'history' && <ScanHistory refresh={refreshKey} />}
                 </div>
             )}
 
-            {activeTab === 'reports' && (
+            {/* 3. THREAT CENTER */}
+            {activeTab === 'threat-center' && (
                 <div className="animate-fade-in">
-                    <Reports refresh={refreshKey} />
+                    {renderSubTabs([
+                        { id: 'siem', label: 'SIEM Alerts', icon: <Activity className="h-4 w-4" /> },
+                        { id: 'vulnerabilities', label: 'Vulnerabilities', icon: <Bug className="h-4 w-4" /> },
+                        { id: 'network', label: 'Network Map', icon: <Network className="h-4 w-4" /> }
+                    ])}
+
+                    {activeSubTab === 'siem' && <div className="h-[600px]"><UnifiedInbox /></div>}
+                    {activeSubTab === 'vulnerabilities' && <VulnerabilitiesPanel refresh={refreshKey} />}
+                    {activeSubTab === 'network' && <NetworkTopology refresh={refreshKey} />}
                 </div>
             )}
 
-            {activeTab === 'siem' && (
-                <div className="animate-fade-in h-[600px]">
-                    <UnifiedInbox />
+            {/* 4. AI BRAIN */}
+            {activeTab === 'ai-brain' && (
+                <div className="animate-fade-in">
+                    {renderSubTabs([
+                        { id: 'ai-console', label: 'Agent Console', icon: <Brain className="h-4 w-4" /> }
+                    ])}
+
+                    {activeSubTab === 'ai-console' && (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Brain className="h-6 w-6 text-purple-400" />
+                                    <h3 className="text-xl font-bold text-white">AI Agent Activity</h3>
+                                </div>
+                                <select
+                                    value={selectedScanId || ''}
+                                    onChange={(e) => setSelectedScanId(e.target.value)}
+                                    className="px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+                                >
+                                    <option value="">Select a scan...</option>
+                                </select>
+                            </div>
+                            <AgentLogViewer scanId={selectedScanId} />
+                        </div>
+                    )}
                 </div>
             )}
 
-            {activeTab === 'active' && (
-                <ActivityFeed refresh={refreshKey} />
-            )}
+            {/* 5. SYSTEM & REPORTS */}
+            {activeTab === 'system' && (
+                <div className="animate-fade-in">
+                    {renderSubTabs([
+                        { id: 'reports', label: 'PDF Reports', icon: <FileText className="h-4 w-4" /> },
+                        { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> }
+                    ])}
 
-            {activeTab === 'settings' && (
-                <div className="bg-cyber-light p-12 rounded-xl border border-gray-700 text-center animate-fade-in">
-                    <Settings className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-white mb-2">System Settings</h3>
-                    <p className="text-gray-400">Configuration options for AI agents, Nuclei templates, and API keys.</p>
+                    {activeSubTab === 'reports' && <Reports refresh={refreshKey} />}
+
+                    {activeSubTab === 'settings' && (
+                        <div className="bg-cyber-light p-12 rounded-xl border border-gray-700 text-center">
+                            <Settings className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-white mb-2">System Settings</h3>
+                            <p className="text-gray-400">Configuration options for AI agents, Nuclei templates, and API keys.</p>
+                        </div>
+                    )}
                 </div>
             )}
         </Layout>
