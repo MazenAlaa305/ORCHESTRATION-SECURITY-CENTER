@@ -20,12 +20,6 @@ Before diving into the code, you must have the environment running. found 404 us
     git clone https://github.com/omarkapil/the-dashboard-project-.git
     cd the-dashboard-project-
     ```
-### 2. Zero-Config Installation
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/omarkapil/the-dashboard-project-.git
-    cd the-dashboard-project-
-    ```
 2. **Launch Everything (One Command)**:
    ```bash
    docker-compose up -d --build
