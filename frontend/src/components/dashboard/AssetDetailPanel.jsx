@@ -84,7 +84,7 @@ const AssetDetailPanel = ({ node, onClose }) => {
                 {details.ai_insight && (
                     <section className="animate-fade-in">
                         <h3 className="text-[10px] font-black text-cyber-neon uppercase mb-4 flex items-center gap-2 tracking-[0.2em]">
-                            <Shield className="w-3 h-3" /> Intelligence Analysis
+                            <Shield className="w-3 h-3" /> SME Security Advisor
                         </h3>
                         <div className="bg-cyber-accent/5 border border-cyber-accent/20 rounded-xl p-5 relative group overflow-hidden">
                             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-30 transition-opacity">
@@ -93,35 +93,32 @@ const AssetDetailPanel = ({ node, onClose }) => {
 
                             <div className="space-y-4 relative z-10">
                                 <div>
-                                    <span className="text-[9px] font-black text-cyber-accent/60 uppercase block mb-1">Device Role</span>
+                                    <span className="text-[9px] font-black text-cyber-danger uppercase block mb-1">Why this is dangerous</span>
                                     <p className="text-gray-200 text-xs font-bold leading-relaxed">
-                                        {details.ai_insight.role_analysis}
+                                        {details.ai_insight.risk_explanation}
                                     </p>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">
                                     <div className="bg-black/40 p-3 rounded-lg border border-white/5">
-                                        <span className="text-[9px] font-black text-cyber-danger uppercase block mb-1">Exposure Synthesis</span>
+                                        <span className="text-[9px] font-black text-cyber-warning uppercase block mb-1">Business Impact</span>
                                         <p className="text-gray-400 text-[11px] leading-relaxed italic">
-                                            "{details.ai_insight.risk_synthesis}"
+                                            "{details.ai_insight.business_impact}"
                                         </p>
                                     </div>
-                                    <div className="bg-black/40 p-4 rounded-lg border-l-2 border-l-cyber-vibrant">
-                                        <span className="text-[9px] font-black text-cyber-vibrant uppercase block mb-2">Lateral Movement Risk</span>
+                                    <div className="bg-black/40 p-4 rounded-lg border-l-2 border-l-cyber-success">
+                                        <span className="text-[9px] font-black text-cyber-success uppercase block mb-2">How to respond</span>
                                         <p className="text-gray-300 text-[11px] leading-relaxed font-medium">
-                                            {details.ai_insight.lateral_movement_risk}
+                                            {details.ai_insight.remediation_advice}
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="pt-2">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-cyber-success shadow-neon-sm"></div>
-                                        <span className="text-[9px] font-black text-cyber-success uppercase tracking-widest">Recommended Action</span>
+                                        <div className={`h-1.5 w-1.5 rounded-full shadow-neon-sm ${details.ai_insight.response_priority === 'High' ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Recommended Priority: {details.ai_insight.response_priority}</span>
                                     </div>
-                                    <p className="text-white text-xs font-medium bg-cyber-success/10 p-3 rounded-lg border border-cyber-success/20">
-                                        {details.ai_insight.security_tip}
-                                    </p>
                                 </div>
                             </div>
                         </div>

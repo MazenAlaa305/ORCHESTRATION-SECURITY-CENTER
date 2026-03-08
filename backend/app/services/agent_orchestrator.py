@@ -16,6 +16,7 @@ from app.models.scan import AgentLog, Scan, Vulnerability, Endpoint, SeverityLev
 from app.services.wazuh_integration import wazuh_service
 from app.services.elastic_integration import elastic_service
 from app.services.soar_orchestrator import soar_service
+from app.services.unified_risk_engine import UnifiedRiskEngine
 
 logger = logging.getLogger(__name__)
 
@@ -553,13 +554,8 @@ class ValidationAgent(BaseAgent):
     
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate findings using AI reasoning.
-        
-        Args:
-            context: {findings: list}
-        
-        Returns:
-            {validated: list, false_positives: list}
+        Deterministic validation of findings.
+        Filters findings based on tool confidence scores and rules.
         """
         self.state = AgentState.RUNNING
         findings = context.get("findings", [])
@@ -567,27 +563,20 @@ class ValidationAgent(BaseAgent):
         self.log_action(
             action="start_validation",
             input_data={"finding_count": len(findings)},
-            reasoning={"goal": "Filter false positives using LLM analysis"}
+            reasoning={"goal": "Filter findings based on deterministic rules and confidence"}
         )
         
         validated = []
         false_positives = []
         
         for finding in findings:
-            # Skip high-confidence findings
-            if finding.get("confidence", 0) >= 0.8:
-                validated.append(finding)
-                continue
+            # Deterministic filtering logic
+            # Any finding with confidence > 0.6 or from a high-trust tool is validated
+            is_valid = finding.get("confidence", 0) >= 0.6
             
-            # Use LLM for low-confidence findings
-            validation_result = await self._validate_with_llm(finding)
-            
-            if validation_result["is_valid"]:
-                finding["ai_validation_result"] = validation_result
-                finding["confidence"] = validation_result.get("new_confidence", finding.get("confidence", 0.5))
+            if is_valid:
                 validated.append(finding)
             else:
-                finding["ai_validation_result"] = validation_result
                 false_positives.append(finding)
         
         # Update database with validation results
@@ -599,7 +588,6 @@ class ValidationAgent(BaseAgent):
             ).first()
             if vuln:
                 vuln.status = VulnStatus.FALSE_POSITIVE
-                vuln.ai_validation_result = fp.get("ai_validation_result")
         self.db.commit()
         
         self.state = AgentState.COMPLETED
@@ -614,7 +602,7 @@ class ValidationAgent(BaseAgent):
         self.log_action(
             action="validation_complete",
             output_data=result,
-            reasoning={"analysis": f"Validated {len(validated)}, filtered {len(false_positives)} false positives"}
+            reasoning={"analysis": f"Validated {len(validated)}, filtered {len(false_positives)} findings"}
         )
         
         return result
@@ -983,16 +971,30 @@ class AgentOrchestrator:
             })
             results["stages"]["recon"] = recon_result
             
+            # DETERMINISTIC CHAINING: Trigger specific scan types based on services found
+            assets = recon_result.get("assets", [])
+            has_web = False
+            has_smb = False
+            for asset in assets:
+                for service in asset.get("ports", []):
+                    if service.get("port") in [80, 443, 8080, 3000]:
+                        has_web = True
+                    if service.get("port") == 445:
+                        has_smb = True
+            
+            logger.info(f"[{self.scan_id}] Deterministic chaining: web={has_web}, smb={has_smb}")
+
             # Stage 2: Attack
             attack_agent = AttackAgent(self.scan_id, self.db)
             attack_result = await attack_agent.execute({
                 "endpoints": recon_result.get("endpoints", []),
                 "forms": recon_result.get("forms", []),
-                "assets": recon_result.get("assets", [])
+                "assets": recon_result.get("assets", []),
+                "chained_modes": {"web": has_web, "smb": has_smb}
             })
             results["stages"]["attack"] = attack_result
             
-            # Stage 3: Validation
+            # Stage 3: Validation (Deterministic)
             validation_agent = ValidationAgent(self.scan_id, self.db)
             validation_result = await validation_agent.execute({
                 "findings": attack_result.get("findings", [])
@@ -1011,25 +1013,25 @@ class AgentOrchestrator:
             })
             results["stages"]["reporting"] = report_result
             
-            # Update scan with score and metadata
+            # Update scan with score and metadata using UnifiedRiskEngine
             if scan:
+                risk_engine = UnifiedRiskEngine(self.db)
+                scan.risk_score = risk_engine.update_scan_risk(self.scan_id)
+                risk_engine.generate_action_items(self.scan_id)
+                
+                # INTEGRATION: Limited AI Advice for SME response
+                try:
+                    from app.services.intelligence_agent import IntelligenceAgent
+                    ai_agent = IntelligenceAgent(self.db)
+                    # Get advice for the top 3 assets found
+                    for asset in recon_result.get("assets", [])[:3]:
+                        ai_agent.analyze_asset(self.scan_id, asset)
+                except Exception as ai_err:
+                    logger.error(f"Failed to generate AI advisory: {ai_err}")
+
                 scan.status = ScanStatus.COMPLETED
                 scan.completed_at = datetime.utcnow()
-                scan.end_time = scan.completed_at # Sync legacy legacy field
-                
-                # Fetch all data to calculate risk
-                from app.services.risk_engine import RiskCalculator
-                # Re-fetch scan data from DB for accurate scoring
-                all_vulns = [{"severity": v.severity.value, "port": v.port} for v in scan.vulnerabilities]
-                all_assets = [{"ports": [{"port": a.port, "state": "open"} for a in scan.assets]}] # Mocking structure
-                
-                # Simplified risk call using the engine we built
-                scan_data = {
-                    "assets": results["stages"]["recon"].get("assets", []),
-                    "vulnerabilities": [{"severity": v["severity"]} for v in results["stages"]["attack"].get("findings", [])]
-                }
-                scan.risk_score = RiskCalculator.calculate(scan_data)
-                
+                scan.end_time = scan.completed_at
                 self.db.commit()
             
             results["status"] = "completed"

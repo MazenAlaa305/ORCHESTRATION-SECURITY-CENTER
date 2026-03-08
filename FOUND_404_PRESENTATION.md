@@ -59,45 +59,57 @@ flowchart TB
         direction TB
         Main["FastAPI Gateway"]
         Queue["Redis/Celery Queue"]
-        LLM["Gemini AI Reasoning"]
+        RiskEng["UnifiedRiskEngine (Deterministic)"]
         DB[("PostgreSQL State")]
+        AI["Gemini AI (Advisory Only)"]
     end
 
     subgraph "Active Scanners (The Hands)"
         Nmap["Nmap Discovery"]
-        Nuclei["Nuclei Templates"]
+        Nuclei["Nuclei (Web ports detected)"]
         GVM["OpenVAS Engine"]
     end
 
     Wazuh --> Main
     Main <--> Queue
-    Queue --> Nmap & Nuclei & GVM
-    Nmap & Nuclei & GVM --> Main
-    Main <--> LLM
-    Main --> DB
+    Queue --> Nmap
+    Nmap -->|"Port 80/443?"| Nuclei
+    Nmap & Nuclei & GVM --> RiskEng
+    RiskEng -->|"Risk + Health Score + Tasks"| DB
+    RiskEng -->|"Top 3 assets"| AI
+    AI -->|"SME Advice"| DB
+    DB --> Main
     Main --> UI["React Topology Dashboard"]
 ```
 
-- **Real-time Processing:** Every event is processed as a separate "Task" to ensure no threat is missed.
+- **Deterministic Core:** Discovery, validation, and risk scoring require **zero AI** — they are reliable and fast.
+- **AI Advisory:** AI is only called after scoring is done, to add human-friendly context.
 
 ---
 
-## Slide 5: The Autonomous Security Lifecycle
-**The 5-Step Logic Flow:** From unknown asset to a clean bill of health.
+## Slide 5: The Security Lifecycle (Hybrid Model)
+**The Logic Flow:** From unknown asset to actionable report.
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant O as Orchestrator
-    participant S as Scanners
-    participant AI as Gemini Pro
-    participant R as Remediation (n8n)
+    participant S as Scanners (Nmap/Nuclei/GVM)
+    participant E as UnifiedRiskEngine
+    participant AI as Gemini AI (Advisory)
+    participant R as Task Manager
 
     U->>O: Enter CIDR / Domain
-    O->>S: Launch Discovery & Scan
-    S-->>O: Raw JSON Results
-    O->>AI: "Reasoning Request"
-    AI-->>O: Natural Language Advice + Risk Score
+    O->>S: Launch Network Discovery (Nmap)
+    S-->>O: Open Ports + OS Fingerprint
+    Note over O: Port 80 found → trigger Nuclei<br/>Port 445 found → trigger SMB scan
+    O->>S: Run Chained Scans
+    S-->>E: Raw Vulnerability Findings
+    E->>E: Calculate Risk Score + Health Score
+    E->>R: Auto-Generate Action Tasks
+    E-->>AI: Top 3 critical assets (advisory only)
+    AI-->>O: SME Advice (business_impact, remediation)
+    O-->>U: Full Report: Risk Score + Tasks + Advice
     O->>U: Alert: Vulnerability Found!
     O->>R: Trigger Auto-Block Playbook
     R-->>U: Threat Neutralized
@@ -121,19 +133,22 @@ sequenceDiagram
 
 ---
 
-## Slide 8: Component 3: The AI Reasoning Hub (Gemini)
-**Turning "Technical Noise" into "Business Wisdom":**
+## Slide 8: Component 3: The Deterministic Risk Engine + AI Advisor
+**Two complementary systems. One clear answer.**
 
 ```mermaid
 flowchart LR
-    Raw["Raw Scan Data: CVE-2023-..."] --> Agent["Gemini 1.5 Pro"]
-    Agent --> Context{"Context Check"}
-    Context -->|Critical Asset| Out1["Urgently Patch: This is your DB!"]
-    Context -->|Dev Machine| Out2["Informal Alert: Low priority"]
+    Raw["Raw Findings (CVSS + Ports)"] --> Engine["UnifiedRiskEngine"]
+    Engine --> Score["Risk Score (0=Safe, 100=Critical)"]
+    Engine --> Health["Health Score (100=Safe, 0=Critical)"]
+    Engine --> Tasks["ActionItems (REMEDIATON / REVIEW / CONFIG)"]
+    Engine -->|"Top 3 Assets"| AI["Gemini AI (Advisory Only)"]
+    AI --> Advice["SME Advice: Why dangerous? Business impact? How to fix?"]
 ```
 
-- **Human-Like Filtering:** The AI asks: *Is this vulnerability actually exploitable in this specific network configuration?*
-- **Explainability:** It translates "Buffer Overflow in libc" into "The server can be crashed by a specialized message; please run 'apt-get update' to fix."
+- **Risk Engine (Deterministic):** Uses CVSS weights, port risk tables, and asset criticality to compute reliable, consistent scores.
+- **AI Advisor (Non-blocking):** Only adds human-readable context **after** the deterministic analysis is done. The scan succeeds even if AI is unavailable.
+- **No Alert Fatigue:** Every finding is a graded task (CRITICAL/HIGH/MEDIUM), not just a raw log.
 
 ---
 
@@ -142,10 +157,10 @@ flowchart LR
 - **Engine:** Built with **D3.js** for high-performance hex-grid rendering.
 - **Gravity Physics:** Nodes cluster together based on network relationships.
 - **Color Coding:**
-    - **Blue (Safe):** No critical findings.
-    - **Orange (Warning):** Misconfigurations or medium vulns.
-    - **Red (Critical):** Active threats or high risk scores (>80).
-- **Interactivity:** Hover for instant "AI Quickview" without leaving the screen.
+    - **Blue (Safe):** No critical findings. Health Score ≥ 80.
+    - **Orange (Warning):** Misconfigurations or medium vulns. Health Score 40-79.
+    - **Red (Critical):** Active threats or high risk scores. Health Score < 40.
+- **Interactivity:** Hover for **Health Score + Expert Advice** without leaving the screen.
 
 ---
 

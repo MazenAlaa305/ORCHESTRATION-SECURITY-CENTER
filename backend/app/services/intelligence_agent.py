@@ -16,43 +16,51 @@ class IntelligenceAgent:
     
     def __init__(self, db: Session):
         self.db = db
-        # Configure Gemini
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = None
+        # Guard: only configure if API key is present
+        if not settings.GEMINI_API_KEY:
+            logger.warning("GEMINI_API_KEY not set. IntelligenceAgent will use fallback responses.")
+            return
+        try:
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            self.model = genai.GenerativeModel('gemini-1.5-flash')  # updated from deprecated gemini-pro
+        except Exception as e:
+            logger.warning(f"Could not initialize Gemini model: {e}")
 
     def analyze_asset(self, scan_id: str, asset: Dict[str, Any]) -> Dict[str, Any]:
         """
         Processes a single asset's discovery data to generate security insights.
         """
         try:
-            # Prepare technical context for the LLM
+            # Guard: return fallback if model not configured
+            if not self.model:
+                return {
+                    "risk_explanation": "Vulnerability detected on open services.",
+                    "business_impact": "Potential data exposure or system compromise.",
+                    "remediation_advice": "Restrict network access to this device and update software.",
+                    "response_priority": "High"
+                }
+
+            # Prepare context for SME Advisory role
             prompt = f"""
-            As a Senior Security Architect for an SME Cyber Dashboard named "found 404", 
-            analyze the following technical discovery data for a network device and provide 
-            a human-readable "Identity & Risk Synthesis".
-
-            TECHNICAL DATA (JSON):
-            {json.dumps(asset, indent=2)}
-
-            GOALS:
-            1. Identify what this device likely is (e.g., HR Laptop, Database Server, Unknown IoT).
-            2. Explain its role in the network.
-            3. Highlight the MOST CRITICAL risk based on its open ports and OS.
-            4. Provide a "Security Tip" for a non-technical business owner.
-
+            As a Security Advisor for SME businesses, analyze these technical findings for a network asset.
+            
+            ASSET DATA: {json.dumps(asset)}
+            
+            Your goal is to provide human-readable advice and explain the risk simply.
+            
             OUTPUT FORMAT (JSON):
             {{
-                "classification": "Brief device category",
-                "role_analysis": "What this device does in the business",
-                "risk_synthesis": "Plain-English risk description",
-                "lateral_movement_risk": "How an attacker might use this device to move elsewhere",
-                "security_tip": "One actionable advice"
+                "risk_explanation": "Explain in 1 sentence why this device is currently dangerous (e.g., 'It has an open door that attackers can use to steal data').",
+                "business_impact": "What happens if this is hacked? (e.g., 'Your client records could be leaked').",
+                "remediation_advice": "Simple, non-technical steps to fix it.",
+                "response_priority": "High/Medium/Low"
             }}
             """
 
             response = self.model.generate_content(prompt)
             
-            # Clean up response (handle potential markdown formatting)
+            # Clean up response
             text = response.text.strip()
             if text.startswith('```json'):
                 text = text[7:-3].strip()
@@ -69,19 +77,19 @@ class IntelligenceAgent:
             
             if db_asset:
                 db_asset.ai_insight = insight
+                # Overwrite standard AI fields with our new advice fields for the UI
                 self.db.commit()
-                logger.info(f"Generated AI Insight for {asset.get('ip')}")
+                logger.info(f"Generated Security Advice for {asset.get('ip')}")
             
             return insight
 
         except Exception as e:
-            logger.error(f"Intelligence Agent analysis failed: {e}")
+            logger.error(f"Intelligence Agent advisory failed: {e}")
             return {
-                "classification": asset.get('device_type', 'Unknown Device'),
-                "role_analysis": "Analysis pending deep synthesis.",
-                "risk_synthesis": "Potential exposure on open ports detected.",
-                "lateral_movement_risk": "Standard pivoting risk.",
-                "security_tip": "Keep all services updated to the latest version."
+                "risk_explanation": "Vulnerability detected on open services.",
+                "business_impact": "Potential data exposure or system compromise.",
+                "remediation_advice": "Restrict network access to this device and update software.",
+                "response_priority": "High"
             }
 
     def batch_analyze(self, scan_id: str, assets: List[Dict[str, Any]]):

@@ -160,12 +160,30 @@ const NetworkTopology = ({ refresh }) => {
                 <ForceGraph2D
                     ref={fgRef}
                     graphData={graphData}
-                    nodeLabel={(node) => `
-                        <div class="p-2 bg-black/80 border border-white/10 rounded-lg backdrop-blur-md">
-                            <div class="text-[10px] font-black text-cyber-neon mb-1 uppercase tracking-tighter">${node.name}</div>
-                            <div class="text-[8px] text-gray-400 font-mono">${node.ip || 'INTERNAL HUB'}</div>
+                    nodeLabel={(node) => {
+                        const aiAdvice = node.details?.ai_insight?.risk_explanation || "Analyzing risks...";
+                        const health = node.details?.agent_thoughts?.health_score || (100 - node.riskScore);
+
+                        return `
+                        <div class="p-3 bg-black/90 border border-white/10 rounded-xl backdrop-blur-xl shadow-2xl min-w-[200px]">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-black text-cyber-neon uppercase tracking-tighter">${node.name}</span>
+                                <span class="text-[9px] font-mono text-gray-500">${node.ip || 'INTERNAL'}</span>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="p-2 bg-white/5 rounded-lg border border-white/5">
+                                    <div class="text-[8px] text-gray-400 uppercase font-black mb-1">Health Score</div>
+                                    <div class="text-xs font-bold ${health > 70 ? 'text-cyber-success' : health > 40 ? 'text-cyber-warning' : 'text-cyber-danger'}">${health}%</div>
+                                </div>
+                                
+                                <div class="p-2 bg-cyber-neon/5 rounded-lg border border-cyber-neon/10">
+                                    <div class="text-[8px] text-cyber-neon uppercase font-black mb-1">Expert Advice</div>
+                                    <div class="text-[10px] text-gray-200 leading-tight italic">"${aiAdvice}"</div>
+                                </div>
+                            </div>
                         </div>
-                    `}
+                    `}}
                     nodeColor={getNodeColor}
                     nodeRelSize={7}
                     linkColor={() => 'rgba(56, 189, 248, 0.1)'}
