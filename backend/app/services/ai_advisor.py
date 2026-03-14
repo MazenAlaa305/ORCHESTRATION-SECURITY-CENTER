@@ -10,9 +10,9 @@ class AIAdvisor:
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
             try:
-                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                self.model = genai.GenerativeModel('gemini-2.0-flash')
             except Exception:
-                self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                self.model = genai.GenerativeModel('gemini-pro')
         else:
             logger.warning("GEMINI_API_KEY not set. Using AI Advisor Demo Mode.")
             self.model = None
@@ -35,7 +35,7 @@ The calculated Risk Score is **{scan.risk_score} / 100**.
 
 ## 3. Recommended Actions
 1.  **Review Firewall Rules**: Restrict access to strictly necessary ports only.
-2.  **Patch Management**: Ensure all detected services ({', '.join(set([v.service for v in scan.vulnerabilities][:3]))}) are updated to the latest stable versions.
+3.  **Patch Management**: Ensure all detected services ({', '.join(list(set([v.service for v in scan.vulnerabilities]))[:3])}) are updated to the latest stable versions.
 3.  **Network Segmentation**: Isolate critical assets from the public-facing interface.
 
 *Note: This is a generated sample report because no valid GEMINI_API_KEY was provided.*"""

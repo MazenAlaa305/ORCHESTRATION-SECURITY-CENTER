@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, ChevronDown, ChevronUp, Terminal, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Brain, ChevronDown, Terminal, CheckCircle, XCircle, Loader2, Network, Cpu, BarChart2 } from 'lucide-react';
 import { pentesterService } from '../../services/api';
+
+const PIPELINE = [
+    { id: 'recon_agent', label: 'Nmap', icon: <Network className="h-3 w-3" />, color: 'text-blue-400', borderColor: 'border-blue-400' },
+    { id: 'attack_agent', label: 'Nuclei', icon: <Cpu className="h-3 w-3" />, color: 'text-red-400', borderColor: 'border-red-400' },
+    { id: 'validation_agent', label: 'Risk Engine', icon: <BarChart2 className="h-3 w-3" />, color: 'text-yellow-400', borderColor: 'border-yellow-400' },
+    { id: 'reporting_agent', label: 'AI Advisory', icon: <Brain className="h-3 w-3" />, color: 'text-purple-400', borderColor: 'border-purple-400' },
+];
 
 /**
  * AgentLogViewer Component
@@ -73,15 +80,57 @@ const AgentLogViewer = ({ scanId, autoRefresh = true }) => {
     if (!scanId) {
         return (
             <div className="glass-card p-12 text-center relative overflow-hidden group">
-                <div className="absolute inset-0 bg-cyber-accent/5 blur-3xl rounded-full scale-150 group-hover:bg-cyber-vibrant/5 transition-colors"></div>
-                <Brain className="h-16 w-16 text-gray-700 mx-auto mb-4 relative z-10" />
-                <p className="text-gray-400 font-medium relative z-10">INITIALIZING AI ADVISOR... <span className="animate-pulse">_</span></p>
-                <p className="text-gray-600 text-xs mt-2 relative z-10 uppercase tracking-widest">Select an active scan to bridge connection</p>
+                <div className="absolute inset-0 bg-cyber-accent/5 blur-3xl rounded-full scale-150 group-hover:bg-cyber-vibrant/5 transition-colors" />
+                <Brain className="h-14 w-14 text-gray-700 mx-auto mb-4 relative z-10" />
+                <p className="text-gray-400 font-medium relative z-10 font-mono text-sm">
+                    INITIALIZING AI ADVISOR... <span className="animate-blink">_</span>
+                </p>
+                <p className="text-gray-600 text-xs mt-2 relative z-10 uppercase tracking-widest font-mono">
+                    Select a scan above to view the agent pipeline
+                </p>
             </div>
         );
     }
 
-    return (
+    // Derive which pipeline stages have logs
+    const visitedAgents = new Set(logs.map(l => l.agent_name));
+    const lastAgentIdx = PIPELINE.reduce((acc, p, i) => visitedAgents.has(p.id) ? i : acc, -1);
+
+    return (<div className="space-y-4">
+        {/* Pipeline Stepper */}
+        <div className="glass-card p-4">
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-3">Security Pipeline</div>
+            <div className="flex items-center gap-0">
+                {PIPELINE.map((stage, i) => {
+                    const isDone = i <= lastAgentIdx;
+                    const isActive = i === lastAgentIdx && logs.length > 0;
+                    return (
+                        <React.Fragment key={stage.id}>
+                            <div className="flex flex-col items-center gap-1.5 flex-1">
+                                <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
+                                    isActive ? `${stage.borderColor} bg-white/10 ${stage.color} shadow-neon-sm animate-pulse`
+                                    : isDone ? 'border-cyber-success bg-cyber-success/10 text-cyber-success'
+                                    : 'border-white/10 bg-white/5 text-gray-600'
+                                }`}>
+                                    {isDone && !isActive ? <CheckCircle className="h-4 w-4" /> : stage.icon}
+                                </div>
+                                <span className={`text-[9px] font-bold uppercase tracking-wide text-center ${
+                                    isActive ? stage.color
+                                    : isDone ? 'text-cyber-success'
+                                    : 'text-gray-700'
+                                }`}>{stage.label}</span>
+                            </div>
+                            {i < PIPELINE.length - 1 && (
+                                <div className={`h-px flex-1 mb-5 transition-colors duration-700 ${
+                                    i < lastAgentIdx ? 'bg-cyber-success/40' : 'bg-white/5'
+                                }`} />
+                            )}
+                        </React.Fragment>
+                    );
+                })}
+            </div>
+        </div>
+
         <div className="glass-card border-cyber-accent/10 overflow-hidden relative group">
             {/* Header / Console Top Bar */}
             <div className="flex items-center justify-between px-6 py-4 bg-white/5 border-b border-white/5">
@@ -112,7 +161,7 @@ const AgentLogViewer = ({ scanId, autoRefresh = true }) => {
             </div>
 
             {/* Logs Container / Viewport */}
-            <div className="max-h-[500px] overflow-y-auto p-6 font-mono text-xs space-y-3 relative">
+            <div className="max-h-[500px] overflow-y-auto p-4 font-mono text-xs space-y-2 relative bg-black/20 custom-scrollbar">
                 {/* Scanning Line Effect (Visual Only) */}
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-cyber-neon/20 shadow-[0_0_10px_rgba(34,211,238,0.5)] animate-scan pointer-events-none"></div>
 
@@ -133,14 +182,14 @@ const AgentLogViewer = ({ scanId, autoRefresh = true }) => {
 
                         {/* Log Header */}
                         <div
-                            className="flex items-center gap-3 cursor-pointer group-hover/item:translate-x-1 transition-transform"
+                            className={`flex items-center gap-3 cursor-pointer hover:translate-x-1 transition-transform`}
                             onClick={() => toggleExpand(log.id)}
                         >
-                            <span className="text-lg opacity-80">{getAgentIcon(log.agent_name)}</span>
-                            <span className={`font-black tracking-tighter ${getAgentColor(log.agent_name)} drop-shadow-sm`}>
-                                {log.agent_name?.replace('_agent', '').toUpperCase()}
+                            <span className="text-base opacity-80">{getAgentIcon(log.agent_name)}</span>
+                            <span className={`font-black tracking-tighter ${getAgentColor(log.agent_name)}`}>
+                                [{log.agent_name?.replace('_agent', '').toUpperCase()}]
                             </span>
-                            <span className="text-gray-300 font-medium group-hover/item:text-white transition-colors">{log.action}</span>
+                            <span className="text-gray-300 group-hover/item:text-white transition-colors truncate flex-1">{log.action}</span>
 
                             <div className="flex-grow border-t border-dashed border-white/5 mx-2 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
 
@@ -217,7 +266,7 @@ const AgentLogViewer = ({ scanId, autoRefresh = true }) => {
                 </div>
             </div>
         </div>
-    );
+    </div>);
 };
 
 export default AgentLogViewer;

@@ -4,9 +4,9 @@ services:
     container_name: sme_dashboard_backend
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
-      # - gvm_socket:/run/gvmd
+    # volumes:
+    #   - ./backend:/app
+    #   - gvm_socket:/run/gvmd
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
@@ -32,9 +32,9 @@ services:
     container_name: sme_dashboard_frontend
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    # volumes:
+    #   - ./frontend:/app
+    #   - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
@@ -43,6 +43,14 @@ services:
   db:
     image: postgres:15-alpine
     container_name: sme_dashboard_db
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 256M
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
@@ -55,6 +63,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: sme_dashboard_redis
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
     ports:
       - "6379:6379"
 
@@ -62,6 +75,14 @@ services:
     build: ./backend
     container_name: sme_dashboard_celery
     command: celery -A app.core.celery_app worker --loglevel=info
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
@@ -182,5 +203,3 @@ volumes:
   gvm_data:
   elastic_data:
   n8n_data:
-
-

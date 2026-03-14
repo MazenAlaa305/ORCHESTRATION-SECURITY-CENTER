@@ -23,7 +23,7 @@ class IntelligenceAgent:
             return
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')  # updated from deprecated gemini-pro
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
         except Exception as e:
             logger.warning(f"Could not initialize Gemini model: {e}")
 

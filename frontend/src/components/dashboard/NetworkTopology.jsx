@@ -28,47 +28,57 @@ const NetworkTopology = ({ refresh }) => {
     };
 
     const transformDataToGraph = (assets) => {
-        const nodes = [];
-        const links = [];
+        setGraphData(prevData => {
+            const oldNodes = new Map((prevData.nodes || []).map(n => [n.id, n]));
+            const nodes = [];
+            const links = [];
 
-        // Add Central Hub (The Scanner/Gateway)
-        nodes.push({
-            id: 'hub',
-            name: 'found 404 Hub',
-            group: 'gateway',
-            val: 20,
-            riskScore: 0
+            const createNode = (data) => {
+                const old = oldNodes.get(data.id);
+                // Inherit D3 physics coordinates if the node already exists
+                if (old) {
+                    return { ...old, ...data, x: old.x, y: old.y, vx: old.vx, vy: old.vy, fx: old.fx, fy: old.fy };
+                }
+                return data;
+            };
+
+            // Add Central Hub (The Scanner/Gateway)
+            nodes.push(createNode({
+                id: 'hub',
+                name: 'found 404 Hub',
+                group: 'gateway',
+                val: 20,
+                riskScore: 0
+            }));
+
+            if (Array.isArray(assets)) {
+                assets.forEach(asset => {
+                    const estimatedVulns = Math.floor((asset.risk_score || 0) / 10);
+
+                    nodes.push(createNode({
+                        id: asset.id || asset.ip_address,
+                        name: asset.hostname || asset.ip_address,
+                        ip: asset.ip_address,
+                        group: determineGroup(asset),
+                        vulnCount: estimatedVulns,
+                        status: (asset.risk_score > 50) ? 'critical' : 'secure',
+                        val: 10 + ((asset.risk_score || 0) / 5),
+                        riskScore: asset.risk_score || 0,
+                        criticality: asset.criticality || 'MEDIUM',
+                        details: asset
+                    }));
+
+                    // Link to Hub
+                    links.push({
+                        source: 'hub',
+                        target: asset.id || asset.ip_address,
+                        value: 2
+                    });
+                });
+            }
+
+            return { nodes, links };
         });
-
-        if (Array.isArray(assets)) {
-            assets.forEach(asset => {
-                // Determine Vulnerability Count from Risk Score (Reverse engineering for viz)
-                // Default logic if not explicit
-                const estimatedVulns = Math.floor((asset.risk_score || 0) / 10);
-
-                nodes.push({
-                    id: asset.id || asset.ip_address,
-                    name: asset.hostname || asset.ip_address,
-                    ip: asset.ip_address,
-                    group: determineGroup(asset),
-                    vulnCount: estimatedVulns,
-                    status: (asset.risk_score > 50) ? 'critical' : 'secure',
-                    val: 10 + ((asset.risk_score || 0) / 5),
-                    riskScore: asset.risk_score || 0,
-                    criticality: asset.criticality || 'MEDIUM',
-                    details: asset
-                });
-
-                // Link to Hub
-                links.push({
-                    source: 'hub',
-                    target: asset.id || asset.ip_address,
-                    value: 2
-                });
-            });
-        }
-
-        setGraphData({ nodes, links });
     };
 
     const determineGroup = (asset) => {
@@ -118,9 +128,9 @@ const NetworkTopology = ({ refresh }) => {
     );
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in relative z-10 w-full h-full">
             {/* Graph Container */}
-            <div className="lg:col-span-2 glass-card border-white/5 overflow-hidden relative" style={{ height: '600px' }}>
+            <div className="lg:col-span-2 glass-card border-white/5 overflow-hidden relative w-full h-full min-h-[400px]">
                 <div className="absolute top-6 left-6 z-20">
                     <div className="px-4 py-3 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 shadow-glass">
                         <div className="flex flex-col gap-2.5">
@@ -217,14 +227,32 @@ const NetworkTopology = ({ refresh }) => {
                         ctx.stroke();
 
                         // 2. Animated Scanning Ring (Simulated with time)
-                        // Pulse Speed based on Risk
-                        const pulseSpeed = node.riskScore > 50 ? 5 : 2;
                         const t = Date.now() / 1000;
-                        const pulsate = Math.sin(t * pulseSpeed) * 0.2 + 1;
-                        ctx.beginPath();
-                        ctx.arc(node.x, node.y, size * (1.1 + pulsate * 0.1), 0, 2 * Math.PI);
-                        ctx.strokeStyle = `${nodeColor}22`;
-                        ctx.stroke();
+                        if (node.riskScore > 50) {
+                            // Layered aggressive pulse for High/Critical Risk
+                            const pulseSpeed = 4;
+                            const pulsate1 = (Math.sin(t * pulseSpeed) + 1) / 2;
+                            const pulsate2 = (Math.sin(t * pulseSpeed - 1) + 1) / 2;
+                            
+                            // Outer ring
+                            ctx.beginPath();
+                            ctx.arc(node.x, node.y, size * (1.2 + pulsate1 * 0.4), 0, 2 * Math.PI);
+                            ctx.fillStyle = `${nodeColor}${Math.floor((1-pulsate1)*50).toString(16).padStart(2,'0')}`;
+                            ctx.fill();
+
+                            // Inner ring
+                            ctx.beginPath();
+                            ctx.arc(node.x, node.y, size * (1.1 + pulsate2 * 0.2), 0, 2 * Math.PI);
+                            ctx.fillStyle = `${nodeColor}${Math.floor((1-pulsate2)*80).toString(16).padStart(2,'0')}`;
+                            ctx.fill();
+                        } else {
+                            // Standard gentle ping
+                            const pulsate = Math.sin(t * 2) * 0.2 + 1;
+                            ctx.beginPath();
+                            ctx.arc(node.x, node.y, size * (1.1 + pulsate * 0.1), 0, 2 * Math.PI);
+                            ctx.strokeStyle = `${nodeColor}22`;
+                            ctx.stroke();
+                        }
 
                         // 3. Node Core (Gradient)
                         const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size);

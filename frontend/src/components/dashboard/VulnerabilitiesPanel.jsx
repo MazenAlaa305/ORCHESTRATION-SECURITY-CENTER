@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, Loader2 } from 'lucide-react';
+import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, Loader2, Filter } from 'lucide-react';
 import { vulnerabilityService } from '../../services/api';
+
+const SEV_BORDER = {
+    critical: 'border-l-red-500 shadow-[inset_3px_0_0_rgba(239,68,68,0.5)]',
+    high:     'border-l-orange-500 shadow-[inset_3px_0_0_rgba(249,115,22,0.5)]',
+    medium:   'border-l-yellow-500 shadow-[inset_3px_0_0_rgba(234,179,8,0.5)]',
+    low:      'border-l-blue-400 shadow-[inset_3px_0_0_rgba(96,165,250,0.5)]',
+    info:     'border-l-gray-500',
+};
+
+const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
+const SEV_COLORS_BAR = {
+    critical: 'bg-red-500',
+    high: 'bg-orange-500',
+    medium: 'bg-yellow-400',
+    low: 'bg-blue-400',
+    info: 'bg-gray-500',
+};
 
 /**
  * VulnerabilitiesPanel Component
@@ -97,14 +114,50 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
         );
     }
 
+    // Build severity counts
+    const sevCounts = {};
+    vulnerabilities.forEach(v => {
+        const s = (v.severity || 'info').toLowerCase();
+        sevCounts[s] = (sevCounts[s] || 0) + 1;
+    });
+    const total = vulnerabilities.length || 1;
+
     return (
         <div className="space-y-4 animate-fade-in">
+            {/* Severity Summary Bar */}
+            {vulnerabilities.length > 0 && (
+                <div className="glass-card p-4 flex flex-col gap-2">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Severity Distribution</span>
+                        <span className="text-[10px] font-mono text-gray-600">{vulnerabilities.length} total</span>
+                    </div>
+                    <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
+                        {SEV_ORDER.map(sev => {
+                            const pct = ((sevCounts[sev] || 0) / total) * 100;
+                            if (pct === 0) return null;
+                            return (
+                                <div key={sev} className={`h-full ${SEV_COLORS_BAR[sev]} transition-all duration-700`}
+                                    style={{ width: `${pct}%` }} title={`${sev}: ${sevCounts[sev] || 0}`} />
+                            );
+                        })}
+                    </div>
+                    <div className="flex gap-3 flex-wrap">
+                        {SEV_ORDER.filter(s => sevCounts[s]).map(sev => (
+                            <div key={sev} className="flex items-center gap-1">
+                                <div className={`h-2 w-2 rounded-full ${SEV_COLORS_BAR[sev]}`} />
+                                <span className="text-[10px] font-mono text-gray-500 capitalize">{sev} ({sevCounts[sev]})</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             {/* Filters */}
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-3 items-center flex-wrap">
+                <Filter className="h-4 w-4 text-gray-600" />
                 <select
                     value={filter.severity}
                     onChange={(e) => setFilter({ ...filter, severity: e.target.value })}
-                    className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm"
+                    className="px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:border-cyber-accent/40 transition-colors"
                 >
                     <option value="">All Severities</option>
                     <option value="critical">Critical</option>
@@ -115,42 +168,54 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 <select
                     value={filter.status}
                     onChange={(e) => setFilter({ ...filter, status: e.target.value })}
-                    className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm"
+                    className="px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:border-cyber-accent/40 transition-colors"
                 >
                     <option value="">All Statuses</option>
                     <option value="open">Open</option>
                     <option value="fixed">Fixed</option>
                     <option value="false_positive">False Positive</option>
                 </select>
-                <span className="text-gray-400 text-sm ml-auto">
-                    {vulnerabilities.length} vulnerabilities
+                <span className="text-gray-600 text-xs font-mono ml-auto">
+                    {vulnerabilities.length} vulnerabilities found
                 </span>
             </div>
 
             {/* Vulnerabilities List */}
             <div className="space-y-3">
-                {vulnerabilities.map((vuln) => (
+                {vulnerabilities.map((vuln) => {
+                    const sevKey = (vuln.severity || 'info').toLowerCase();
+                    const cveId = vuln.cve_id || vuln.type?.match(/CVE-\d{4}-\d+/)?.[0];
+                    return (
                     <div
                         key={vuln.id}
-                        className="glass-card-interactive p-5 relative group"
+                        className={`glass-card-interactive p-5 relative group border-l-4 ${SEV_BORDER[sevKey] || 'border-l-gray-700'}`}
                     >
-                        {/* Status Accent Line */}
-                        <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${vuln.severity === 'critical' ? 'bg-cyber-danger shadow-[2px_0_10px_rgba(239,68,68,0.4)]' : 'bg-transparent'}`}></div>
                         <div className="flex items-start gap-4">
                             {/* Severity Badge */}
-                            <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSeverityColor(vuln.severity)}`}>
-                                {vuln.severity?.toUpperCase()}
+                            <div className={`px-2.5 py-1 rounded-md text-[10px] font-black border uppercase tracking-wider shrink-0 ${getSeverityColor(vuln.severity)}`}>
+                                {vuln.severity?.toUpperCase() || 'INFO'}
                             </div>
 
                             {/* Main Content */}
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
                                     {getStatusIcon(vuln.status)}
-                                    <h4 className="text-white font-medium truncate">
+                                    <h4 className="text-white font-semibold truncate">
                                         {vuln.type || 'Unknown Vulnerability'}
                                     </h4>
+                                    {cveId && (
+                                        <a
+                                            href={`https://nvd.nist.gov/vuln/detail/${cveId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-[10px] text-cyber-accent/70 hover:text-cyber-accent border border-cyber-accent/20 hover:border-cyber-accent/40 rounded px-1.5 py-0.5 transition-colors font-mono"
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            {cveId} <ExternalLink className="h-2.5 w-2.5" />
+                                        </a>
+                                    )}
                                 </div>
-                                <p className="text-gray-400 text-sm truncate mb-2">
+                                <p className="text-gray-500 text-xs truncate mb-2 font-mono">
                                     {vuln.url}
                                 </p>
                                 {vuln.description && (
@@ -212,7 +277,8 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                             </div>
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             {vulnerabilities.length === 0 && (

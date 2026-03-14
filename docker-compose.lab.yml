@@ -1,63 +1,158 @@
 version: '3.8'
 
+# ============================================================
+# LAB ENVIRONMENT - Test Triple Setup
+# Purpose: Simulated vulnerable network for dashboard testing
+#
+# Test Triples:
+#   Triple 1: Web App Attack (OWASP Juice Shop)
+#   Triple 2: Network Recon (Simulated Corporate LAN)
+#   Triple 3: Vulnerable API (Simulated Redis + REST API)
+# ============================================================
+
 services:
-  # 1. Network Gateway / Router
+
+  # ──────────────────────────────────────────────────────────
+  # TRIPLE 1: WEB APPLICATION TARGET
+  # Target: OWASP Juice Shop (intentionally vulnerable web app)
+  # Simulates: E-commerce company with many OWASP Top 10 flaws
+  # Scan with: http://lab_juice_shop:3000
+  # ──────────────────────────────────────────────────────────
+  lab_juice_shop:
+    image: bkimminich/juice-shop:latest
+    container_name: lab_juice_shop
+    ports:
+      - "3000:3000"
+    networks:
+      - lab_network
+    labels:
+      lab.triple: "1"
+      lab.role: "vulnerable-web-app"
+      lab.description: "OWASP Juice Shop - Web App vulnerabilities (XSS, SQLi, IDOR, Broken Auth)"
+
+  # ──────────────────────────────────────────────────────────
+  # TRIPLE 2: NETWORK / INFRASTRUCTURE TARGETS
+  # Simulates a corporate LAN with mixed OS endpoints
+  # ──────────────────────────────────────────────────────────
+
+  # 2a. Corporate Router / Gateway
   lab_gateway:
     image: alpine:latest
     container_name: lab_gateway
-    command: sh -c "apk add --no-cache netcat-openbsd && /entrypoint.sh"
-    volumes:
-      - ./lab_config/entrypoint.sh:/entrypoint.sh
+    command: >
+      sh -c "apk add --no-cache netcat-openbsd curl &&
+             echo 'Gateway UP' &&
+             while true; do nc -l -p 23 -e echo 'Telnet 220 Router Ready'; sleep 1; done &
+             while true; do nc -l -p 80 -e echo 'HTTP/1.1 200 OK Router Web UI'; sleep 1; done &
+             tail -f /dev/null"
     environment:
       - SIMULATE_OS=router
+      - DEVICE_NAME=corp-gw-01
     networks:
       - lab_network
     cap_add:
       - NET_ADMIN
+    labels:
+      lab.triple: "2"
+      lab.role: "gateway"
+      lab.description: "Simulated router - exposes Telnet (23) and HTTP (80)"
 
-  # 2. Corporate Database (Vulnerable Redis)
-  lab_db:
-    image: redis:6.0
-    container_name: lab_db
-    ports:
-      - "6379"
-    networks:
-      - lab_network
-
-  # 3. File Server (Vulnerable SMB)
-  lab_files:
-    image: dperson/samba
-    container_name: lab_files
-    environment:
-      - USER=admin;admin
-      - SHARE=public;/public;yes;no;no;all;none;
-    networks:
-      - lab_network
-
-  # 4. HR Workstation (Simulated Windows)
+  # 2b. HR Workstation (Windows Simulation)
   lab_hr_pc:
     image: alpine:latest
     container_name: lab_hr_pc
-    command: sh -c "apk add --no-cache netcat-openbsd && chmod +x /entrypoint.sh && /entrypoint.sh"
-    volumes:
-      - ./lab_config/entrypoint.sh:/entrypoint.sh
+    command: >
+      sh -c "apk add --no-cache netcat-openbsd &&
+             echo 'HR PC UP' &&
+             while true; do nc -l -p 3389 -e echo 'Microsoft RDP 6.0'; sleep 1; done &
+             while true; do nc -l -p 445 -e echo 'SMB Negotiate'; sleep 1; done &
+             tail -f /dev/null"
     environment:
       - SIMULATE_OS=windows
+      - DEVICE_NAME=hr-workstation-01
+      - WEAK_PASSWORD=Password123
     networks:
       - lab_network
+    labels:
+      lab.triple: "2"
+      lab.role: "hr-workstation"
+      lab.description: "Simulated Windows PC - exposes RDP (3389) and SMB (445)"
 
-  # 5. Developer Laptop (Linux)
+  # 2c. Developer Laptop (Linux Simulation)
   lab_dev_pc:
-    image: nginx:alpine
+    image: alpine:latest
     container_name: lab_dev_pc
-    command: sh -c "apk add --no-cache netcat-openbsd && chmod +x /entrypoint.sh && /entrypoint.sh"
-    volumes:
-      - ./lab_config/entrypoint.sh:/entrypoint.sh
+    command: >
+      sh -c "apk add --no-cache netcat-openbsd openssh &&
+             echo 'Dev PC UP' &&
+             while true; do nc -l -p 22 -e echo 'SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5'; sleep 1; done &
+             while true; do nc -l -p 8080 -e echo 'HTTP/1.1 200 OK Dev Server'; sleep 1; done &
+             tail -f /dev/null"
     environment:
       - SIMULATE_OS=linux
+      - DEVICE_NAME=dev-laptop-42
     networks:
       - lab_network
+    labels:
+      lab.triple: "2"
+      lab.role: "dev-workstation"
+      lab.description: "Simulated Linux laptop - exposes SSH (22) and Dev Server (8080)"
 
+  # 2d. Internal File Server (Samba)
+  lab_file_server:
+    image: dperson/samba:latest
+    container_name: lab_file_server
+    command: >
+      -u "admin;admin123" -u "guest;guest"
+      -s "public;/public;yes;no;no;all;none;"
+      -s "confidential;/confidential;no;no;no;admin;none;"
+    environment:
+      - DEVICE_NAME=corp-files-01
+    networks:
+      - lab_network
+    labels:
+      lab.triple: "2"
+      lab.role: "file-server"
+      lab.description: "Samba file server - weak credentials, public+confidential shares"
+
+  # ──────────────────────────────────────────────────────────
+  # TRIPLE 3: VULNERABLE DATABASE / API TARGET
+  # Simulates: Exposed database + unprotected REST API
+  # ──────────────────────────────────────────────────────────
+
+  # 3a. Exposed Redis (no auth, dangerous commands enabled)
+  lab_redis_exposed:
+    image: redis:6.0-alpine
+    container_name: lab_redis_exposed
+    command: redis-server --protected-mode no --bind 0.0.0.0
+    ports:
+      - "6380:6379"
+    networks:
+      - lab_network
+    labels:
+      lab.triple: "3"
+      lab.role: "exposed-database"
+      lab.description: "Redis with no auth + no protected mode - data exposure risk"
+
+  # 3b. Mock Vulnerable REST API
+  lab_api_server:
+    image: kennethreitz/httpbin:latest
+    container_name: lab_api_server
+    ports:
+      - "8081:80"
+    networks:
+      - lab_network
+    labels:
+      lab.triple: "3"
+      lab.role: "rest-api"
+      lab.description: "HTTPBin - mirrors requests, simulates open REST API without auth"
+
+# ──────────────────────────────────────────────────────────
+# NETWORK - Shared with main stack (created by docker-compose.yml)
+# The main stack creates this network; lab containers join it.
+# This allows the backend to reach lab targets by container name.
+# ──────────────────────────────────────────────────────────
 networks:
   lab_network:
-    driver: bridge
+    external: true
+    name: the-dashboard-project-_lab_network

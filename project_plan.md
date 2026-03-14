@@ -134,11 +134,11 @@ Each phase of the Software Development Life Cycle is augmented with a **Learning
 
 | Week | Sub-Team 1 (Backend/AI) | Sub-Team 2 (Frontend) | Sub-Team 3 (Security) | Sub-Team 4 (DevOps/QA) |
 |------|--------------------------|------------------------|------------------------|-------------------------|
-| **Wk 5** | Refactor/stabilize FastAPI endpoints; solidify DB models | Rebuild Dashboard page with real API data | Study scan pipeline code end-to-end | Set up test environment, write API test suite stubs |
-| **Wk 6** | ✅ Refactor `AgentOrchestrator`: Rule-based chaining, remove AI from validation | ✅ Updated Network Topology tooltip (Health Score + AI Advice) | Improve Nmap scanner: better OS detection, subnet handling | Run full docker-compose, document all service dependencies |
-| **Wk 7** | ✅ Build `UnifiedRiskEngine`: Risk Score, Health Score, deterministic task generation | ✅ Updated `AssetDetailPanel` to display SME security advice | Integrate Wazuh + Elasticsearch: live log ingestion | Write integration tests for Backend ↔ Scanner |
+| **Wk 5** | ✅ Refactor/stabilize FastAPI endpoints; solidify DB models | Rebuild Dashboard page with real API data | Study scan pipeline code end-to-end | Set up test environment, write API test suite stubs |
+| **Wk 6** | ✅ Refactor `AgentOrchestrator`: Rule-based chaining, fix types/slices | ✅ Updated Network Topology tooltip (Health Score + AI Advice) | Improve Nmap scanner: better OS detection, subnet handling | Run full docker-compose, document all service dependencies |
+| **Wk 7** | ✅ Build `UnifiedRiskEngine`: Risk Score, Health Score, fixed math | ✅ Updated `AssetDetailPanel` to display SME security advice | Integrate Wazuh + Elasticsearch: live log ingestion | Write integration tests for Backend ↔ Scanner |
 | **Wk 8** | ✅ Refactor `IntelligenceAgent` to advisory-only role (Gemini 1.5 Flash) | Connect every page to live API data | Set up n8n SOAR: build 1 remediation playbook (e.g., block IP) | Load test the backend + document performance benchmarks |
-| **Wk 9** | **Integration Checkpoint:** Backend ↔ Frontend ↔ Security connected | Ensure every page pulls live API data | SIEM data flows into dashboard UI | All tests passing, CI pipeline green |
+| **Wk 9** | ✅ **Phase 2 Complete:** Backend stabilized, unused files deleted | Ensure every page pulls live API data | SIEM data flows into dashboard UI | All tests passing, CI pipeline green |
 
 **📌 Deliverables (End of Week 9):**
 - [x] Full scan flow working: Nmap → Nuclei → Risk Engine → Dashboard display
@@ -204,11 +204,11 @@ Month 1 (March)   | PHASE 1: Foundation & Learning
   Wk 4: Phase 1 Learning Demo ★ COMPLETED
 
 Month 2 (April)   | PHASE 2: Core Development (Part 1)
-  Wk 5: Stabilize & Refactor
-  Wk 6: Core Feature Development ★ IN PROGRESS (Architecture refactor done)
-  Wk 7: Advanced Features (UnifiedRiskEngine done)
-  Wk 8: AI Advisory (IntelligenceAgent refactored)
-  Wk 9: Integration Checkpoint ★
+  Wk 5: Stabilize & Refactor ★ COMPLETED
+  Wk 6: Core Feature Development ★ COMPLETED
+  Wk 7: Advanced Features (UnifiedRiskEngine done) ★ COMPLETED
+  Wk 8: AI Advisory (IntelligenceAgent refactored) ★ COMPLETED
+  Wk 9: Integration Checkpoint & Cleanup ★ COMPLETED
 
 Month 3 (May-Jun) | PHASE 3: Integration & Enhancement
   Wk 10: RBAC + System Hardening

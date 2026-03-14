@@ -2,7 +2,7 @@ from app.core.celery_app import celery_app
 from app.services.nmap_wrapper import NmapWrapper
 from app.core.database import SessionLocal
 from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService, ActionItem, Target
-from app.services.risk_engine import RiskCalculator, ActionGenerator
+from app.services.unified_risk_engine import UnifiedRiskEngine
 from app.services.asset_monitor import AssetMonitor
 from datetime import datetime
 import logging
@@ -157,35 +157,10 @@ def run_scan_task(self, scan_id: int):
         except Exception as e:
             logger.error(f"Nuclei scan failed or skipped: {e}")
 
-        # Prepare Data for Risk Engine
-        scan_data = {
-            "assets": results, 
-            "vulnerabilities": all_vulns
-        }
-
-        # Calculate Professional Risk Score
-        # Fetch Target to get Business Context
-        target_obj = db.query(Target).filter(Target.id == scan.target_id).first()
-        criticality_multiplier = 1.0
-        if target_obj:
-            if target_obj.asset_value == "CRITICAL": criticality_multiplier = 2.0
-            elif target_obj.asset_value == "HIGH": criticality_multiplier = 1.5
-            elif target_obj.asset_value == "LOW": criticality_multiplier = 0.5
-            
-        base_score = RiskCalculator.calculate(scan_data)
-        scan.risk_score = min(100.0, base_score * criticality_multiplier)
-        
-        # Generate Action Items
-        actions = ActionGenerator.generate_actions(scan_data)
-        for action in actions:
-            db_action = ActionItem(
-                scan_id=scan.id,
-                title=action['title'],
-                description=action['description'],
-                priority=action['priority'],
-                type=action['type']
-            )
-            db.add(db_action)
+        # Calculate Professional Risk Score and Actions via UnifiedRiskEngine
+        risk_engine = UnifiedRiskEngine(db)
+        risk_engine.update_scan_risk(scan.id)
+        risk_engine.generate_action_items(scan.id)
 
         # Phase 2: Process through Asset Monitor for new device/change detection
         AssetMonitor.process_scan_results(db, scan.id, results)
@@ -209,7 +184,7 @@ def trigger_periodic_scan(target: str = "localhost"):
     db = SessionLocal()
     try:
         # Create new scan record
-        scan = Scan(target=target, scan_type="quick")
+        scan = Scan(target_url=target, scan_type="quick")
         db.add(scan)
         db.commit()
         db.refresh(scan)

@@ -4,9 +4,9 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
 
-from app.core.database import get_db
-from app.models.scan import NetworkAsset, ActionItem, Scan
-from app.core.risk_engine import RiskEngine
+from ....core.database import get_db, SessionLocal
+from ....models.scan import Scan, Vulnerability, ScanAsset, NetworkAsset, ActionItem
+from ....services.unified_risk_engine import UnifiedRiskEngine
 
 router = APIRouter()
 
@@ -37,7 +37,7 @@ def get_risk_overview(db: Session = Depends(get_db)):
     Get high-level risk statistics for the dashboard.
     Triggers a risk recalculation (lazy update).
     """
-    engine = RiskEngine(db)
+    engine = UnifiedRiskEngine(db)
     # Trigger recalculation for freshness? Or maybe do it async?
     # For MVP, let's do it on read, but lightweight.
     # Actually, let's skip full recalc on every read to be fast.
@@ -65,8 +65,7 @@ def get_action_items(status: str = "OPEN", db: Session = Depends(get_db)):
     Get prioritized list of action items.
     """
     # Helper to ensure we have fresh actions
-    engine = RiskEngine(db)
-    # engine.run_analysis() # Uncomment to force refresh on load (slow)
+    engine = UnifiedRiskEngine(db)
     
     actions = db.query(ActionItem).filter(
         ActionItem.status == status
@@ -82,8 +81,11 @@ def get_action_items(status: str = "OPEN", db: Session = Depends(get_db)):
 @router.post("/refresh-risk")
 def refresh_risk_scores(db: Session = Depends(get_db)):
     """
-    Force a recalculation of all risk scores.
+    Force a recalculation of all risk scores by evaluating the latest scans.
     """
-    engine = RiskEngine(db)
-    engine.run_analysis()
+    engine = UnifiedRiskEngine(db)
+    scans = db.query(Scan).limit(20).all()
+    for s in scans:
+        engine.update_scan_risk(s.id)
+        engine.generate_action_items(s.id)
     return {"status": "Risk scores updated"}
