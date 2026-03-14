@@ -1,6 +1,9 @@
 # Found 404: Zero-to-One Project Analysis
 **Deterministic Security Orchestration for SMEs**
 
+*فاوند 404: تحليل مشروع من الصفر إلى الواحد*
+*التنسيق الأمني الحتمي للشركات الصغيرة والمتوسطة*
+
 ---
 
 ## 1. Executive Summary & Core Philosophy
@@ -13,12 +16,29 @@ Found 404 is built on the principle of **Deterministic Orchestration**. Unlike t
 
 ---
 
+### 1. الملخص التنفيذي والفلسفة الأساسية
+**"السبب" وراء فاوند 404**
+
+في المشهد الحالي للأمن السيبراني، غالبًا ما تقع الشركات الصغيرة والمتوسطة (SMEs) في "فجوة حماية". فهي تفتقر إلى الميزانية المخصصة لمركز عمليات أمنية (SOC) ولكنها تواجه نفس التهديدات المعقدة التي تواجهها المؤسسات الكبيرة. توفر معظم الأدوات عددًا كبيرًا جدًا من التنبيهات مع سياق قليل جدًا، مما يؤدي إلى **إرهاق التنبيهات (Alert Fatigue)**.
+
+**الفلسفة الأساسية:**
+تم بناء فاوند 404 على مبدأ **التنسيق الحتمي (Deterministic Orchestration)**. على عكس الماسحات الضوئية التقليدية التي تطلق اختبارات عشوائية على الهدف، يستخدم فاوند 404 نهجًا منظمًا قائمًا على القواعد لـ "تسلسل" الأدوات. فهو يعطي الأولوية للاكتشاف والتحقق على الحجم الخام، وينتقل من *اكتشاف المعلومات* إلى *الذكاء القابل للتنفيذ*.
+
+---
+
 ## 2. Functional Mechanics
 **Under the Hood: The Four-Stage Pipeline**
 
 The system operates via the `AgentOrchestrator`, which manages a sequence of specialized agents to solve the problem of fragmented security data.
 
+### 2. الآليات الوظيفية
+**ما تحت الغطاء: خط الأنابيب المكون من أربع مراحل**
+
+يعمل النظام عبر المنسق `AgentOrchestrator`، والذي يدير تسلسلاً من الوكلاء المتخصصين لحل مشكلة البيانات الأمنية المجزأة.
+
 ### The 4-Stage Agent Pipeline
+*(خط أنابيب الوكلاء المكون من 4 مراحل)*
+
 ```mermaid
 graph TD
     A[User Input: Target URL] --> B(ReconAgent)
@@ -37,7 +57,16 @@ graph TD
 *   **Validation (ValidationAgent):** Instead of reporting every potential hit, it applies a deterministic confidence filter (≥ 0.6) and uses AI to assist in weeding out false positives for complex cases (e.g., BOLA).
 *   **Scoring (UnifiedRiskEngine):** Translates technical CVE data into business risk using a 0-100 scale.
 
+---
+*   **الاكتشاف (ReconAgent):** يستخدم `Nmap` لرسم خريطة البنية التحتية و `Playwright` لزحف تطبيقات الويب. يحدد "سطح الهجوم" (المنافذ والخدمات ونقاط نهاية عناوين URL).
+*   **التسلسل الموجه (AttackAgent):** هذا هو عقل النظام. يقوم بتعيين الخدمات المكتشفة (مثل `ssh`، `http`، `smb`) لقوالب ثغرات محددة في `Nuclei`.
+    *   *مثال:* إذا تم العثور على المنفذ 445 (SMB)، فإنه يطلق فحوصات تكوين خاصة بـ SMB بدلاً من إضاعة حركة المرور على اختبارات SQLi المستندة إلى الويب.
+*   **التحقق (ValidationAgent):** بدلاً من الإبلاغ عن كل إصابة محتملة، فإنه يطبق مرشح ثقة حتمي (≥ 0.6) ويستخدم الذكاء الاصطناعي للمساعدة في التخلص من الإيجابيات الكاذبة للحالات المعقدة (مثل BOLA).
+*   **تسجيل المخاطر (UnifiedRiskEngine):** يترجم البيانات الفنية لـ CVE إلى مخاطر تجارية باستخدام مقياس من 0 إلى 100.
+
 ### Risk Calculation Logic
+*(منطق حساب المخاطر)*
+
 ```mermaid
 graph LR
     V[Severity Weights] --> S(Risk Score)
@@ -54,8 +83,17 @@ graph LR
 
 Found 404 is designed for containerized deployment, making it portable and easy to reset.
 
+### 3. دليل النشر والمستخدم
+**بيئة المختبر: من الصفر إلى الفحص الأول**
+
+تم تصميم فاوند 404 للنشر في حاويات (Containers)، مما يجعله محمولاً وسهل إعادة الضبط.
+
 ### First-Time Setup
+*(الإعداد لأول مرة)*
+
 ### Deployment Workflow
+*(سير عمل النشر)*
+
 ```mermaid
 sequenceDiagram
     participant U as User
@@ -90,6 +128,25 @@ sequenceDiagram
 5.  **Access the Command Center:** Open `http://localhost:5173` in your browser.
 
 ---
+1.  **تجهيز البيئة:** تأكد من تثبيت Docker و PowerShell.
+2.  **تشغيل النظام:**
+    ```powershell
+    docker compose up -d
+    ```
+    هذا يبدأ تشغيل الواجهة الخلفية FastAPI، وقاعدة بيانات Postgres، و Redis، والواجهة الأمامية Vite/React.
+3.  **إعداد المختبر:**
+    ```powershell
+    .\lab_setup.ps1 start
+    ```
+    يطلق هذا "الثلاثيات الاختبارية" (Juice Shop، وشبكة الشركة، وواجهة API المكشوفة).
+4.  **تغذية الأهداف:**
+    ```powershell
+    .\lab_setup.ps1 seed
+    ```
+    يسجل أصول المختبر في قاعدة بيانات لوحة القيادة عبر واجهة برمجة التطبيقات (API).
+5.  **الوصول إلى مركز القيادة:** افتح `http://localhost:5173` في متصفحك.
+
+---
 
 ## 4. Operational Workflow
 **Lifecycle of a Security Scan**
@@ -107,6 +164,22 @@ sequenceDiagram
 
 ---
 
+### 4. سير العمل التشغيلي
+**دورة حياة الفحص الأمني**
+
+1.  **التشغيل:** يبدأ المستخدم عملية فحص عبر واجهة مستخدم لوحة القيادة (Vite/React).
+2.  **الاصطفاف في قائمة الانتظار:** يصل الطلب إلى نقطة نهاية FastAPI ويتم دفعه إلى `Celery` (الذي يعمل على `Redis`).
+3.  **التنفيذ:** يقوم `AgentOrchestrator` بإنشاء خط الأنابيب:
+    *   يقوم `Nmap` بمسح نطاق IP المستهدف.
+    *   يتم تخزين الأصول التي تم العثور عليها (مثل `172.30.0.50`) في `ScanAsset`.
+    *   يقوم `Nuclei` بتشغيل علامات مستهدفة ضد الخدمات المكتشفة.
+4.  **المعالجة:** يتم إدخال النتائج في جدول `Vulnerability` (الثغرات).
+5.  **التسجيل:** يقوم محرك `UnifiedRiskEngine` بتشغيل `update_scan_risk()`، مع حساب `risk_score` (درجة المخاطر).
+6.  **الإجراء:** يقوم المحرك بإنشاء `ActionItems` (عناصر الإجراء: معالجة أو تكوين) لمسؤول تقنية المعلومات.
+7.  **الإغلاق:** يعرض المستخدم العقد النابضة في الرسم البياني للشبكة D3.js ويتبع المعالجة المقترحة بالذكاء الاصطناعي.
+
+---
+
 ## 5. Orchestration & Automation
 **Managing Complex technical Orchestration**
 
@@ -120,6 +193,19 @@ Automation resides primarily in the `AgentOrchestrator` and `Celery` task queue.
 
 ---
 
+### 5. التنسيق والأتمتة
+**إدارة التنسيق التقني المعقد**
+
+تكمن الأتمتة بشكل أساسي في `AgentOrchestrator` وقائمة مهام `Celery`.
+
+*   **إدارة المهام:** يتعامل Celery مع الطبيعة غير المتزامنة لعمليات الفحص، مما يضمن بقاء واجهة المستخدم سريعة الاستجابة حتى عندما يكون هناك الآلاف من مجسات Nmap قيد التنفيذ.
+*   **تواصل المكونات:**
+    *   **الخلفية والأدوات:** تقوم أغلفة بايثون لـ `Nmap` و `Nuclei` بتحليل المخرجات/JSON إلى نماذج SQLAlchemy منظمة.
+    *   **تكامل الذكاء الاصطناعي:** يعمل `IntelligenceAgent` (Gemini 1.5 Flash) كـ **معلم تقني**، وليس صانع قرار. فهو يشرح *سبب* أهمية الخطر و*كيفية* إصلاحه، مما يقلل من حاجة المسؤول البشري ليكون خبيرًا أمنيًا.
+*   **المنطق الحتمي:** تم برمجة منطق التنسيق بشكل "ثابت" (hard-coded) من أجل الموثوقية. يتبع النظام خرائط صارمة مثل `SERVICE_TO_TEMPLATE` لضمان سلوك متوقع وتقليل ضجيج الشبكة إلى أقصى حد.
+
+---
+
 ## 6. Value Proposition
 **The SME Efficiency Multiplier**
 
@@ -129,4 +215,15 @@ Automation resides primarily in the `AgentOrchestrator` and `Celery` task queue.
 *   **Risk Translation:** Converts abstract technical jargon (CVE-2023-XXXX) into business impact ("High Risk: Patient Data Exposure"), allowing solo admins to communicate priorities to non-technical stakeholders.
 
 ---
+
+### 6. عرض القيمة
+**مضاعف كفاءة الشركات الصغيرة والمتوسطة**
+
+*   **توفير الوقت:** يربط تلقائيًا "Nmap يعثر على منفذ" مع "Nuclei يعثر على خطأ"، مما يوفر ساعات من التنقل اليدوي بين الأدوات.
+*   **تقليل الجهد:** يقوم `UnifiedRiskEngine` بتصفية الضوضاء. أنت لا ترى 1000 سجل، بل ترى 5 **عناصر قابلة للتنفيذ (Action Items)**.
+*   **العمليات المركزية:** يعمل بمثابة "لوحة زجاجية واحدة" (المنصة الموحدة). من تصور طوبولوجيا الشبكة إلى نصوص إثبات المفهوم (PoC) ونصائح الإصلاح، يعيش كل شيء في لوحة قيادة واحدة.
+*   **ترجمة المخاطر:** يحول المصطلحات التقنية المجردة (CVE-2023-XXXX) إلى تأثير تجاري حقيقي ("خطر عالٍ: الكشف عن بيانات المرضى")، مما يسمح للمسؤولين المستقلين بتوصيل الأولويات لأصحاب المصلحة غير التقنيين.
+
+---
 *Analysis prepared by Antigravity AI | Project Repo: the-dashboard-project-*
+*أُعد هذا التحليل بواسطة Antigravity AI | مستودع المشروع: the-dashboard-project-*
