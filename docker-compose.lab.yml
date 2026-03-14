@@ -1,158 +1,119 @@
-version: '3.8'
-
 # ============================================================
-# LAB ENVIRONMENT - Test Triple Setup
-# Purpose: Simulated vulnerable network for dashboard testing
-#
-# Test Triples:
-#   Triple 1: Web App Attack (OWASP Juice Shop)
-#   Triple 2: Network Recon (Simulated Corporate LAN)
-#   Triple 3: Vulnerable API (Simulated Redis + REST API)
+# TARGET RANGE ENVIRONMENT - Found 404
+# Deterministic Security Orchestration Lab
+# Models a 3-tier SME architecture with realistic targets.
 # ============================================================
 
 services:
 
   # ──────────────────────────────────────────────────────────
-  # TRIPLE 1: WEB APPLICATION TARGET
-  # Target: OWASP Juice Shop (intentionally vulnerable web app)
-  # Simulates: E-commerce company with many OWASP Top 10 flaws
-  # Scan with: http://lab_juice_shop:3000
+  # 1. THE BROKEN WEB APP (Frontend DMZ)
+  # Persona: An intentionally vulnerable e-commerce platform
+  # Vulnerabilities: BOLA, SQLi
+  # Expected Risk Score: 9.5 (Critical)
   # ──────────────────────────────────────────────────────────
-  lab_juice_shop:
+  lab_broken_web:
     image: bkimminich/juice-shop:latest
-    container_name: lab_juice_shop
+    container_name: lab_broken_web
     ports:
       - "3000:3000"
     networks:
+      - frontend-dmz
       - lab_network
     labels:
-      lab.triple: "1"
-      lab.role: "vulnerable-web-app"
-      lab.description: "OWASP Juice Shop - Web App vulnerabilities (XSS, SQLi, IDOR, Broken Auth)"
+      lab.persona: "broken-web-app"
+      lab.vulns: "bola,sqli"
+      lab.target_score: "9.5"
+      lab.description: "Intentionally vulnerable Node.js web app (OWASP Juice Shop) exposing BOLA and SQL Injection flaws."
 
   # ──────────────────────────────────────────────────────────
-  # TRIPLE 2: NETWORK / INFRASTRUCTURE TARGETS
-  # Simulates a corporate LAN with mixed OS endpoints
+  # 2. THE API GATEWAY (Frontend DMZ)
+  # Persona: Legacy API Gateway
+  # Vulnerabilities: Information Disclosure (Old headers, Swagger DB)
+  # Expected Risk Score: 6.0 (Medium)
   # ──────────────────────────────────────────────────────────
-
-  # 2a. Corporate Router / Gateway
-  lab_gateway:
-    image: alpine:latest
-    container_name: lab_gateway
+  lab_api_gateway:
+    image: nginx:alpine
+    container_name: lab_api_gateway
     command: >
-      sh -c "apk add --no-cache netcat-openbsd curl &&
-             echo 'Gateway UP' &&
-             while true; do nc -l -p 23 -e echo 'Telnet 220 Router Ready'; sleep 1; done &
-             while true; do nc -l -p 80 -e echo 'HTTP/1.1 200 OK Router Web UI'; sleep 1; done &
-             tail -f /dev/null"
-    environment:
-      - SIMULATE_OS=router
-      - DEVICE_NAME=corp-gw-01
+      sh -c "echo 'server { listen 8081; location / { default_type application/json; return 200 \"{\\\"swagger\\\": \\\"2.0\\\", \\\"info\\\": {\\\"title\\\": \\\"Internal API\\\"}}\"; add_header Server \"Apache/2.2.14 (Unix)\"; add_header X-Powered-By \"PHP/5.3.2\"; } }' > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+    ports:
+      - "8081:8081"
     networks:
-      - lab_network
-    cap_add:
-      - NET_ADMIN
-    labels:
-      lab.triple: "2"
-      lab.role: "gateway"
-      lab.description: "Simulated router - exposes Telnet (23) and HTTP (80)"
-
-  # 2b. HR Workstation (Windows Simulation)
-  lab_hr_pc:
-    image: alpine:latest
-    container_name: lab_hr_pc
-    command: >
-      sh -c "apk add --no-cache netcat-openbsd &&
-             echo 'HR PC UP' &&
-             while true; do nc -l -p 3389 -e echo 'Microsoft RDP 6.0'; sleep 1; done &
-             while true; do nc -l -p 445 -e echo 'SMB Negotiate'; sleep 1; done &
-             tail -f /dev/null"
-    environment:
-      - SIMULATE_OS=windows
-      - DEVICE_NAME=hr-workstation-01
-      - WEAK_PASSWORD=Password123
-    networks:
+      - frontend-dmz
       - lab_network
     labels:
-      lab.triple: "2"
-      lab.role: "hr-workstation"
-      lab.description: "Simulated Windows PC - exposes RDP (3389) and SMB (445)"
+      lab.persona: "api-gateway"
+      lab.vulns: "info-disclosure,swagger"
+      lab.target_score: "6.0"
+      lab.description: "Exposed REST API with outdated documentation and verbose Server headers."
 
-  # 2c. Developer Laptop (Linux Simulation)
-  lab_dev_pc:
-    image: alpine:latest
-    container_name: lab_dev_pc
-    command: >
-      sh -c "apk add --no-cache netcat-openbsd openssh &&
-             echo 'Dev PC UP' &&
-             while true; do nc -l -p 22 -e echo 'SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5'; sleep 1; done &
-             while true; do nc -l -p 8080 -e echo 'HTTP/1.1 200 OK Dev Server'; sleep 1; done &
-             tail -f /dev/null"
-    environment:
-      - SIMULATE_OS=linux
-      - DEVICE_NAME=dev-laptop-42
-    networks:
-      - lab_network
-    labels:
-      lab.triple: "2"
-      lab.role: "dev-workstation"
-      lab.description: "Simulated Linux laptop - exposes SSH (22) and Dev Server (8080)"
-
-  # 2d. Internal File Server (Samba)
-  lab_file_server:
+  # ──────────────────────────────────────────────────────────
+  # 3. THE MISCONFIGURED INFRASTRUCTURE (Internal Servers)
+  # Persona: Forgotten corporate file server
+  # Vulnerabilities: Exposed SMB, Weak/Default Credentials
+  # Expected Risk Score: 8.0 (High)
+  # ──────────────────────────────────────────────────────────
+  lab_misconfig_infra:
     image: dperson/samba:latest
-    container_name: lab_file_server
+    container_name: lab_misconfig_infra
+    # Ports published to host for simulated network scans (mapped to avoid Windows conflict)
+    ports:
+      - "4445:445"
+      - "1139:139"
     command: >
       -u "admin;admin123" -u "guest;guest"
       -s "public;/public;yes;no;no;all;none;"
       -s "confidential;/confidential;no;no;no;admin;none;"
-    environment:
-      - DEVICE_NAME=corp-files-01
     networks:
+      - internal-srv
       - lab_network
     labels:
-      lab.triple: "2"
-      lab.role: "file-server"
-      lab.description: "Samba file server - weak credentials, public+confidential shares"
+      lab.persona: "misconfigured-infra"
+      lab.vulns: "default-login,misconfig,smb-enum"
+      lab.target_score: "8.0"
+      lab.description: "Windows/Linux Samba server with weak admin credentials (admin123) and exposed data."
 
   # ──────────────────────────────────────────────────────────
-  # TRIPLE 3: VULNERABLE DATABASE / API TARGET
-  # Simulates: Exposed database + unprotected REST API
+  # 4. THE SHADOW IT ASSET (Data Vault)
+  # Persona: Unmanaged in-memory datastore
+  # Vulnerabilities: Non-standard port, Unauthenticated access
+  # Expected Risk Score: 8.5 (High)
   # ──────────────────────────────────────────────────────────
-
-  # 3a. Exposed Redis (no auth, dangerous commands enabled)
-  lab_redis_exposed:
+  lab_shadow_asset:
     image: redis:6.0-alpine
-    container_name: lab_redis_exposed
-    command: redis-server --protected-mode no --bind 0.0.0.0
+    container_name: lab_shadow_asset
+    command: redis-server --port 63790 --protected-mode no --bind 0.0.0.0
     ports:
-      - "6380:6379"
+      - "63790:63790"
     networks:
+      - data-vault
       - lab_network
     labels:
-      lab.triple: "3"
-      lab.role: "exposed-database"
-      lab.description: "Redis with no auth + no protected mode - data exposure risk"
-
-  # 3b. Mock Vulnerable REST API
-  lab_api_server:
-    image: kennethreitz/httpbin:latest
-    container_name: lab_api_server
-    ports:
-      - "8081:80"
-    networks:
-      - lab_network
-    labels:
-      lab.triple: "3"
-      lab.role: "rest-api"
-      lab.description: "HTTPBin - mirrors requests, simulates open REST API without auth"
+      lab.persona: "shadow-it"
+      lab.vulns: "redis-unauthenticated,misconfig"
+      lab.target_score: "8.5"
+      lab.description: "Forgotten Redis instance running on port 63790 without authentication bounds."
 
 # ──────────────────────────────────────────────────────────
-# NETWORK - Shared with main stack (created by docker-compose.yml)
-# The main stack creates this network; lab containers join it.
-# This allows the backend to reach lab targets by container name.
+# MULTI-SUBNET ARCHITECTURE
 # ──────────────────────────────────────────────────────────
 networks:
+  frontend-dmz:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+  internal-srv:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.20.0/24
+  data-vault:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.30.0/24
   lab_network:
     external: true
     name: the-dashboard-project-_lab_network
