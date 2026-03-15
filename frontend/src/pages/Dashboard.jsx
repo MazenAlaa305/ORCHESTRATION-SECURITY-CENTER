@@ -270,7 +270,10 @@ const Dashboard = () => {
                                     <Bug className="h-4 w-4 text-cyber-neon" />
                                     Scan Results
                                 </h3>
-                                <VulnerabilitiesList taskId={(selectedScanId ? scans?.find(s => s.id === selectedScanId) : latestScan)?.configuration?.openvas_task_id} />
+                                <VulnerabilitiesList 
+                                    taskId={(selectedScanId ? scans?.find(s => s.id === selectedScanId) : latestScan)?.configuration?.openvas_task_id} 
+                                    scanId={selectedScanId || latestScan?.id}
+                                />
                             </div>
                         </div>
                     )}

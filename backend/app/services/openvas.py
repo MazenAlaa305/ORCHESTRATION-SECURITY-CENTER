@@ -56,8 +56,13 @@ class OpenVASService:
                 time.sleep(2) # Wait a bit before retrying
 
         print(f"Error connecting to OpenVAS at {self.host if self.connection_type != 'socket' else self.socket_path}: {last_error}")
-        # Re-raise nicely or handled
-        raise ConnectionError(f"Could not connect to OpenVAS scanner after {retries} attempts. Ensure the service is running. Details: {last_error}")
+        
+        # Friendly error message for initialization
+        friendly_error = str(last_error)
+        if "[Errno 111] Connection refused" in friendly_error:
+            friendly_error = "OpenVAS service is still initializing (this can take 5-10 minutes after a restart). Please wait and try again."
+            
+        raise ConnectionError(f"Could not connect to OpenVAS scanner. Details: {friendly_error}")
 
     def _disconnect(self):
         """Close the connection."""

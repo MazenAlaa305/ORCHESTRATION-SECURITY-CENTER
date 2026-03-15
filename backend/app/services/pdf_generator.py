@@ -81,13 +81,14 @@ class PDFReportGenerator:
         
         # Health Score Box
         risk_score = scan_data.get("risk_score", 0)
-        grade = PDFReportGenerator._calculate_grade(risk_score)
+        health_score = 100 - risk_score
+        grade = PDFReportGenerator._calculate_grade(health_score)
         grade_color = PDFReportGenerator._get_grade_color(grade)
         
         score_data = [[
             Paragraph(f"<b>Security Health Score</b>", normal_style),
             Paragraph(f"<font size=36 color='{grade_color}'><b>{grade}</b></font>", normal_style),
-            Paragraph(f"<b>{int(risk_score)}/100</b>", normal_style)
+            Paragraph(f"<b>{int(health_score)}/100</b>", normal_style)
         ]]
         score_table = Table(score_data, colWidths=[2*inch, 1.5*inch, 1.5*inch])
         score_table.setStyle(TableStyle([

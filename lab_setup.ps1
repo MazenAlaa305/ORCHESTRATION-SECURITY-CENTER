@@ -64,13 +64,10 @@ function Show-Status {
     Write-Header "Lab Container Status"
 
     $containers = @(
-        @{ Name="lab_juice_shop";    Triple="1"; Role="OWASP Juice Shop (Web App)";      URL="http://localhost:3000" },
-        @{ Name="lab_gateway";       Triple="2"; Role="Corporate Router (Telnet/HTTP)";   URL="172.30.0.10" },
-        @{ Name="lab_hr_pc";         Triple="2"; Role="HR Workstation (RDP/SMB)";         URL="172.30.0.20" },
-        @{ Name="lab_dev_pc";        Triple="2"; Role="Dev Laptop (SSH/HTTP)";            URL="172.30.0.30" },
-        @{ Name="lab_file_server";   Triple="2"; Role="File Server (Samba)";              URL="172.30.0.40" },
-        @{ Name="lab_redis_exposed"; Triple="3"; Role="Exposed Redis (no auth)";          URL="172.30.0.50:6379" },
-        @{ Name="lab_api_server";    Triple="3"; Role="Mock REST API (HTTPBin)";          URL="http://localhost:8081" }
+        @{ Name="lab_broken_web";    Triple="1"; Role="OWASP Juice Shop (Web App)";      URL="http://localhost:3000" },
+        @{ Name="lab_api_gateway";   Triple="2"; Role="Corporate Router (Telnet/HTTP)";   URL="10.10.10.0/24" },
+        @{ Name="lab_misconfig_infra";Triple="2"; Role="File Server (Samba)";              URL="10.10.20.0/24" },
+        @{ Name="lab_shadow_asset";  Triple="3"; Role="Exposed Redis (no auth)";          URL="10.10.30.0/24" }
     )
 
     foreach ($c in $containers) {

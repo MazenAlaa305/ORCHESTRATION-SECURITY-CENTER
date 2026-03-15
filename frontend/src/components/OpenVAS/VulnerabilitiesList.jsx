@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { openvasService } from '../../services/api';
+import { openvasService, vulnerabilityService } from '../../services/api';
 import { AlertTriangle, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
-const VulnerabilitiesList = ({ taskId }) => {
+const VulnerabilitiesList = ({ taskId, scanId }) => {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [expandedFull, setExpandedFull] = useState(null); // ID of expanded item
 
     useEffect(() => {
-        if (!taskId) return;
+        if (!taskId && !scanId) return;
 
         const fetchResults = async () => {
             setLoading(true);
             try {
-                const response = await openvasService.getScanResults(taskId);
-                setResults(response.data);
+                let data = [];
+                if (taskId) {
+                    const response = await openvasService.getScanResults(taskId);
+                    data = response.data;
+                } else if (scanId) {
+                    const response = await vulnerabilityService.list({ scan_id: scanId });
+                    data = response.data;
+                }
+                setResults(data);
             } catch (err) {
                 console.error("Failed to fetch results", err);
                 setError("Could not load results. Scan might be in progress.");
@@ -25,8 +32,7 @@ const VulnerabilitiesList = ({ taskId }) => {
         };
 
         fetchResults();
-        // Optional: Poll if status is running
-    }, [taskId]);
+    }, [taskId, scanId]);
 
     if (!taskId) {
         return <div className="text-gray-500 italic text-center p-10">Select a scan to view detailed results.</div>;

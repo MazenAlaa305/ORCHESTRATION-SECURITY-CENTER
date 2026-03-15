@@ -22,6 +22,8 @@ def run_scan_task(self, scan_id: int):
         # Update status to RUNNING and set actual start time
         scan.status = ScanStatus.RUNNING
         scan.started_at = datetime.utcnow()
+        if scan.configuration is None:
+            scan.configuration = {}
         db.commit()
         
         # Execute Scan
