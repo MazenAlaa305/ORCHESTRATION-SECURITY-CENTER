@@ -19,7 +19,7 @@ const NAV_SECTIONS = [
     {
         label: 'System',
         items: [
-            { icon: <FileText />, label: 'Reports', id: 'system' },
+            { icon: <FileText />, label: 'Reports', id: 'reports' },
             { icon: <Settings />, label: 'Settings', id: 'settings' },
         ]
     }

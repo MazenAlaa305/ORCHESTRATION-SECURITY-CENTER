@@ -28,10 +28,16 @@ function Start-Lab {
     Write-Header "Starting Lab Environment (3 Test Triples)"
 
     Write-Info "Pulling images (first run may take a few minutes)..."
-    docker compose -f $LAB_COMPOSE pull 2>&1 | Out-Null
+    docker compose -f $LAB_COMPOSE pull
 
-    Write-Info "Starting lab containers..."
-    docker compose -f $LAB_COMPOSE up -d
+    Write-Info "Checking for running lab containers..."
+    $running = docker compose -f $LAB_COMPOSE ps --format "{{.Status}}"
+    if ($running -match "Up") {
+        Write-Info "Lab containers are already running."
+    } else {
+        Write-Info "Starting lab containers..."
+        docker compose -f $LAB_COMPOSE up -d
+    }
 
     Start-Sleep -Seconds 5
     
@@ -82,12 +88,12 @@ function Show-Status {
 # ─────────────────────────────────────────────────────────────
 # SEED - Register test targets in the dashboard API
 # ─────────────────────────────────────────────────────────────
-function Seed-Targets {
+function Invoke-SeedTargets {
     Write-Header "Seeding Test Targets into Dashboard"
     
     # Check if API is reachable
     try {
-        $ping = Invoke-RestMethod -Uri "$API_BASE/dashboard/summary" -Method GET -TimeoutSec 5 -ErrorAction Stop
+        Invoke-RestMethod -Uri "$API_BASE/dashboard/risk-overview" -Method GET -TimeoutSec 5 -ErrorAction Stop
         Write-Ok "Dashboard API is reachable."
     } catch {
         Write-Err "Dashboard API at $API_BASE is not reachable. Start the main stack first:"
@@ -197,7 +203,7 @@ switch ($Action) {
     "start"  { Start-Lab }
     "stop"   { Stop-Lab }
     "status" { Show-Status }
-    "seed"   { Seed-Targets }
+    "seed"   { Invoke-SeedTargets }
     "reset"  { Reset-Lab }
     "logs"   { Show-Logs }
 }

@@ -342,7 +342,9 @@ class AttackAgent(BaseAgent):
             # 1. Determine Targeted Templates based on Assets (Nmap Results)
             targeted_templates = set()
             for host in assets:
+                if not isinstance(host, dict): continue
                 for port_data in host.get('ports', []):
+                    if not isinstance(port_data, dict): continue
                     service = port_data.get('service', 'unknown').lower()
                     if service in self.SERVICE_TO_TEMPLATE:
                         targeted_templates.update(self.SERVICE_TO_TEMPLATE[service])
@@ -397,8 +399,10 @@ class AttackAgent(BaseAgent):
                 
                 # PROCESS ASSETS (Infrastructure Findings)
                 for host in assets:
+                    if not isinstance(host, dict): continue
                     ip = host.get('ip')
                     for port_data in host.get('ports', []):
+                        if not isinstance(port_data, dict): continue
                         port = port_data.get('port')
                         service = port_data.get('service', 'unknown')
                         
@@ -1030,7 +1034,9 @@ class AgentOrchestrator:
             has_web = False
             has_smb = False
             for asset in assets:
+                if not isinstance(asset, dict): continue
                 for service in asset.get("ports", []):
+                    if not isinstance(service, dict): continue
                     if service.get("port") in [80, 443, 8080, 3000]:
                         has_web = True
                     if service.get("port") == 445:

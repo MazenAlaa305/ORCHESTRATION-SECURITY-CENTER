@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, Loader2, Filter } from 'lucide-react';
+import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, Loader2, Filter, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { vulnerabilityService } from '../../services/api';
+import IncidentDetailDrawer from './IncidentDetailDrawer';
 
 const SEV_BORDER = {
     critical: 'border-l-red-500 shadow-[inset_3px_0_0_rgba(239,68,68,0.5)]',
@@ -27,9 +28,11 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
     const [vulnerabilities, setVulnerabilities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedVuln, setSelectedVuln] = useState(null);
-    const [showPoc, setShowPoc] = useState(false);
-    const [poc, setPoc] = useState(null);
+    const [showDrawer, setShowDrawer] = useState(false);
     const [filter, setFilter] = useState({ severity: '', status: '' });
+    const [search, setSearch] = useState('');
+    const [sortField, setSortField] = useState('severity');
+    const [sortDir, setSortDir] = useState('desc');
 
     useEffect(() => {
         fetchVulnerabilities();
@@ -48,42 +51,19 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
         }
     };
 
-    const handleMarkFalsePositive = async (id) => {
-        try {
-            await vulnerabilityService.markFalsePositive(id);
-            fetchVulnerabilities();
-        } catch (error) {
-            console.error('Failed to mark as false positive:', error);
-        }
-    };
-
-    const handleMarkFixed = async (id) => {
-        try {
-            await vulnerabilityService.markFixed(id);
-            fetchVulnerabilities();
-        } catch (error) {
-            console.error('Failed to mark as fixed:', error);
-        }
-    };
-
-    const handleViewPoc = async (vuln) => {
+    const handleOpenDrawer = (vuln) => {
         setSelectedVuln(vuln);
-        setShowPoc(true);
-        try {
-            const response = await vulnerabilityService.getPoc(vuln.id);
-            setPoc(response.data);
-        } catch (error) {
-            console.error('Failed to get PoC:', error);
-        }
+        setShowDrawer(true);
     };
 
-    const handleRevalidate = async (id) => {
-        try {
-            await vulnerabilityService.revalidate(id);
-            fetchVulnerabilities();
-        } catch (error) {
-            console.error('Failed to revalidate:', error);
-        }
+    const toggleSort = (field) => {
+        if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortField(field); setSortDir('desc'); }
+    };
+
+    const SortIcon = ({ field }) => {
+        if (sortField !== field) return null;
+        return sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
     };
 
     const getSeverityColor = (severity) => {
@@ -104,6 +84,24 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
             default: return <Bug className="h-4 w-4 text-yellow-400" />;
         }
     };
+
+    const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+
+    const displayed = vulnerabilities
+        .filter(v => {
+            if (search) {
+                const q = search.toLowerCase();
+                return (v.type || '').toLowerCase().includes(q) || (v.url || '').toLowerCase().includes(q) || (v.cve_id || '').toLowerCase().includes(q);
+            }
+            return true;
+        })
+        .sort((a, b) => {
+            let av, bv;
+            if (sortField === 'severity') { av = SEV_RANK[(a.severity||'info').toLowerCase()] || 0; bv = SEV_RANK[(b.severity||'info').toLowerCase()] || 0; }
+            else if (sortField === 'confidence') { av = a.confidence_score || 0; bv = b.confidence_score || 0; }
+            else { av = a.type || ''; bv = b.type || ''; return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av); }
+            return sortDir === 'asc' ? av - bv : bv - av;
+        });
 
     if (loading) {
         return (
@@ -151,9 +149,20 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                     </div>
                 </div>
             )}
-            {/* Filters */}
+            {/* Filters + Search */}
             <div className="flex gap-3 items-center flex-wrap">
-                <Filter className="h-4 w-4 text-gray-600" />
+                <Filter className="h-4 w-4 text-gray-500 shrink-0" />
+                {/* Search */}
+                <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 focus-within:border-cyber-accent/40 transition-all">
+                    <Search className="h-3.5 w-3.5 text-gray-500" />
+                    <input
+                        type="text"
+                        placeholder="Search CVE, type, URL..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="bg-transparent text-white text-xs outline-none placeholder:text-gray-600 w-40 font-mono"
+                    />
+                </div>
                 <select
                     value={filter.severity}
                     onChange={(e) => setFilter({ ...filter, severity: e.target.value })}
@@ -175,20 +184,34 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                     <option value="fixed">Fixed</option>
                     <option value="false_positive">False Positive</option>
                 </select>
-                <span className="text-gray-600 text-xs font-mono ml-auto">
-                    {vulnerabilities.length} vulnerabilities found
+                {/* Sort buttons */}
+                <div className="flex items-center gap-1 ml-auto">
+                    <span className="text-[9px] text-gray-600 uppercase tracking-widest font-black">Sort:</span>
+                    {['severity','confidence','type'].map(f => (
+                        <button key={f} onClick={() => toggleSort(f)}
+                            className={`flex items-center gap-0.5 px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${
+                                sortField === f ? 'text-cyber-accent bg-cyber-accent/10' : 'text-gray-600 hover:text-white'
+                            }`}
+                        >
+                            {f} <SortIcon field={f} />
+                        </button>
+                    ))}
+                </div>
+                <span className="text-gray-600 text-xs font-mono">
+                    {displayed.length}/{vulnerabilities.length} findings
                 </span>
             </div>
 
             {/* Vulnerabilities List */}
             <div className="space-y-3">
-                {vulnerabilities.map((vuln) => {
+                {displayed.map((vuln) => {
                     const sevKey = (vuln.severity || 'info').toLowerCase();
                     const cveId = vuln.cve_id || vuln.type?.match(/CVE-\d{4}-\d+/)?.[0];
                     return (
                     <div
                         key={vuln.id}
-                        className={`glass-card-interactive p-5 relative group border-l-4 ${SEV_BORDER[sevKey] || 'border-l-gray-700'}`}
+                        onClick={() => handleOpenDrawer(vuln)}
+                        className={`glass-card-interactive p-5 relative group border-l-4 ${SEV_BORDER[sevKey] || 'border-l-gray-700'} cursor-pointer`}
                     >
                         <div className="flex items-start gap-4">
                             {/* Severity Badge */}
@@ -239,40 +262,27 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                 )}
                             </div>
 
-                            {/* Actions & Workflow */}
-                            <div className="flex flex-col gap-2 border-l border-gray-700 pl-4 ml-4 min-w-[150px]">
+                            {/* Quick actions - stop event propagation so card onclick doesn't fire */}
+                            <div className="flex flex-col gap-2 border-l border-gray-700 pl-4 ml-4 min-w-[140px]" onClick={e => e.stopPropagation()}>
                                 <select
                                     value={vuln.status}
                                     onChange={(e) => {
                                         vulnerabilityService.updateWorkflow(vuln.id, { status: e.target.value });
                                         fetchVulnerabilities();
                                     }}
-                                    className={`text-xs px-2 py-1 rounded bg-gray-800 border border-gray-600 text-white w-full`}
+                                    className="text-xs px-2 py-1 rounded bg-gray-800 border border-gray-600 text-white w-full"
                                 >
                                     <option value="open">Open</option>
                                     <option value="in_progress">In Progress</option>
                                     <option value="fixed">Fixed</option>
                                     <option value="false_positive">False Positive</option>
                                 </select>
-
-                                <input
-                                    type="text"
-                                    placeholder="Ticket ID"
-                                    defaultValue={vuln.ticket_id}
-                                    onBlur={(e) => {
-                                        if (e.target.value !== vuln.ticket_id) {
-                                            vulnerabilityService.updateWorkflow(vuln.id, { ticket_id: e.target.value });
-                                        }
-                                    }}
-                                    className="text-xs px-2 py-1 rounded bg-gray-800 border border-gray-600 text-white w-full"
-                                />
-
                                 <button
-                                    onClick={() => handleViewPoc(vuln)}
-                                    className="flex items-center gap-2 justify-center p-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded text-cyan-400"
+                                    onClick={() => handleOpenDrawer(vuln)}
+                                    className="flex items-center gap-2 justify-center p-2 text-xs bg-cyber-accent/10 border border-cyber-accent/25 hover:bg-cyber-accent/20 rounded-lg text-cyber-accent font-bold transition-all"
                                 >
                                     <Code className="h-3 w-3" />
-                                    View PoC
+                                    Deep Dive
                                 </button>
                             </div>
                         </div>
@@ -288,45 +298,12 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 </div>
             )}
 
-            {/* PoC Modal */}
-            {showPoc && selectedVuln && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                    <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[80vh] overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-                            <h3 className="text-lg font-semibold text-white">
-                                Proof of Concept: {selectedVuln.type}
-                            </h3>
-                            <button
-                                onClick={() => { setShowPoc(false); setPoc(null); }}
-                                className="text-gray-400 hover:text-white"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div className="p-6 overflow-y-auto max-h-[60vh]">
-                            {poc ? (
-                                <>
-                                    <div className="mb-4">
-                                        <h4 className="text-cyan-400 mb-2">Script</h4>
-                                        <pre className="bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm text-gray-300">
-                                            {poc.proof_of_concept}
-                                        </pre>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-green-400 mb-2">Remediation</h4>
-                                        <p className="text-gray-300 bg-gray-800 p-4 rounded-lg">
-                                            {poc.remediation}
-                                        </p>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader2 className="h-6 w-6 text-cyan-400 animate-spin" />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+            {/* Full Incident Detail Drawer */}
+            {showDrawer && selectedVuln && (
+                <IncidentDetailDrawer
+                    vuln={selectedVuln}
+                    onClose={() => { setShowDrawer(false); setSelectedVuln(null); }}
+                />
             )}
         </div>
     );

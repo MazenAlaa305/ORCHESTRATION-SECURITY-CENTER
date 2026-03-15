@@ -97,8 +97,7 @@ class ScanResponse(ScanSummary):
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    completed_at: Optional[datetime] = None
 
 
 class ScanDetail(ScanResponse):
@@ -249,6 +248,19 @@ class ScanAssetResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+# ============================================================================
+# OPENVAS SCHEMAS (backward compatibility)
+# ============================================================================
+
+class OpenVASScanCreate(BaseModel):
+    target_ip: str
+    target_name: str
+
+class OpenVASScanResponse(BaseModel):
+    task_id: str
+    report_id: Optional[str] = None
+    status: str = "success"
 
 class ActionItemResponse(BaseModel):
     id: int

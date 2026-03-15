@@ -115,6 +115,8 @@ body {
 
 /* ─── Animate Fade In (for existing usage) ───── */
 .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-scan-line { animation: scanLine 3s linear infinite; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }

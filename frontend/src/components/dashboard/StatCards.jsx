@@ -27,8 +27,8 @@ function useCountUp(target, duration = 1200) {
 const StatCards = ({ latestScan, isScanning }) => {
     const riskScore = latestScan?.risk_score ?? 0;
     const healthScore = latestScan?.health_score ?? (latestScan ? 100 - riskScore : null);
-    const vulnCount = latestScan?.vulnerabilities?.length ?? 0;
-    const assetCount = latestScan?.assets?.length ?? latestScan?.asset_count ?? 0;
+    const vulnCount = latestScan?.vulnerabilities?.length ?? latestScan?.vulnerabilities_count ?? 0;
+    const assetCount = latestScan?.assets?.length ?? latestScan?.assets_count ?? 0;
 
     const animRisk = useCountUp(Math.round(riskScore));
     const animVuln = useCountUp(vulnCount);

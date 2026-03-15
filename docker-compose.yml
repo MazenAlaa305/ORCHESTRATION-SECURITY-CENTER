@@ -36,7 +36,7 @@ services:
     #   - ./frontend:/app
     #   - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8000/api/v1
     depends_on:
       - backend
 
@@ -128,7 +128,7 @@ services:
       - "9390:9390" # GMP
     volumes:
       - gvm_data:/var/lib/openvas
-    entrypoint: [ "/bin/sh", "-c", "rm -f /var/lib/openvas/feed-update.lock && find /var/lib -name postmaster.pid -delete && /scripts/start.sh" ]
+    entrypoint: [ "/bin/sh", "-c", "chown -R gvm:gvm /var/lib/openvas && rm -f /var/lib/openvas/feed-update.lock && find /var/lib -name postmaster.pid -delete && /scripts/start.sh" ]
     networks:
       - default
       - lab_network

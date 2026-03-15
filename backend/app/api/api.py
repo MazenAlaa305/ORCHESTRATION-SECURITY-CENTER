@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .v1.endpoints import scans, reports, network, targets, vulnerabilities, dashboard
+from .v1.endpoints import scans, reports, network, targets, vulnerabilities, dashboard, openvas, siem
 
 api_router = APIRouter()
 
@@ -12,6 +12,8 @@ api_router.include_router(vulnerabilities.router, prefix="/vulnerabilities", tag
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(network.router, prefix="/network", tags=["network"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(openvas.router, prefix="/openvas", tags=["openvas"])
+api_router.include_router(siem.router, prefix="/siem", tags=["siem"])
 
 @api_router.get("/")
 def root():
