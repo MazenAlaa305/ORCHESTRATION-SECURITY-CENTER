@@ -57,8 +57,6 @@ Each phase of the Software Development Life Cycle is augmented with a **Learning
 | 5 | **Omnia Helmy** | **React-Force-Graph-2d** & Network Topology D3 Logic |
 | 6 | **Mazin Alaa** | Tailwind CSS Design, Asset Detail Slide-outs, UX Polish |
 
-**Technologies to Learn:** React, Vite, Tailwind CSS, D3.js, React Force Graph, Lucide Icons.
-
 ---
 
 ### 🔷 Sub-Team 3: Security Ops & Scanning Engine
@@ -68,15 +66,13 @@ Each phase of the Software Development Life Cycle is augmented with a **Learning
 | 7 | **Shahd Paher** (Sub-Leader) | Nmap Discovery scripts & Nuclei Template Orchestration |
 | 8 | **Rahma Ebraheam** | Wazuh EDR Integration & Elasticsearch/Kibana SIEM Tuning |
 
-**Technologies to Learn:** Nmap, Nuclei, Wazuh, Elasticsearch, Kibana, Linux CLI, Docker Networking.
-
 ---
 
 ### 🔷 Sub-Team 4: DevOps & Quality Assurance
 **Sub-Leader: Omar Kapil** *(Team Leader)*
 | # | Member | Role |
 |---|--------|------|
-| 9 | **Omar Kapil** (Sub-Leader + Project Lead) | Docker Orchestration, CI/CD, Infrastructure Hardening |
+| 9 | **Omar Kapil** (Sub-Leader) | Docker Orchestration, CI/CD, Infrastructure Hardening |
 | 10 | **Yosef Ali** | Testing (Pytest, Playwright), Integration Verification |
 | 11 | **Omar Tarek** | Documentation, Academic Defense Design, Presentation |
 
