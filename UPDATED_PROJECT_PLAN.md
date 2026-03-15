@@ -41,9 +41,9 @@
 **Sub-Leader: Marize Ehap**
 | # | Member | Role |
 |---|--------|------|
-| 4 | **Marize Ehap** (Sub-Leader) | React Component Architecture, State Management |
-| 5 | **Omnia Helmy** | **React-Force-Graph-2d** & Network Topology D3 Logic |
-| 6 | **Mazin Alaa** | Tailwind CSS Design, Asset Detail Slide-outs, UX Polish |
+| 4 | **Rahma Epraheam** | React Component Architecture, State Management |
+| 5 | **Omnia Helmy** (Sub-Leader) | **React-Force-Graph-2d** & Network Topology D3 Logic |
+| 6 | **AI** | Tailwind CSS Design, Asset Detail Slide-outs, UX Polish |
 
 ---
 
@@ -52,7 +52,7 @@
 | # | Member | Role |
 |---|--------|------|
 | 7 | **Shahd Paher** (Sub-Leader) | Nmap Discovery scripts & Nuclei Template Orchestration |
-| 8 | **Rahma Ebraheam** | Wazuh EDR Integration & Elasticsearch/Kibana SIEM Tuning |
+| 8 | **Mariz Ehap ,Omar kapil** | Wazuh EDR Integration & Elasticsearch/Kibana SIEM Tuning |
 
 ---
 
@@ -61,7 +61,7 @@
 | # | Member | Role |
 |---|--------|------|
 | 9 | **Omar Kapil** (Sub-Leader) | Docker Orchestration, CI/CD, Infrastructure Hardening |
-| 10 | **Yosef Ali** | Testing (Pytest, Playwright), Integration Verification |
+| 10 | **Yosef Ali , Mazin Alaa** | Testing (Pytest, Playwright), Integration Verification |
 | 11 | **Omar Tarek** | Documentation, Academic Defense Design, Presentation |
 
 ---
