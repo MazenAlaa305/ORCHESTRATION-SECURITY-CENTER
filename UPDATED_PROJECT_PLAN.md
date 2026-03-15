@@ -2,115 +2,104 @@
 ## SME Security Orchestration Center | Team of 11 | Professional Graduation Path
 
 > [!IMPORTANT]
-> **Project Vision:** *found 404* is a deterministic, high-fidelity security orchestration platform designed specifically for Small and Medium Enterprises (SMEs). It leverages hybrid tool-chaining (Nmap, Nuclei, OpenVAS) and AI-driven advisory (Gemini 1.5 Flash) to provide actionable remediation without the noise of typical enterprise security tools.
+> **Core Architecture Protocol:** "found 404" operates on a **Deterministic Hybrid Model**. 
+> - **Execution:** Rule-based tool chaining (Nmap -> Nuclei -> Wazuh).
+> - **Scoring:** Statistical calculation (CVSS weights + Asset Criticality).
+> - **AI Role:** *Advisory Only*. Gemini 1.5 Flash translates technical findings into business-readable SME advice.
 
 ---
 
 ## 🛠️ Updated Tech Stack & Architecture Rules
 
 ### 🔹 Core Technologies
-*   **Backend:** Python 3.10+, FastAPI (Asynchronous API), SQLAlchemy (ORM).
-*   **Engine:** Celery (Distributed Tasks), Redis (Message Broker), PostgreSQL (Persistence).
-*   **Frontend:** React 18+, Vite (Build Tool), Tailwind CSS (Styling), D3.js / React-Force-Graph (Topology).
-*   **Security Stack:** Nmap (Network Discovery), Nuclei (Vulnerability Templates), OpenVAS (Deep Scans), Wazuh (EDR/SIEM), Elasticsearch/Kibana (Log Analytics).
-*   **AI Layer:** Google Gemini 1.5 Flash (Deterministic AI Advisory).
-*   **SOAR/DevOps:** n8n (Orchestration), Docker / Docker Compose (Containerization).
+*   **Backend:** Python 3.10+, FastAPI (Asynchronous API), PostgreSQL (Metadata & Results).
+*   **Engine:** Celery (Distributed Tasks), Redis (Message Broker), `AgentOrchestrator` (Rule Chaining).
+*   **Frontend:** React 18+, Vite, **react-force-graph-2d** (Topology), Tailwind CSS (High-Density UI).
+*   **Security Stack:** Nmap (Network Discovery), Nuclei (Vulnerability Templates), Wazuh EDR/SIEM (Log Analytics).
+*   **AI Advisory:** Google Gemini 1.5 Flash (Risk Explanations & Remediation Advice).
 
-### 📏 Architectural Rules
-1.  **Strict Determinism:** The Security Engine must prioritize rule-based results over AI predictions. AI is limited to the *Advisory Role* (Explanations, Business Impact).
-2.  **Stateless API:** All backend services must remain stateless, relying on the database and Redis for state management.
-3.  **Unified Scoring:** All vulnerabilities must be mapped to the `UnifiedRiskEngine` to ensure a consistent 0-100 score across all tools.
-4.  **HMR Only:** Containers must support Hot Module Replacement (HMR) for rapid frontend/backend iteration.
+### 📏 Mandatory Rules
+1.  **Rule-Based Logic:** No AI is used to decide "what to scan." Scans are triggered by hard-coded tool chaining (e.g., Open Port 80 -> Nuclei HTTP Scan).
+2.  **UnifiedRiskEngine:** All findings must pass through `UnifiedRiskEngine.py` to calculate the **SME Health Score** (100 - Reductions).
+3.  **Visualization:** Interactive D3.js/React-Force-Graph for real-time subnet mapping.
 
 ---
 
-## 👥 Professional Team Resource Distribution
+## 👥 Team Structure & Sub-Teams
 
-Our team of 11 is divided into 4 specialized "Task Forces."
-
-### 🔷 Task Force 1: Backend & AI Core (Engine Room)
-*   **Lead:** **Reem Amin**
-*   **Members:** **Yousef Abdel Hady**, **Mohamed Shaban**
-*   **Responsibilities:**
-    *   API Security & Performance (FastAPI).
-    *   Asynchronous Pipeline Management (Celery/Redis).
-    *   AI Prompt Engineering & Advisory Logic (Gemini 1.5 Flash).
-    *   Database Schema Design & Migration (PostgreSQL).
-
-### 🔷 Task Force 2: Frontend & Data Visualization (The Hub)
-*   **Lead:** **Marize Ehap**
-*   **Members:** **Omnia Helmy**, **Mazin Alaa**
-*   **Responsibilities:**
-    *   Interactive SOC Dashboard (React).
-    *   Real-time Network Topology Mapping (D3.js).
-    *   Responsive Security Analytics & UI/UX (Tailwind).
-    *   Frontend Service Integration (API Consumption).
-
-### 🔷 Task Force 3: Security Research & Scanning Engine (The Armor)
-*   **Lead:** **Shahd Paher**
-*   **Members:** **Rahma Ebraheam**
-*   **Responsibilities:**
-    *   Tool Orchestration (Nmap, Nuclei, OpenVAS).
-    *   EDR Implementation & SIEM Dashboarding (Wazuh).
-    *   Security Templates/Rules Development.
-    *   Virtual Lab Vulnerability Design (Target Range).
-
-### 🔷 Task Force 4: DevOps, QA & Documentation (The Shield)
-*   **Lead:** **Omar Kapil** (Project Lead)
-*   **Members:** **Yosef Ali**, **Omar Tarek**
-*   **Responsibilities:**
-    *   Container Orchestration & CI/CD Pipelines.
-    *   Automated Testing (Pytest, Playwright).
-    *   Comprehensive Technical Documentation & Graduation Deliverables.
-    *   Strategic Coordination & Presentation Design.
+### 🔷 Sub-Team 1: Backend & AI Advisory
+**Sub-Leader: Reem Amin**
+| # | Member | Role |
+|---|--------|------|
+| 1 | **Reem Amin** (Sub-Leader) | FastAPI Endpoints, Schema Design, OpenVAS Integration |
+| 2 | **Yousef Abdel Hady** | **UnifiedRiskEngine.py** (CVSS Logic) & Advisor Prompting |
+| 3 | **Mohamed Shaban** | **AgentOrchestrator** (Deterministic Rule & Task Chaining) |
 
 ---
 
-## 📅 Graduation Roadmap (16-Week Timeline)
-
-### 🟡 Phase 1: Foundation & Technical Sprints (Weeks 1–4)
-*   **Focus:** Environment stability & cross-training.
-*   **Wk 1-2:** environment setup, architecture deep-dives, and documentation review.
-*   **Wk 3-4:** Sub-team technical demos (Learning proofs).
-*   **Deliverable:** Fully functional dev environment for all 11 members + Phase 1 Technical Docs.
-
-### 🟠 Phase 2: Core Sovereign Development (Weeks 5–9)
-*   **Focus:** Building the "found 404" proprietary logic.
-*   **Wk 5:** API stabilization and DB model solidification.
-*   **Wk 6-7:** `UnifiedRiskEngine` build and `AgentOrchestrator` tool-chaining.
-*   **Wk 8-9:** AI Advisory integration and Real-time Topology connection.
-*   **Deliverable:** End-to-end scan flow: Discovery → Scan → AI Advice → UI.
-
-### 🔴 Phase 3: System Integration & Hardening (Weeks 10–13)
-*   **Focus:** Reliability, Security, and Polish.
-*   **Wk 10-11:** Implementation of RBAC, PDF Reporting, and SOAR Playbooks (n8n).
-*   **Wk 12-13:** UAT (User Acceptance Testing) and security self-audit.
-*   **Deliverable:** Stable "Beta" platform with PDF reporting and access controls.
-
-### 🟢 Phase 4: Finalization & Graduation Defense (Weeks 14–16)
-*   **Focus:** Preparation for University Defense.
-*   **Wk 14:** Production of a 5-minute Master Demo Video.
-*   **Wk 15:** Dry-run presentations and final bug squashing.
-*   **Wk 16:** **🎓 MASTER GRADUATION DEFENSE.**
-*   **Deliverable:** Final Repo, Presentation Slides, Demo Video, and Documentation Package.
+### 🔷 Sub-Team 2: Frontend & High-Density Visualization
+**Sub-Leader: Marize Ehap**
+| # | Member | Role |
+|---|--------|------|
+| 4 | **Marize Ehap** (Sub-Leader) | React Component Architecture, State Management |
+| 5 | **Omnia Helmy** | **React-Force-Graph-2d** & Network Topology D3 Logic |
+| 6 | **Mazin Alaa** | Tailwind CSS Design, Asset Detail Slide-outs, UX Polish |
 
 ---
 
-## 📊 Performance Indicators (KPIs)
+### 🔷 Sub-Team 3: Security Ops & Scanning Engine
+**Sub-Leader: Shahd Paher**
+| # | Member | Role |
+|---|--------|------|
+| 7 | **Shahd Paher** (Sub-Leader) | Nmap Discovery scripts & Nuclei Template Orchestration |
+| 8 | **Rahma Ebraheam** | Wazuh EDR Integration & Elasticsearch/Kibana SIEM Tuning |
 
-*   **System Reliability:** 99.9% container uptime during the final demo.
-*   **Scan Coverage:** Support for Web, Network, and Infrastructure vulnerabilities.
-*   **AI Accuracy:** AI remediation advice must map correctly to the CVSS context of the vulnerability.
-*   **Speed:** Initial "Quick Scan" results must appear in < 60 seconds for a single IP.
+---
+
+### 🔷 Sub-Team 4: DevOps & Quality Assurance
+**Sub-Leader: Omar Kapil** *(Team Leader)*
+| # | Member | Role |
+|---|--------|------|
+| 9 | **Omar Kapil** (Sub-Leader) | Docker Orchestration, CI/CD, Infrastructure Hardening |
+| 10 | **Yosef Ali** | Testing (Pytest, Playwright), Integration Verification |
+| 11 | **Omar Tarek** | Documentation, Academic Defense Design, Presentation |
 
 ---
 
-## 📅 Weekly Project Cadence
-*   **Monday 10:00:** Weekly Strategy Kickoff (All).
-*   **Daily 09:00:** Sub-team Sync (Internal).
-*   **Wednesday 14:00:** Cross-Team Integration Review (Leads).
-*   **Friday 16:00:** Progress Review & Notion Update (All).
+## 📅 16-Week Implementation Roadmap
+
+### 🟡 PHASE 1 — Foundation & Tech Sprints (Weeks 1–4)
+*   **Wk 1-2:** Environment setup (Docker Compose), Repository cloning, and SDLC walkthrough.
+*   **Wk 3-4:** Sub-team technical deep-dives (FastAPI, React-Force-Graph, Nmap advanced).
+*   **Deliverable:** 11 healthy development environments + Integrated Dashboard Base.
+
+### 🟠 PHASE 2 — Deterministic Core Development (Weeks 5–9)
+*   **Wk 5-6:** Build the **Deterministic Workflow**. Mohamed (Back) & Shahd (Sec) map Nmap outputs to Nuclei inputs.
+*   **Wk 7-8:** Implement **UnifiedRiskEngine.py**. Yousef (AI) builds the CVSS reduction logic for the **SME Health Score**.
+*   **Wk 9:** Connect React-Force-Graph to real-time discovery events.
+*   **Deliverable:** First "Start Scan" button success — Discovery to Dashboard.
+
+### 🔴 PHASE 3 — Advisory AI & System Hardening (Weeks 10–13)
+*   **Wk 10-11:** Integrate Gemini 1.5 Flash. AI takes deterministic JSON scores and generates "Risk Explanation" and "SME Remediation Advice."
+*   **Wk 12:** Implement Wazuh log ingestion. Alerts show up on the Network Topology nodes.
+*   **Wk 13:** PDF Report generation with correct Health Score grading ($A$-$F$).
+*   **Deliverable:** Fully functional SIM/SOAR platform with automated advice.
+
+### 🟢 PHASE 4 — Academic Defense & Finalization (Weeks 14–16)
+*   **Wk 14:** **Efficiency Benchmark:** Measure time saved (Manual Scan vs Orchestrated) to prove SME business value.
+*   **Wk 15:** Demo video production & Mock Presentation (Final Polish).
+*   **Wk 16:** **🎓 MASTER GRADUATION DEFENSE.** 
+*   **Deliverable:** Professional GitHub repo, Presentation Slides, and 5-min Demo.
 
 ---
-*Generated by: Senior PM & Lead Architect Team*
+
+## 🏁 Weekly Rituals
+| Ritual | Day | Duration | Who |
+|--------|-----|----------|-----|
+| **Strategy Kickoff** | Monday | 30 min | Full Team |
+| **Code Review** | Wednesday | 1 hour | Sub-Leaders |
+| **Demo & Review** | Friday | 45 min | Full Team |
+
+---
+*Created by: Senior Cybersecurity PM & Solutions Architect*
 *Last Update: March 15, 2026*
