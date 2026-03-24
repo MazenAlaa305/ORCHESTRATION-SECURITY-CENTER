@@ -8,6 +8,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./test.db"
     
+    @property
+    def ASYNC_DATABASE_URL(self) -> str:
+        url = self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("sqlite://"):
+            return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+        return url
+    
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"
     

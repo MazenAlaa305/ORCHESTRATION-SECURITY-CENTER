@@ -22,3 +22,6 @@ aiohttp==3.9.1
 beautifulsoup4==4.12.2
 lxml==5.1.0
 python-gvm==24.1.0
+asyncpg==0.31.0
+aiosqlite==0.19.0
+greenlet==3.0.3

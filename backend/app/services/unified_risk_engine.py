@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.models.scan import Scan, Vulnerability, ScanStatus, SeverityLevel, VulnStatus, ActionItem, ScanAsset, AssetService, NetworkAsset
 
 logger = logging.getLogger(__name__)
@@ -38,8 +40,8 @@ class UnifiedRiskEngine:
         "LOW": 0.8
     }
 
-    def __init__(self, db: Session):
-        self.db: Session = db
+    def __init__(self, db: AsyncSession):
+        self.db: AsyncSession = db
         # Ensure HIGH_RISK_PORTS is available as explicit float for linter
         self.port_weights: dict = self.__class__.HIGH_RISK_PORTS
 
@@ -50,8 +52,6 @@ class UnifiedRiskEngine:
         1. Start with aggregate penalties from all vulnerabilities.
         2. Apply asset-specific multipliers.
         3. Normalize to 0-100 scale where 100 is "Maximum Risk".
-        Note: The project previously used 100 as "Perfectly Secure". 
-        We will stick to 0-100 where higher is MORE RISK to align with CVSS/SME expectations.
         """
         if not scan.vulnerabilities and not scan.assets:
             return 0.0
@@ -63,10 +63,7 @@ class UnifiedRiskEngine:
             penalty = self.SEVERITY_WEIGHTS.get(vuln.severity, 0)
             # Confidence multiplier (if tool provided)
             confidence = vuln.confidence_score if vuln.confidence_score is not None else 1.0
-            from typing import cast
-            p_val = float(cast(float, penalty))
-            c_val = float(cast(float, confidence))
-            total_penalty = float(cast(float, total_penalty)) + (p_val * c_val)
+            total_penalty += float(penalty) * float(confidence)
 
         # 2. Port Penalties (from ScanAssets)
         for asset in scan.assets:
@@ -76,9 +73,7 @@ class UnifiedRiskEngine:
                     port_data = ports_map[service.port]
                     if isinstance(port_data, tuple) and len(port_data) >= 2:
                         _, penalty = port_data
-                        from typing import cast
-                        p_val = float(cast(float, penalty))
-                        total_penalty = float(float(total_penalty) + p_val)
+                        total_penalty += float(penalty)
 
         # 3. Asset Criticality Multiplier
         target_val = "MEDIUM"
@@ -96,53 +91,55 @@ class UnifiedRiskEngine:
         if any(target_ip.startswith(prefix) for prefix in ['10.', '192.168.', '172.16.', '172.17.', '172.18.', '172.19.', '172.2', '172.30.', '172.31.', '127.', 'localhost']):
             exposure_multiplier = 0.6  # Internal/NAT asset
             
-        a_mult = float(asset_multiplier)
-        e_mult = float(exposure_multiplier)
-        temp_score = float(float(total_penalty) * a_mult)
-        final_score = float(temp_score * e_mult)
+        final_score = total_penalty * asset_multiplier * exposure_multiplier
 
         # Normalize/Cap
-        res_val = float(final_score)
-        return float(min(100.0, res_val))
+        return min(100.0, final_score)
 
     def calculate_health_score(self, scan: Scan) -> float:
         """
         Legacy-inspired Health Score (100 = Safe, 0 = Dangerous).
         Provides a better "At-a-glance" metric for SME owners.
         """
-        score = 100.0
+        score_val = 100.0
         
         # 1. Vulnerability Penalty
-        score_val = 100.0
         for vuln in scan.vulnerabilities:
-            s_val = float(score_val)
             if vuln.severity == SeverityLevel.CRITICAL:
-                score_val = float(s_val - 20.0)
+                score_val -= 20.0
             elif vuln.severity == SeverityLevel.HIGH:
-                score_val = float(s_val - 10.0)
+                score_val -= 10.0
             elif vuln.severity == SeverityLevel.MEDIUM:
-                score_val = float(s_val - 5.0)
+                score_val -= 5.0
         
         # 2. Port Penalty
         for asset in scan.assets:
             for service in asset.services:
                 if service.state == 'open' and service.port in [21, 23, 445, 3389]:
-                    s_val = float(score_val)
-                    score_val = float(s_val - 15.0)
+                    score_val -= 15.0
 
         # 3. Cap
-        safe_score: float = float(score_val)
-        if scan.vulnerabilities and safe_score > 90.0:
-            safe_score = 90.0
+        if scan.vulnerabilities and score_val > 90.0:
+            score_val = 90.0
 
-        return float(max(0.0, safe_score))
+        return max(0.0, score_val)
 
-    def update_scan_risk(self, scan_id: str) -> float:
+    async def update_scan_risk(self, scan_id: str) -> float:
         """Calculates and saves both Risk and Health scores."""
-        scan = self.db.query(Scan).filter(Scan.id == scan_id).first()
+        _s_res = await self.db.execute(
+            select(Scan)
+            .options(
+                selectinload(Scan.vulnerabilities), 
+                selectinload(Scan.assets).selectinload(ScanAsset.services),
+                selectinload(Scan.target)
+            )
+            .filter(Scan.id == scan_id)
+        )
+        scan = _s_res.scalars().first()
+        
         if scan:
-            risk_score: float = float(self.calculate_scan_risk(scan))
-            health_score: float = float(self.calculate_health_score(scan))
+            risk_score = self.calculate_scan_risk(scan)
+            health_score = self.calculate_health_score(scan)
             
             # We store the deterministic risk_score in the main field for now
             scan.risk_score = risk_score
@@ -154,17 +151,26 @@ class UnifiedRiskEngine:
             thoughts["health_score"] = health_score
             scan.agent_thoughts = thoughts
             
-            self.db.commit()
+            await self.db.commit()
             logger.info(f"Updated scores for scan {scan_id}: Risk={risk_score}, Health={health_score}")
             return risk_score
         return 0.0
 
-    def generate_action_items(self, scan_id: str):
+    async def generate_action_items(self, scan_id: str):
         """
         Deterministic task generation.
         Translates raw findings into ActionItem records.
         """
-        scan = self.db.query(Scan).filter(Scan.id == scan_id).first()
+        _s_res = await self.db.execute(
+            select(Scan)
+            .options(
+                selectinload(Scan.vulnerabilities),
+                selectinload(Scan.assets).selectinload(ScanAsset.services)
+            )
+            .filter(Scan.id == scan_id)
+        )
+        scan = _s_res.scalars().first()
+        
         if not scan:
             return []
 
@@ -174,20 +180,23 @@ class UnifiedRiskEngine:
         for vuln in scan.vulnerabilities:
             if vuln.severity in [SeverityLevel.CRITICAL, SeverityLevel.HIGH]:
                 title = vuln.title or f"Fix {vuln.type or 'Vulnerability'}"
-                description = vuln.description or f"Critical security issue detected on {vuln.host or 'target'}."
+                description = vuln.description or f"Critical security issue detected on {vuln.url or 'target'}."
                 
                 # Deduplicate
-                existing = self.db.query(ActionItem).filter(
-                    ActionItem.scan_id == scan_id,
-                    ActionItem.title == title
-                ).first()
+                _e_res = await self.db.execute(
+                    select(ActionItem).filter(
+                        ActionItem.scan_id == scan_id,
+                        ActionItem.title == title
+                    )
+                )
+                existing = _e_res.scalars().first()
                 
                 if not existing:
                     action = ActionItem(
                         scan_id=scan_id,
                         title=title,
                         description=description,
-                        priority=vuln.severity.value.upper(),  # BUG FIX: use .value to get str from Enum
+                        priority=vuln.severity.value.upper(),
                         status="OPEN",
                         type="REMEDIATION",
                         created_at=datetime.utcnow()
@@ -206,10 +215,13 @@ class UnifiedRiskEngine:
                         title = f"Secure {name} service on {asset.ip_address}"
                         description = f"The {name} service (Port {service.port}) is exposed. SMEs should restrict this or use a VPN."
                     
-                    existing = self.db.query(ActionItem).filter(
-                        ActionItem.scan_id == scan_id,
-                        ActionItem.title == title
-                    ).first()
+                    _e_res = await self.db.execute(
+                        select(ActionItem).filter(
+                            ActionItem.scan_id == scan_id,
+                            ActionItem.title == title
+                        )
+                    )
+                    existing = _e_res.scalars().first()
                     
                     if not existing:
                         action = ActionItem(
@@ -224,5 +236,5 @@ class UnifiedRiskEngine:
                         self.db.add(action)
                         new_actions.append(action)
 
-        self.db.commit()
+        await self.db.commit()
         return new_actions

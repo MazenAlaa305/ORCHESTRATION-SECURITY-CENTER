@@ -1,322 +1,335 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { ZoomIn, ZoomOut, RefreshCw, Move } from 'lucide-react';
+import AssetDetailPanel from './AssetDetailPanel';
+import TopologyLegend from './TopologyLegend';
 import { networkService } from '../../services/api';
 
-import { Loader, Move, ZoomIn, ZoomOut, RefreshCw, Smartphone, Server, Monitor, Radio, Shield } from 'lucide-react';
-import AssetDetailPanel from './AssetDetailPanel';
+// ─── Color resolver ───────────────────────────────────────
+const getNodeColor = (node) => {
+    if (node.id === 'hub')         return '#00ffff';
+    if (node.riskScore >= 75)      return '#ff0055';
+    if (node.riskScore >= 50)      return '#ffaa00';
+    if (node.riskScore >= 20)      return '#ffaa00';
+    if ((node.vulnCount || 0) > 0) return '#ffaa00';
+    return '#00ff88';
+};
 
+// ─── Device icon glyphs ───────────────────────────────────
+const ICON_MAP = {
+    gateway:  '⊕',
+    server:   '▦',
+    firewall: '⬡',
+    desktop:  '▣',
+    mobile:   '◈',
+    router:   '⊞',
+    database: '◉',
+};
+
+// ─── Rounded rectangle path helper ───────────────────────
+function roundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x - w + r, y - h);
+    ctx.arcTo(x + w, y - h, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x - w, y + h, r);
+    ctx.arcTo(x - w, y + h, x - w, y - h, r);
+    ctx.arcTo(x - w, y - h, x + w, y - h, r);
+    ctx.closePath();
+}
+
+// ─── Component ────────────────────────────────────────────
 const NetworkTopology = ({ refresh }) => {
-    const [graphData, setGraphData] = useState({ nodes: [], links: [] });
-    const [loading, setLoading] = useState(true);
+    const [graphData, setGraphData]     = useState({ nodes: [], links: [] });
+    const [loading, setLoading]         = useState(true);
     const [selectedNode, setSelectedNode] = useState(null);
     const fgRef = useRef();
 
-    useEffect(() => {
-        fetchData();
-    }, [refresh]);
+    useEffect(() => { fetchData(); }, [refresh]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const { data: assets } = await networkService.getAssets();
             transformDataToGraph(assets);
-        } catch (error) {
-            console.error("Failed to fetch topology", error);
+        } catch (err) {
+            console.error('Topology fetch failed', err);
         } finally {
             setLoading(false);
         }
     };
 
     const transformDataToGraph = (assets) => {
-        setGraphData(prevData => {
-            const oldNodes = new Map((prevData.nodes || []).map(n => [n.id, n]));
-            const nodes = [];
-            const links = [];
+        setGraphData(prev => {
+            const oldNodes = new Map((prev.nodes || []).map(n => [n.id, n]));
+            const nodes  = [];
+            const links  = [];
 
             const createNode = (data) => {
                 const old = oldNodes.get(data.id);
-                // Inherit D3 physics coordinates if the node already exists
-                if (old) {
-                    return { ...old, ...data, x: old.x, y: old.y, vx: old.vx, vy: old.vy, fx: old.fx, fy: old.fy };
-                }
-                return data;
+                return old
+                    ? { ...old, ...data, x: old.x, y: old.y, vx: old.vx, vy: old.vy, fx: old.fx, fy: old.fy }
+                    : data;
             };
 
-            // Add Central Hub (The Scanner/Gateway)
-            nodes.push(createNode({
-                id: 'hub',
-                name: 'found 404 Hub',
-                group: 'gateway',
-                val: 20,
-                riskScore: 0
-            }));
+            // Central hub
+            nodes.push(createNode({ id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0 }));
 
             if (Array.isArray(assets)) {
                 assets.forEach(asset => {
-                    const estimatedVulns = Math.floor((asset.risk_score || 0) / 10);
-
+                    const vulns = Math.floor((asset.risk_score || 0) / 10);
                     nodes.push(createNode({
-                        id: asset.id || asset.ip_address,
-                        name: asset.hostname || asset.ip_address,
-                        ip: asset.ip_address,
-                        group: determineGroup(asset),
-                        vulnCount: estimatedVulns,
-                        status: (asset.risk_score > 50) ? 'critical' : 'secure',
-                        val: 10 + ((asset.risk_score || 0) / 5),
-                        riskScore: asset.risk_score || 0,
-                        criticality: asset.criticality || 'MEDIUM',
-                        details: asset
+                        id:         asset.id || asset.ip_address,
+                        name:       asset.hostname || asset.ip_address,
+                        ip:         asset.ip_address,
+                        group:      determineGroup(asset),
+                        vulnCount:  vulns,
+                        val:        10 + ((asset.risk_score || 0) / 5),
+                        riskScore:  asset.risk_score || 0,
+                        criticality:asset.criticality || 'MEDIUM',
+                        details:    asset,
                     }));
-
-                    // Link to Hub
-                    links.push({
-                        source: 'hub',
-                        target: asset.id || asset.ip_address,
-                        value: 2
-                    });
+                    links.push({ source: 'hub', target: asset.id || asset.ip_address, value: 2 });
                 });
             }
-
             return { nodes, links };
         });
     };
 
     const determineGroup = (asset) => {
         const type = (asset.device_type || '').toLowerCase();
-        const os = (asset.os_family || '').toLowerCase();
-
-        // Primary: Device Type
-        if (type.includes('server')) return 'server';
+        const os   = (asset.os_family   || '').toLowerCase();
+        if (type.includes('server'))  return 'server';
         if (type.includes('router') || type.includes('gateway') || type.includes('wap')) return 'router';
-        if (type.includes('phone') || type.includes('mobile')) return 'mobile';
-
-        // Fallback: OS Family
-        if (os.includes('server') || os.includes('linux')) return 'server';
-        if (os.includes('ios') || os.includes('android')) return 'mobile';
-        if (os.includes('cisco') || os.includes('bsd')) return 'router';
-
+        if (type.includes('phone')  || type.includes('mobile')) return 'mobile';
+        if (os.includes('server')   || os.includes('linux'))  return 'server';
+        if (os.includes('ios')      || os.includes('android'))return 'mobile';
+        if (os.includes('cisco')    || os.includes('bsd'))    return 'router';
         return 'desktop';
     };
 
-    const getNodeColor = (node) => {
-        if (node.id === 'hub') return '#38bdf8'; // cyber-accent
-        if (node.riskScore >= 80) return '#ef4444'; // CRITICAL - Red
-        if (node.riskScore >= 50) return '#f97316'; // HIGH - Orange
-        if (node.riskScore >= 20) return '#eab308'; // MEDIUM - Yellow
-        if (node.vulnCount > 0) return '#fbbf24'; // LOW - Amber (fallback)
-        return '#10b981'; // cyber-success
-    };
-
-    const handleNodeClick = useCallback(node => {
+    const handleNodeClick = useCallback((node) => {
         setSelectedNode(node);
-        const distance = 40;
-        const distRatio = 1 + distance / Math.hypot(node.x, node.y);
+        if (fgRef.current) {
+            const dist = 50;
+            const ratio = 1 + dist / Math.hypot(node.x || 1, node.y || 1);
+            fgRef.current.centerAt(node.x * ratio, node.y * ratio, 1000);
+            fgRef.current.zoom(3.5, 1200);
+        }
+    }, []);
 
-        fgRef.current.centerAt(
-            node.x * distRatio,
-            node.y * distRatio,
-            1200 // Smoother transition
-        );
-        fgRef.current.zoom(3.5, 2000);
-    }, [fgRef]);
+    // ─── Canvas node renderer ─────────────────────────────
+    const drawNode = useCallback((node, ctx, globalScale) => {
+        if (node.x === undefined || node.y === undefined) return;
+
+        const color  = getNodeColor(node);
+        const size   = (node.val || 10) * 0.85;
+        const half   = size;
+        const r      = size * 0.3;
+        const isHub  = node.id === 'hub';
+        const isRisk = node.riskScore > 50;
+        const isCrit = node.riskScore > 75;
+        const t      = Date.now() / 800;
+
+        // 1. Outer glow
+        ctx.shadowColor = color;
+        ctx.shadowBlur  = isCrit ? 28 : isRisk ? 18 : (isHub ? 16 : 10);
+
+        // 2. Hub: concentric rings design; others: rounded rect
+        if (isHub) {
+            // Outer ring
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, half * 1.35, 0, 2 * Math.PI);
+            ctx.strokeStyle = `${color}30`;
+            ctx.lineWidth   = 2 / globalScale;
+            ctx.stroke();
+
+            // Main rounded rect
+            roundedRect(ctx, node.x, node.y, half, half, r);
+            const bg = ctx.createLinearGradient(node.x - half, node.y - half, node.x + half, node.y + half);
+            bg.addColorStop(0, 'rgba(0,30,38,0.95)');
+            bg.addColorStop(1, 'rgba(0,18,24,0.98)');
+            ctx.fillStyle   = bg;
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth   = 2.5 / globalScale;
+            ctx.stroke();
+
+            // Inner pulsing circle
+            const pulse = (Math.sin(t * 1.8) + 1) / 2;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, half * 0.45, 0, 2 * Math.PI);
+            ctx.strokeStyle = `${color}${Math.floor((0.4 + pulse * 0.4) * 255).toString(16).padStart(2,'0')}`;
+            ctx.lineWidth   = 2 / globalScale;
+            ctx.stroke();
+
+            // Inner dot
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, half * 0.22, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+        } else {
+            // -- Pulsing danger ring (high/critical)
+            if (isRisk) {
+                const pulse = (Math.sin(t) + 1) / 2;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, half * (1.25 + pulse * 0.35), 0, 2 * Math.PI);
+                const alpha = isCrit ? (0.2 + pulse * 0.3) : (0.1 + pulse * 0.18);
+                ctx.strokeStyle = `${color}${Math.floor(alpha * 255).toString(16).padStart(2,'0')}`;
+                ctx.lineWidth   = (isCrit ? 2 : 1.5) / globalScale;
+                ctx.stroke();
+            }
+
+            // Rounded square shape
+            roundedRect(ctx, node.x, node.y, half, half, r);
+            const bg = ctx.createLinearGradient(node.x - half, node.y - half, node.x + half, node.y + half);
+            bg.addColorStop(0, 'rgba(15,25,34,0.92)');
+            bg.addColorStop(1, 'rgba(8,14,20,0.97)');
+            ctx.fillStyle   = bg;
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth   = (isCrit ? 2.5 : isRisk ? 2 : 1.8) / globalScale;
+            ctx.stroke();
+
+            // Inner shine line (top)
+            const innerR = r * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(node.x - half + innerR, node.y - half + 1/globalScale);
+            ctx.lineTo(node.x + half - innerR, node.y - half + 1/globalScale);
+            ctx.strokeStyle = `${color}22`;
+            ctx.lineWidth   = 1 / globalScale;
+            ctx.stroke();
+
+            // Icon
+            const icon = ICON_MAP[node.group] || ICON_MAP.desktop;
+            ctx.font          = `bold ${size * 0.78}px JetBrains Mono`;
+            ctx.fillStyle     = color;
+            ctx.globalAlpha   = isRisk ? 1 : 0.85;
+            ctx.textAlign     = 'center';
+            ctx.textBaseline  = 'middle';
+            ctx.fillText(icon, node.x, node.y);
+            ctx.globalAlpha   = 1;
+        }
+
+        ctx.shadowBlur = 0;
+
+        // 3. Label
+        if (globalScale > 1.4 || selectedNode?.id === node.id) {
+            const label    = node.name || '';
+            const fontSize = 9 / globalScale;
+            ctx.font          = `600 ${fontSize}px Outfit, sans-serif`;
+            ctx.textAlign     = 'center';
+            ctx.textBaseline  = 'top';
+
+            const textW    = ctx.measureText(label).width + 10;
+            const labelY   = node.y + half + 10 / globalScale;
+
+            // Label background pill
+            ctx.fillStyle   = 'rgba(2,9,15,0.8)';
+            ctx.strokeStyle = `${color}55`;
+            ctx.lineWidth   = 0.8 / globalScale;
+            ctx.beginPath();
+            ctx.roundRect(node.x - textW / 2, labelY - 2 / globalScale, textW, fontSize + 4 / globalScale, 4 / globalScale);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.78)';
+            ctx.fillText(label, node.x, labelY);
+        }
+    }, [selectedNode]);
 
     if (loading) return (
-        <div className="flex flex-col justify-center items-center h-[600px] glass-card border-dashed">
-            <Loader className="h-10 w-10 text-cyber-neon animate-spin mb-4" />
-            <span className="text-[10px] font-black text-cyber-neon/60 animate-pulse tracking-[0.3em] uppercase">Mapping Neural Network...</span>
+        <div className="flex flex-col justify-center items-center h-full min-h-[450px] glass-card border-dashed">
+            <div className="w-10 h-10 border-2 border-transparent border-t-cyan-400 rounded-full animate-spin mb-4" />
+            <span className="text-[10px] font-black text-cyan-400/60 animate-pulse tracking-[0.3em] uppercase">
+                Mapping Neural Network...
+            </span>
         </div>
     );
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in relative z-10 w-full h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in w-full h-full">
+
             {/* Graph Container */}
-            <div className="lg:col-span-2 glass-card border-white/5 overflow-hidden relative w-full h-full min-h-[400px]">
-                <div className="absolute top-6 left-6 z-20">
-                    <div className="px-4 py-3 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 shadow-glass">
-                        <div className="flex flex-col gap-2.5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-cyber-accent shadow-[0_0_8px_rgba(56,189,248,0.8)]"></div>
-                                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Gateway Hub</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-cyber-success shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-                                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Operational</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-cyber-danger shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
-                                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Infected</span>
-                            </div>
-                        </div>
+            <div className="lg:col-span-2 relative overflow-hidden glass-card p-0" style={{ minHeight: 420 }}>
+                {/* Title Bar */}
+                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-2.5"
+                     style={{ borderBottom: '1px solid rgba(0,255,255,0.06)', background:'rgba(2,9,15,0.6)', backdropFilter:'blur(10px)' }}>
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" style={{ boxShadow:'0 0 6px #00ffff' }} />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.25em]">Live Network Topology</span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={() => fgRef.current?.zoomToFit(400)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
+                            title="Zoom to Fit">
+                            <ZoomOut className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={fetchData}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
+                            title="Refresh">
+                            <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
                     </div>
                 </div>
 
-                <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
-                    <button
-                        onClick={() => fgRef.current.zoomToFit(400)}
-                        className="p-3 bg-black/60 backdrop-blur-md hover:bg-white/10 text-white rounded-xl border border-white/10 transition-all hover:shadow-neon"
-                        title="Zoom to Fit"
-                    >
-                        <ZoomOut className="h-4 w-4 text-cyber-neon" />
-                    </button>
-                    <button
-                        onClick={fetchData}
-                        className="p-3 bg-black/60 backdrop-blur-md hover:bg-white/10 text-white rounded-xl border border-white/10 transition-all hover:shadow-neon"
-                        title="Refresh Stream"
-                    >
-                        <RefreshCw className="h-4 w-4 text-cyber-neon" />
-                    </button>
+                {/* Floating Legend */}
+                <div className="absolute top-12 left-4 z-20">
+                    <TopologyLegend />
                 </div>
 
-                <ForceGraph2D
-                    ref={fgRef}
-                    graphData={graphData}
-                    nodeLabel={(node) => {
-                        const aiAdvice = node.details?.ai_insight?.risk_explanation || "Analyzing risks...";
-                        const health = node.details?.agent_thoughts?.health_score || (100 - node.riskScore);
+                {/* Scan-line overlay */}
+                <div className="scanline-overlay" style={{ top: 44 }} />
 
-                        return `
-                        <div class="p-3 bg-black/90 border border-white/10 rounded-xl backdrop-blur-xl shadow-2xl min-w-[200px]">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-[10px] font-black text-cyber-neon uppercase tracking-tighter">${node.name}</span>
-                                <span class="text-[9px] font-mono text-gray-500">${node.ip || 'INTERNAL'}</span>
+                {/* Graph */}
+                <div className="w-full h-full" style={{ marginTop: 44 }}>
+                    <ForceGraph2D
+                        ref={fgRef}
+                        graphData={graphData}
+                        backgroundColor="#01050a"
+                        nodeCanvasObject={drawNode}
+                        nodeCanvasObjectMode={() => 'replace'}
+                        nodeLabel={(node) => `
+                            <div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.2);border-radius:10px;font-family:Outfit,sans-serif;min-width:180px">
+                                <div style="font-size:11px;font-weight:800;color:#00ffff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">${node.name}</div>
+                                <div style="font-size:10px;color:rgba(255,255,255,0.5);font-family:'JetBrains Mono',monospace">${node.ip || 'INTERNAL'}</div>
+                                <div style="margin-top:8px;font-size:10px;color:${getNodeColor(node)}">Risk: ${node.riskScore || 0}%</div>
                             </div>
-                            
-                            <div class="space-y-2">
-                                <div class="p-2 bg-white/5 rounded-lg border border-white/5">
-                                    <div class="text-[8px] text-gray-400 uppercase font-black mb-1">Health Score</div>
-                                    <div class="text-xs font-bold ${health > 70 ? 'text-cyber-success' : health > 40 ? 'text-cyber-warning' : 'text-cyber-danger'}">${health}%</div>
-                                </div>
-                                
-                                <div class="p-2 bg-cyber-neon/5 rounded-lg border border-cyber-neon/10">
-                                    <div class="text-[8px] text-cyber-neon uppercase font-black mb-1">Expert Advice</div>
-                                    <div class="text-[10px] text-gray-200 leading-tight italic">"${aiAdvice}"</div>
-                                </div>
-                            </div>
-                        </div>
-                    `}}
-                    nodeColor={getNodeColor}
-                    nodeRelSize={7}
-                    linkColor={() => 'rgba(56, 189, 248, 0.1)'}
-                    linkWidth={1}
-                    linkDirectionalParticles={2}
-                    linkDirectionalParticleSpeed={0.005}
-                    backgroundColor="#020617"
-                    onNodeClick={handleNodeClick}
-                    d3VelocityDecay={0.3}
-                    nodeCanvasObject={(node, ctx, globalScale) => {
-                        // SAFETY CHECK: Don't render if positions aren't set yet (prevents blank screen crash)
-                        if (node.x === undefined || node.y === undefined) return;
-
-                        const label = node.name;
-                        const fontSize = 10 / globalScale;
-                        const nodeColor = getNodeColor(node);
-                        const size = node.val * 0.8;
-
-                        // 1. Draw Outer Hexagonal Frame
-                        ctx.beginPath();
-                        for (let i = 0; i < 6; i++) {
-                            const angle = (i * Math.PI) / 3;
-                            const x = node.x + (size * 1.2) * Math.cos(angle);
-                            const y = node.y + (size * 1.2) * Math.sin(angle);
-                            if (i === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        ctx.closePath();
-                        ctx.strokeStyle = `${nodeColor}44`;
-                        ctx.lineWidth = 2 / globalScale;
-                        ctx.stroke();
-
-                        // 2. Animated Scanning Ring (Simulated with time)
-                        const t = Date.now() / 1000;
-                        if (node.riskScore > 50) {
-                            // Layered aggressive pulse for High/Critical Risk
-                            const pulseSpeed = 4;
-                            const pulsate1 = (Math.sin(t * pulseSpeed) + 1) / 2;
-                            const pulsate2 = (Math.sin(t * pulseSpeed - 1) + 1) / 2;
-                            
-                            // Outer ring
-                            ctx.beginPath();
-                            ctx.arc(node.x, node.y, size * (1.2 + pulsate1 * 0.4), 0, 2 * Math.PI);
-                            ctx.fillStyle = `${nodeColor}${Math.floor((1-pulsate1)*50).toString(16).padStart(2,'0')}`;
-                            ctx.fill();
-
-                            // Inner ring
-                            ctx.beginPath();
-                            ctx.arc(node.x, node.y, size * (1.1 + pulsate2 * 0.2), 0, 2 * Math.PI);
-                            ctx.fillStyle = `${nodeColor}${Math.floor((1-pulsate2)*80).toString(16).padStart(2,'0')}`;
-                            ctx.fill();
-                        } else {
-                            // Standard gentle ping
-                            const pulsate = Math.sin(t * 2) * 0.2 + 1;
-                            ctx.beginPath();
-                            ctx.arc(node.x, node.y, size * (1.1 + pulsate * 0.1), 0, 2 * Math.PI);
-                            ctx.strokeStyle = `${nodeColor}22`;
-                            ctx.stroke();
-                        }
-
-                        // 3. Node Core (Gradient)
-                        const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size);
-                        gradient.addColorStop(0, nodeColor);
-                        gradient.addColorStop(1, `${nodeColor}66`);
-
-                        ctx.fillStyle = gradient;
-                        ctx.shadowColor = nodeColor;
-                        ctx.shadowBlur = 10 / globalScale;
-                        ctx.beginPath();
-                        ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
-                        ctx.fill();
-                        ctx.shadowBlur = 0;
-
-                        // 4. Inner Detail (Small crosshair or symbol)
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                        ctx.lineWidth = 1 / globalScale;
-                        ctx.beginPath();
-                        ctx.moveTo(node.x - size / 3, node.y); ctx.lineTo(node.x + size / 3, node.y);
-                        ctx.moveTo(node.x, node.y - size / 3); ctx.lineTo(node.x, node.y + size / 3);
-                        ctx.stroke();
-
-                        // 5. Label Rendering
-                        if (globalScale > 2 || selectedNode?.id === node.id) {
-                            ctx.font = `bold ${fontSize}px "Outfit", sans-serif`;
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-
-                            const textY = node.y + size + (fontSize * 1.5);
-
-                            // Futuristic Label Background
-                            const textWidth = ctx.measureText(label).width;
-                            ctx.fillStyle = 'rgba(2, 6, 23, 0.8)';
-                            ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
-                            ctx.beginPath();
-                            ctx.roundRect(node.x - textWidth / 2 - 6, textY - fontSize, textWidth + 12, fontSize * 2, 4);
-                            ctx.fill();
-                            ctx.stroke();
-
-                            ctx.fillStyle = '#fff';
-                            ctx.fillText(label, node.x, textY);
-                        }
-                    }}
-                />
+                        `}
+                        linkColor={() => 'rgba(0,255,255,0.18)'}
+                        linkWidth={1.2}
+                        linkDirectionalParticles={3}
+                        linkDirectionalParticleWidth={2}
+                        linkDirectionalParticleColor={(link) => {
+                            const r = link.target?.riskScore || 0;
+                            return r > 75 ? '#ff0055' : r > 50 ? '#ffaa00' : '#00ffff';
+                        }}
+                        linkDirectionalParticleSpeed={0.005}
+                        d3AlphaDecay={0.018}
+                        d3VelocityDecay={0.32}
+                        cooldownTicks={150}
+                        onNodeClick={handleNodeClick}
+                    />
+                </div>
             </div>
 
             {/* Details Panel */}
-            <div className={`transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100 translate-x-0' : 'hidden lg:block lg:col-span-1 lg:opacity-20 translate-x-4 pointer-events-none'}`}>
+            <div className={`transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
                 {selectedNode && selectedNode.id !== 'hub' ? (
                     <AssetDetailPanel
                         node={selectedNode}
-                        onClose={() => {
-                            setSelectedNode(null);
-                            fgRef.current.zoomToFit(600);
-                        }}
+                        onClose={() => { setSelectedNode(null); fgRef.current?.zoomToFit(600); }}
                     />
                 ) : (
-                    <div className="h-full glass-card border-dashed border-white/5 flex flex-col justify-center items-center text-center p-10 group/empty">
-                        <div className="p-6 bg-white/5 rounded-full mb-6 group-hover/empty:scale-110 transition-transform duration-500">
-                            <Move className="h-10 w-10 text-cyber-neon/40 group-hover/empty:text-cyber-neon transition-colors" />
+                    <div className="h-full glass-card flex flex-col justify-center items-center text-center p-8 border-dashed group">
+                        <div className="p-5 rounded-full mb-6 group-hover:scale-110 transition-transform duration-500"
+                             style={{ background:'rgba(0,255,255,0.05)', border:'1px solid rgba(0,255,255,0.08)' }}>
+                            <Move className="h-8 w-8" style={{ color:'rgba(0,255,255,0.3)' }} />
                         </div>
-                        <h3 className="text-white font-black text-xl mb-4 tracking-tighter uppercase">Infrastructure Insight</h3>
-                        <p className="text-gray-500 text-sm leading-relaxed max-w-xs font-medium">
-                            Synthesizing network topology... Click any <span className="text-cyber-neon">Node</span> to initiate high-resolution deep packet inspection.
+                        <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">
+                            Infrastructure Insight
+                        </h3>
+                        <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
+                            Click any <span style={{ color:'#00ffff' }}>node</span> on the topology map to view deep packet inspection and AI-generated risk analysis.
                         </p>
                     </div>
                 )}

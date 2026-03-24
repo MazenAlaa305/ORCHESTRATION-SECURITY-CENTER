@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Bug, Monitor, Zap, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ShieldCheck, Bug, Monitor, Zap } from 'lucide-react';
 
-const SEVERITY_COLORS = {
-    CRITICAL: 'bg-red-500',
-    HIGH: 'bg-orange-500',
-    MEDIUM: 'bg-yellow-500',
-    LOW: 'bg-blue-400',
+const SEV_COLORS = {
+    CRITICAL: '#ff0055',
+    HIGH:     '#ff6a00',
+    MEDIUM:   '#ffaa00',
+    LOW:      '#00ffff',
 };
 
 function useCountUp(target, duration = 1200) {
@@ -24,147 +24,124 @@ function useCountUp(target, duration = 1200) {
     return value;
 }
 
+const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse }) => {
+    const animValue = useCountUp(typeof value === 'number' ? value : 0);
+
+    return (
+        <div
+            className="relative overflow-hidden rounded-xl p-5 flex flex-col gap-3 transition-all duration-300 group"
+            style={{
+                background:  `linear-gradient(135deg, rgba(15,25,34,0.7), rgba(10,17,24,0.85))`,
+                border:      `1px solid ${color}28`,
+                boxShadow:   `0 0 24px ${color}12, inset 0 1px 0 rgba(255,255,255,0.04)`,
+            }}
+        >
+            {/* Hover glow */}
+            <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{ background: `radial-gradient(circle at 50% 0, ${color}10, transparent 70%)` }}
+            />
+
+            {/* Header */}
+            <div className="relative z-10 flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-500">{title}</span>
+                <span style={{ color, opacity: 0.55 }}>{icon}</span>
+            </div>
+
+            {/* Value */}
+            <div className="relative z-10 flex items-end gap-2">
+                <span
+                    className={`text-4xl font-black leading-none ${pulse ? 'animate-pulse' : ''}`}
+                    style={{ color: typeof value === 'string' ? color : 'white' }}
+                >
+                    {typeof value === 'string' ? value : animValue}
+                </span>
+                {sub && <span className="text-[9px] text-gray-600 font-mono uppercase mb-0.5">{sub}</span>}
+            </div>
+
+            {/* Bar */}
+            {bar !== undefined && (
+                <div className="relative z-10 h-1 w-full rounded-full overflow-hidden" style={{ background:'rgba(255,255,255,0.06)' }}>
+                    {barSegments ? (
+                        <div className="flex h-full">
+                            {barSegments.map(({ pct, c }, i) =>
+                                pct > 0 ? (
+                                    <div key={i} className="h-full transition-all duration-700" style={{ width:`${pct}%`, background: c }} />
+                                ) : null
+                            )}
+                        </div>
+                    ) : (
+                        <div className="h-full rounded-full transition-all duration-1000"
+                             style={{ width:`${bar}%`, background:`linear-gradient(90deg, ${color}60, ${color})` }} />
+                    )}
+                </div>
+            )}
+
+            {/* Bottom accent */}
+            <div className="absolute bottom-0 left-0 right-0 h-px"
+                 style={{ background:`linear-gradient(90deg, transparent, ${color}50, transparent)` }} />
+        </div>
+    );
+};
+
 const StatCards = ({ latestScan, isScanning }) => {
-    const riskScore = latestScan?.risk_score ?? 0;
-    const healthScore = latestScan?.health_score ?? (latestScan ? 100 - riskScore : null);
-    const vulnCount = latestScan?.vulnerabilities?.length ?? latestScan?.vulnerabilities_count ?? 0;
-    const assetCount = latestScan?.assets?.length ?? latestScan?.assets_count ?? 0;
+    const riskScore   = latestScan?.risk_score ?? 0;
+    const healthScore = Math.round(100 - riskScore);
+    const vulnCount   = latestScan?.vulnerabilities?.length ?? latestScan?.vulnerabilities_count ?? 0;
+    const assetCount  = latestScan?.assets?.length ?? latestScan?.assets_count ?? 0;
 
-    const animRisk = useCountUp(Math.round(riskScore));
-    const animVuln = useCountUp(vulnCount);
-    const animAssets = useCountUp(assetCount);
-
-    // Build severity distribution bars from vulnerabilities
+    const vulns = latestScan?.vulnerabilities || [];
     const sevMap = {};
-    (latestScan?.vulnerabilities || []).forEach(v => {
-        const sev = (v.severity || 'LOW').toUpperCase();
-        sevMap[sev] = (sevMap[sev] || 0) + 1;
+    vulns.forEach(v => {
+        const s = (v.severity || 'LOW').toUpperCase();
+        sevMap[s] = (sevMap[s] || 0) + 1;
     });
-    const sevOrder = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+    const sevSegments = ['CRITICAL','HIGH','MEDIUM','LOW'].map(s => ({
+        pct: vulnCount ? ((sevMap[s] || 0) / vulnCount) * 100 : 0,
+        c:   SEV_COLORS[s],
+    }));
 
-    let scanStatus = 'Idle';
-    let scanStatusColor = 'text-gray-500';
-    if (isScanning) {
-        scanStatus = 'Active';
-        scanStatusColor = 'text-cyber-accent';
-    } else if (latestScan?.status === 'COMPLETED') {
-        scanStatus = 'Complete';
-        scanStatusColor = 'text-cyber-success';
-    } else if (latestScan?.status === 'FAILED') {
-        scanStatus = 'Failed';
-        scanStatusColor = 'text-cyber-danger';
-    }
-
-    // Determine health grade
-    const health = healthScore ?? (100 - riskScore);
-    let grade = 'F', gradeColor = 'text-red-400';
-    if (health >= 80) { grade = 'A'; gradeColor = 'text-cyber-success'; }
-    else if (health >= 60) { grade = 'B'; gradeColor = 'text-cyber-accent'; }
-    else if (health >= 40) { grade = 'C'; gradeColor = 'text-cyber-warning'; }
-    else if (health >= 20) { grade = 'D'; gradeColor = 'text-orange-400'; }
+    let engineStatus = 'IDLE', engineColor = '#1a2332';
+    if (isScanning)                           { engineStatus = 'ACTIVE';    engineColor = '#00ffff'; }
+    else if (latestScan?.status === 'COMPLETED') { engineStatus = 'COMPLETE';  engineColor = '#00ff88'; }
+    else if (latestScan?.status === 'FAILED')    { engineStatus = 'FAILED';    engineColor = '#ff0055'; }
 
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-fade-in">
-            {/* Security Health */}
-            <div className="stat-card group">
-                <div className="absolute inset-0 bg-cyber-success/3 rounded-2xl" />
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyber-success/50 to-transparent rounded-t-2xl" />
-                <div className="flex items-center justify-between relative z-10">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Security Health</span>
-                    <ShieldCheck className="h-4 w-4 text-cyber-success/50" />
-                </div>
-                <div className="flex items-end gap-2 relative z-10">
-                    <span className={`text-5xl font-black ${gradeColor}`}>{grade}</span>
-                    <div className="flex flex-col mb-1">
-                        <span className={`text-xs font-bold ${gradeColor}/70`}>{Math.round(health)}/100</span>
-                        <span className="text-[9px] text-gray-600 font-mono uppercase">Operational</span>
-                    </div>
-                </div>
-                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden relative z-10">
-                    <div
-                        className="h-full bg-gradient-to-r from-cyber-success/50 to-cyber-success transition-all duration-1000"
-                        style={{ width: `${health}%` }}
-                    />
-                </div>
-            </div>
-
-            {/* Vulnerabilities */}
-            <div className="stat-card group">
-                <div className="absolute inset-0 bg-red-500/3 rounded-2xl" />
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/50 to-transparent rounded-t-2xl" />
-                <div className="flex items-center justify-between relative z-10">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Vulnerabilities</span>
-                    <Bug className="h-4 w-4 text-red-500/50" />
-                </div>
-                <div className="flex items-end gap-2 relative z-10">
-                    <span className="text-5xl font-black text-white">{animVuln}</span>
-                    <span className="text-[9px] text-gray-600 font-mono uppercase mb-1">Found</span>
-                </div>
-                {/* Mini severity bar */}
-                <div className="flex gap-0.5 h-1.5 w-full rounded-full overflow-hidden relative z-10">
-                    {vulnCount === 0 ? (
-                        <div className="h-full w-full bg-white/5 rounded-full" />
-                    ) : (
-                        sevOrder.map(sev => {
-                            const pct = ((sevMap[sev] || 0) / vulnCount) * 100;
-                            if (pct === 0) return null;
-                            return (
-                                <div
-                                    key={sev}
-                                    className={`h-full ${SEVERITY_COLORS[sev]} transition-all duration-700`}
-                                    style={{ width: `${pct}%` }}
-                                    title={`${sev}: ${sevMap[sev]}`}
-                                />
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-
-            {/* Assets Discovered */}
-            <div className="stat-card group">
-                <div className="absolute inset-0 bg-cyber-accent/3 rounded-2xl" />
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyber-accent/50 to-transparent rounded-t-2xl" />
-                <div className="flex items-center justify-between relative z-10">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Assets Discovered</span>
-                    <Monitor className="h-4 w-4 text-cyber-accent/50" />
-                </div>
-                <div className="flex items-end gap-2 relative z-10">
-                    <span className="text-5xl font-black text-white">{animAssets}</span>
-                    <span className="text-[9px] text-gray-600 font-mono uppercase mb-1">Hosts</span>
-                </div>
-                <div className="flex items-center gap-1 relative z-10">
-                    <span className="text-[9px] text-gray-600 font-mono">Last scan inventory</span>
-                </div>
-            </div>
-
-            {/* Scan Engine */}
-            <div className="stat-card group">
-                <div className={`absolute inset-0 ${isScanning ? 'bg-cyber-accent/5' : 'bg-white/2'} rounded-2xl transition-colors`} />
-                <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent ${isScanning ? 'via-cyber-accent/50' : 'via-gray-700/50'} to-transparent rounded-t-2xl transition-colors`} />
-                <div className="flex items-center justify-between relative z-10">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Scan Engine</span>
-                    <Zap className={`h-4 w-4 ${isScanning ? 'text-cyber-accent animate-pulse' : 'text-gray-600'}`} />
-                </div>
-                <div className="relative z-10">
-                    <span className={`text-2xl font-black ${scanStatusColor} uppercase tracking-tight`}>{scanStatus}</span>
-                </div>
-                {isScanning && (
-                    <div className="flex items-center gap-2 relative z-10 animate-fade-in">
-                        <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyber-accent/60 rounded-full animate-pulse" style={{ width: '70%' }} />
-                        </div>
-                        <span className="text-[9px] text-cyber-accent font-mono uppercase">Running</span>
-                    </div>
-                )}
-                {!isScanning && (
-                    <div className="relative z-10">
-                        <span className="text-[9px] text-gray-600 font-mono uppercase">
-                            {latestScan ? `Last: ${new Date(latestScan.created_at || Date.now()).toLocaleDateString()}` : 'No scans yet'}
-                        </span>
-                    </div>
-                )}
-            </div>
+            <KPICard
+                title="Security Health"
+                value={healthScore}
+                sub="/ 100"
+                icon={<ShieldCheck className="h-4 w-4" />}
+                color="#00ff88"
+                bar={healthScore}
+            />
+            <KPICard
+                title="Vulnerabilities"
+                value={vulnCount}
+                sub="Found"
+                icon={<Bug className="h-4 w-4" />}
+                color={vulnCount === 0 ? '#00ff88' : vulnCount > 5 ? '#ff0055' : '#ffaa00'}
+                bar={vulnCount > 0 ? 100 : 0}
+                barSegments={vulnCount > 0 ? sevSegments : undefined}
+            />
+            <KPICard
+                title="Assets Discovered"
+                value={assetCount}
+                sub="Hosts"
+                icon={<Monitor className="h-4 w-4" />}
+                color="#00ffff"
+                bar={Math.min(assetCount * 5, 100)}
+            />
+            <KPICard
+                title="Scan Engine"
+                value={engineStatus}
+                sub={latestScan ? new Date(latestScan.started_at || Date.now()).toLocaleDateString() : 'No scans yet'}
+                icon={<Zap className="h-4 w-4" />}
+                color={engineColor}
+                bar={isScanning ? 70 : undefined}
+                pulse={isScanning}
+            />
         </div>
     );
 };

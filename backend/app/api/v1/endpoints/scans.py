@@ -3,11 +3,13 @@ PentesterFlow API Endpoints - Scans
 Extended scan endpoints with AI agent integration
 """
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional
 import asyncio
 
-from app.core.database import get_db
+from app.core.database import get_db, get_async_db, async_session_maker
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.scan import Scan, ScanStatus, Target
 from app.schemas.scan import (
     ScanCreate, ScanResponse, ScanDetail, ScanSummary,
@@ -62,7 +64,7 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/ai", response_model=ScanResponse)
-async def create_ai_scan(scan_in: ScanCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def create_ai_scan(scan_in: ScanCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_async_db)):
     """
     Create a new AI-powered scan using the agent orchestrator.
     This runs the full PentesterFlow workflow:
@@ -76,7 +78,8 @@ async def create_ai_scan(scan_in: ScanCreate, background_tasks: BackgroundTasks,
     auth_credentials = None
     
     if target_id:
-        target = db.query(Target).filter(Target.id == target_id).first()
+        _t_res = await db.execute(select(Target).filter(Target.id == target_id))
+        target = _t_res.scalars().first()
         if not target:
             raise HTTPException(status_code=404, detail="Target not found")
         target_url = target.base_url
@@ -94,17 +97,23 @@ async def create_ai_scan(scan_in: ScanCreate, background_tasks: BackgroundTasks,
         status=ScanStatus.QUEUED
     )
     db.add(scan)
-    db.commit()
-    db.refresh(scan)
+    await db.commit()
+    
+    # Re-fetch with eager loading to avoid MissingGreenlet error during serialization
+    _s_res = await db.execute(
+        select(Scan)
+        .options(selectinload(Scan.vulnerabilities), selectinload(Scan.assets))
+        .filter(Scan.id == scan.id)
+    )
+    scan = _s_res.scalars().first()
     
     # Run AI orchestrator in background
     async def run_ai_scan(scan_id: str, url: str, creds: dict):
-        orchestrator = AgentOrchestrator(scan_id)
-        await orchestrator.run_full_scan(url, creds)
+        async with async_session_maker() as session:
+            orchestrator = AgentOrchestrator(scan_id, session)
+            await orchestrator.run_full_scan(url, creds)
     
-    background_tasks.add_task(
-        lambda: asyncio.run(run_ai_scan(scan.id, target_url, auth_credentials))
-    )
+    background_tasks.add_task(run_ai_scan, scan.id, target_url, auth_credentials)
     
     return scan
 
@@ -129,11 +138,16 @@ def list_scans(
 
 
 @router.get("/{scan_id}", response_model=ScanDetail)
-def get_scan(scan_id: str, db: Session = Depends(get_db)):
+async def get_scan(scan_id: str, db: AsyncSession = Depends(get_async_db)):
     """
     Get detailed scan information including vulnerabilities and agent logs.
     """
-    scan = db.query(Scan).filter(Scan.id == scan_id).first()
+    _s_res = await db.execute(
+        select(Scan)
+        .options(selectinload(Scan.vulnerabilities), selectinload(Scan.assets), selectinload(Scan.agent_logs))
+        .filter(Scan.id == scan_id)
+    )
+    scan = _s_res.scalars().first()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
     return scan

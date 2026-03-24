@@ -22,7 +22,20 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+from app.services.ws_manager import manager
+from fastapi import WebSocket
+
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+@app.websocket("/ws/logs")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive; discard incoming messages
+            await websocket.receive_text()
+    except Exception:
+        manager.disconnect(websocket)
 
 @app.get("/")
 def read_root():

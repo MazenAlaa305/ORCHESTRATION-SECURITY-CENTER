@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.core.database import get_db
+from app.core.database import get_db, get_async_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.scan import Vulnerability, VulnStatus
 from app.schemas.scan import VulnerabilityResponse, VulnerabilityUpdate, ScanResponse
 from app.services.agent_orchestrator import AgentOrchestrator
@@ -77,11 +79,12 @@ def get_proof_of_concept(vuln_id: str, db: Session = Depends(get_db)):
     }
 
 @router.post("/{vuln_id}/revalidate")
-async def revalidate_vulnerability(vuln_id: str, db: Session = Depends(get_db)):
+async def revalidate_vulnerability(vuln_id: str, db: AsyncSession = Depends(get_async_db)):
     """
     Trigger the ValidationAgent to re-verify this specific vulnerability using the LLM.
     """
-    vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
+    _v_res = await db.execute(select(Vulnerability).filter(Vulnerability.id == vuln_id))
+    vuln = _v_res.scalars().first()
     if not vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
     
@@ -106,7 +109,7 @@ async def revalidate_vulnerability(vuln_id: str, db: Session = Depends(get_db)):
     if not result.get("is_valid"):
         vuln.status = VulnStatus.FALSE_POSITIVE
         
-    db.commit()
+    await db.commit()
     
     return result
 

@@ -1,7 +1,8 @@
 import logging
 import json
 from typing import List, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.scan import ScanAsset
 from app.core.config import settings
 import google.generativeai as genai
@@ -14,7 +15,7 @@ class IntelligenceAgent:
     Uses Gemini to translate technical discovery data into human-readable insights.
     """
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
         self.model = None
         # Guard: only configure if API key is present
@@ -27,7 +28,7 @@ class IntelligenceAgent:
         except Exception as e:
             logger.warning(f"Could not initialize Gemini model: {e}")
 
-    def analyze_asset(self, scan_id: str, asset: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze_asset(self, scan_id: str, asset: Dict[str, Any]) -> Dict[str, Any]:
         """
         Processes a single asset's discovery data to generate security insights.
         """
@@ -58,6 +59,8 @@ class IntelligenceAgent:
             }}
             """
 
+            # genai call is blocking, but we wrap it in anyio if needed or just accept it here
+            # for now we'll call it directly since it's one call
             response = self.model.generate_content(prompt)
             
             # Clean up response
@@ -70,15 +73,17 @@ class IntelligenceAgent:
             insight = json.loads(text)
             
             # Update the database record
-            db_asset = self.db.query(ScanAsset).filter(
-                ScanAsset.scan_id == scan_id,
-                ScanAsset.ip_address == asset.get('ip')
-            ).first()
+            _a_res = await self.db.execute(
+                select(ScanAsset).filter(
+                    ScanAsset.scan_id == scan_id,
+                    ScanAsset.ip_address == asset.get('ip')
+                )
+            )
+            db_asset = _a_res.scalars().first()
             
             if db_asset:
                 db_asset.ai_insight = insight
-                # Overwrite standard AI fields with our new advice fields for the UI
-                self.db.commit()
+                await self.db.commit()
                 logger.info(f"Generated Security Advice for {asset.get('ip')}")
             
             return insight
@@ -92,9 +97,9 @@ class IntelligenceAgent:
                 "response_priority": "High"
             }
 
-    def batch_analyze(self, scan_id: str, assets: List[Dict[str, Any]]):
+    async def batch_analyze(self, scan_id: str, assets: List[Dict[str, Any]]):
         """
         Batch process all assets from a scan.
         """
         for asset in assets:
-            self.analyze_asset(scan_id, asset)
+            await self.analyze_asset(scan_id, asset)

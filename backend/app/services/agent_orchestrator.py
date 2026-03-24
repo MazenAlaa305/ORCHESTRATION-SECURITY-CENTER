@@ -11,13 +11,15 @@ from enum import Enum
 
 import google.generativeai as genai
 from app.core.config import settings
-from app.core.database import SessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.scan import AgentLog, Scan, Vulnerability, Endpoint, SeverityLevel, VulnStatus
 # Removed legacy integrations (Wazuh, Elastic, SOAR) as they were deprecated.
 # from app.services.wazuh_integration import wazuh_service
 # from app.services.elastic_integration import elastic_service
 # from app.services.soar_orchestrator import soar_service
 from app.services.unified_risk_engine import UnifiedRiskEngine
+from app.services.ws_manager import manager
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +38,10 @@ class AgentState(str, Enum):
 class BaseAgent(ABC):
     """Abstract base class for all PentesterFlow agents"""
     
-    def __init__(self, name: str, scan_id: str, db_session=None):
+    def __init__(self, name: str, scan_id: str, db_session: AsyncSession):
         self.name = name
         self.scan_id = scan_id
-        self.db = db_session or SessionLocal()
+        self.db = db_session
         self.state = AgentState.IDLE
         self.llm = None
         
@@ -51,7 +53,7 @@ class BaseAgent(ABC):
             except Exception:
                 self.llm = genai.GenerativeModel('gemini-pro')
     
-    def log_action(self, action: str, reasoning: Optional[Dict] = None, 
+    async def log_action(self, action: str, reasoning: Optional[Dict] = None, 
                    input_data: Optional[Dict] = None, output_data: Optional[Dict] = None):
         """Log agent action to database for transparency"""
         log_entry = AgentLog(
@@ -63,7 +65,8 @@ class BaseAgent(ABC):
             output_data=output_data
         )
         self.db.add(log_entry)
-        self.db.commit()
+        await self.db.commit()
+        await manager.broadcast(f"[{self.name.upper()}] {action}")
         logger.info(f"[{self.name}] {action}")
     
     def llm_reason(self, prompt: str) -> str:
@@ -95,8 +98,9 @@ class ReconAgent(BaseAgent):
     Uses Playwright for JS rendering (or falls back to requests).
     """
     
-    def __init__(self, scan_id: str, db_session=None):
+    def __init__(self, scan_id: str, db_session=None, browser_context=None):
         super().__init__("recon_agent", scan_id, db_session)
+        self.browser_context = browser_context
     
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -111,7 +115,7 @@ class ReconAgent(BaseAgent):
         self.state = AgentState.RUNNING
         target_url = context.get("target_url", "")
         
-        self.log_action(
+        await self.log_action(
             action="start_recon",
             input_data={"target_url": target_url},
             reasoning={"goal": "Discover all endpoints and understand application structure"}
@@ -142,15 +146,21 @@ class ReconAgent(BaseAgent):
             tech_stack = {}
             forms = []
             # Try Playwright-based crawling
-            try:
-                from playwright.async_api import async_playwright
-                
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True)
-                    page = await browser.new_page()
+            # Try Playwright-based crawling
+            playwright_success = False
+            if self.browser_context:
+                try:
+                    from playwright.async_api import Error as PlaywrightError
+                    import asyncio
                     
-                    # Navigate to target
-                    await page.goto(target_url, wait_until="networkidle", timeout=30000)
+                    page = await self.browser_context.new_page()
+                    
+                    # Two-tier wait_until strategy
+                    try:
+                        await page.goto(target_url, wait_until="networkidle", timeout=15000)
+                    except (PlaywrightError, asyncio.TimeoutError, Exception):
+                        # Fallback to domcontentloaded for slower apps
+                        await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
                     
                     # Extract all links
                     links = await page.eval_on_selector_all(
@@ -189,9 +199,14 @@ class ReconAgent(BaseAgent):
                                 "parameters": {}
                             })
                     
-                    await browser.close()
+                    await page.close()
+                    playwright_success = True
                     
-            except ImportError:
+                except Exception as e:
+                    logger.warning(f"[{self.scan_id}] Playwright crawler error: {e}")
+                    # Allow fallback
+            
+            if not playwright_success:
                 # Fallback to simple requests-based discovery
                 import httpx
                 async with httpx.AsyncClient() as client:
@@ -204,21 +219,22 @@ class ReconAgent(BaseAgent):
                     })
             
             # Save discovered endpoints to database
-            scan = self.db.query(Scan).filter(Scan.id == self.scan_id).first()
+            _scan_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
+            scan = _scan_res.scalars().first()
             if scan and scan.target_id:
                 # Safe slicing for linter
                 max_ep = min(50, len(discovered_endpoints))
                 safe_endpoints = [discovered_endpoints[i] for i in range(max_ep)]
-                for ep in safe_endpoints:
-                    endpoint = Endpoint(
-                        target_id=scan.target_id,
-                        url=ep["url"],
-                        method=ep["method"],
-                        parameters=ep.get("parameters"),
-                        authentication_required=False
-                    )
-                    self.db.add(endpoint)
-                self.db.commit()
+                async with self.db.begin():
+                    for ep in safe_endpoints:
+                        endpoint = Endpoint(
+                            target_id=scan.target_id,
+                            url=ep["url"],
+                            method=ep["method"],
+                            parameters=ep.get("parameters"),
+                            authentication_required=False
+                        )
+                        self.db.add(endpoint)
             
             self.state = AgentState.COMPLETED
             
@@ -230,7 +246,7 @@ class ReconAgent(BaseAgent):
                 "total_discovered": len(discovered_endpoints)
             }
             
-            self.log_action(
+            await self.log_action(
                 action="recon_complete",
                 output_data=result,
                 reasoning={"analysis": f"Discovered {len(discovered_endpoints)} endpoints"}
@@ -240,7 +256,7 @@ class ReconAgent(BaseAgent):
             
         except Exception as e:
             self.state = AgentState.FAILED
-            self.log_action(
+            await self.log_action(
                 action="recon_failed",
                 output_data={"error": str(e)}
             )
@@ -323,7 +339,7 @@ class AttackAgent(BaseAgent):
         forms = context.get("forms", [])
         assets = context.get("assets", [])
         
-        self.log_action(
+        await self.log_action(
             action="start_attack",
             input_data={
                 "endpoint_count": len(endpoints), 
@@ -353,7 +369,7 @@ class AttackAgent(BaseAgent):
             if not targeted_templates:
                 targeted_templates.add("tags:cve,exposures")
                 
-            self.log_action(
+            await self.log_action(
                 action="template_selection",
                 input_data={"services": [p.get('service') for h in assets for p in h.get('ports', [])]},
                 output_data={"templates": list(targeted_templates)},
@@ -363,11 +379,45 @@ class AttackAgent(BaseAgent):
             # FUTURE INTEGRATION: Pass these `targeted_templates` to the Nuclei engine
             # For this execution flow, we simulate the logic: we evaluate the mapped heuristics.
             
+            import os
+            import asyncio
+            
             async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
                 # Test each endpoint
-                # Safe slicing for linter
-                max_test = min(20, len(endpoints))
+                max_endpoints = int(os.environ.get("MAX_ATTACK_ENDPOINTS", "50"))
+                max_test = min(max_endpoints, len(endpoints))
                 safe_targets = [endpoints[i] for i in range(max_test)]
+                
+                sem = asyncio.Semaphore(10)
+                tasks = []
+                
+                async def fetch_and_analyze(c_url, c_attack_type, c_payload):
+                    async with sem:
+                        test_url = f"{c_url}?test={c_payload}"
+                        try:
+                            response = await client.get(test_url)
+                            return self._analyze_response(
+                                c_url, c_attack_type, c_payload, 
+                                response.status_code, response.text
+                            )
+                        except httpx.TimeoutException as e:
+                            await self.log_action(
+                                action="attack_timeout",
+                                input_data={"url": test_url},
+                                output_data={"error": str(e)}
+                            )
+                            return None
+                        except httpx.ConnectError as e:
+                            await self.log_action(
+                                action="attack_connect_error",
+                                input_data={"url": test_url},
+                                output_data={"error": str(e)}
+                            )
+                            return None
+                        except Exception as e:
+                            logger.debug(f"Request failed for {c_url}: {e}")
+                            return None
+
                 for ep in safe_targets:
                     url = ep["url"]
                     tested_count += 1
@@ -380,23 +430,14 @@ class AttackAgent(BaseAgent):
                         max_p = min(2, len(p_list))
                         safe_payloads = [p_list[i] for i in range(max_p)]
                         for payload in safe_payloads:
-                            try:
-                                # Test with payload in query string
-                                test_url = f"{url}?test={payload}"
-                                response = await client.get(test_url)
-                                
-                                # Analyze response for vulnerability indicators
-                                finding = self._analyze_response(
-                                    url, attack_type, payload, 
-                                    response.status_code, response.text
-                                )
-                                
-                                if finding:
-                                    findings.append(finding)
-                                    
-                            except Exception as e:
-                                logger.debug(f"Request failed for {url}: {e}")
+                            tasks.append(fetch_and_analyze(url, attack_type, payload))
                 
+                # Execute payload tasks concurrently
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for res in results:
+                    if isinstance(res, dict) and "type" in res:
+                        findings.append(res)
+                        
                 # PROCESS ASSETS (Infrastructure Findings)
                 for host in assets:
                     if not isinstance(host, dict): continue
@@ -442,20 +483,20 @@ class AttackAgent(BaseAgent):
                     findings.extend(form_findings)
             
             # Save findings to database
-            for finding in findings:
-                vuln = Vulnerability(
-                    scan_id=self.scan_id,
-                    type=finding.get("type", "Unknown"),
-                    severity=SeverityLevel(finding.get("severity", "low")),
-                    status=VulnStatus.OPEN,
-                    url=finding.get("url", f"unknown://{self.scan_id}"),
-                    parameter=finding.get("parameter"),
-                    evidence=finding.get("evidence"),
-                    description=finding.get("description"),
-                    confidence_score=finding.get("confidence", 0.5)
-                )
-                self.db.add(vuln)
-            self.db.commit()
+            async with self.db.begin():
+                for finding in findings:
+                    vuln = Vulnerability(
+                        scan_id=self.scan_id,
+                        type=finding.get("type", "Unknown"),
+                        severity=SeverityLevel(finding.get("severity", "low")),
+                        status=VulnStatus.OPEN,
+                        url=finding.get("url", f"unknown://{self.scan_id}"),
+                        parameter=finding.get("parameter"),
+                        evidence=finding.get("evidence"),
+                        description=finding.get("description"),
+                        confidence_score=finding.get("confidence", 0.5)
+                    )
+                    self.db.add(vuln)
             
             self.state = AgentState.COMPLETED
             
@@ -465,7 +506,7 @@ class AttackAgent(BaseAgent):
                 "vulnerability_count": len(findings)
             }
             
-            self.log_action(
+            await self.log_action(
                 action="attack_complete",
                 output_data=result,
                 reasoning={"summary": f"Found {len(findings)} potential issues in {tested_count} tests"}
@@ -475,7 +516,7 @@ class AttackAgent(BaseAgent):
             
         except Exception as e:
             self.state = AgentState.FAILED
-            self.log_action(action="attack_failed", output_data={"error": str(e)})
+            await self.log_action(action="attack_failed", output_data={"error": str(e)})
             return {"error": str(e), "findings": [], "tested_count": tested_count}
     
     def _analyze_endpoint(self, url: str) -> List[str]:
@@ -612,7 +653,7 @@ class ValidationAgent(BaseAgent):
         self.state = AgentState.RUNNING
         findings = context.get("findings", [])
         
-        self.log_action(
+        await self.log_action(
             action="start_validation",
             input_data={"finding_count": len(findings)},
             reasoning={"goal": "Filter findings based on deterministic rules and confidence"}
@@ -620,11 +661,23 @@ class ValidationAgent(BaseAgent):
         
         validated = []
         false_positives = []
+        import os
+        gemini_enabled = os.environ.get("GEMINI_VALIDATION_ENABLED", "True").lower() == "true"
         
         for finding in findings:
             # Deterministic filtering logic
-            # Any finding with confidence > 0.6 or from a high-trust tool is validated
+            # Any finding with confidence > 0.6 or from a high-trust tool is initially valid
             is_valid = finding.get("confidence", 0) >= 0.6
+            
+            # Second-pass AI Gate
+            if is_valid and gemini_enabled:
+                try:
+                    llm_result = await self._validate_with_llm(finding)
+                    if llm_result.get("is_valid") is not None:
+                        is_valid = llm_result["is_valid"]
+                        finding["confidence"] = llm_result.get("new_confidence", finding.get("confidence", 0.6))
+                except Exception as e:
+                    logger.debug(f"LLM Validation failed for finding {finding.get('url')}: {e}")
             
             if is_valid:
                 validated.append(finding)
@@ -632,15 +685,16 @@ class ValidationAgent(BaseAgent):
                 false_positives.append(finding)
         
         # Update database with validation results
-        for fp in false_positives:
-            vuln = self.db.query(Vulnerability).filter(
-                Vulnerability.scan_id == self.scan_id,
-                Vulnerability.url == fp["url"],
-                Vulnerability.type == fp["type"]
-            ).first()
-            if vuln:
-                vuln.status = VulnStatus.FALSE_POSITIVE
-        self.db.commit()
+        async with self.db.begin():
+            for fp in false_positives:
+                _v_res = await self.db.execute(select(Vulnerability).filter(
+                    Vulnerability.scan_id == self.scan_id,
+                    Vulnerability.url == fp["url"],
+                    Vulnerability.type == fp["type"]
+                ))
+                vuln = _v_res.scalars().first()
+                if vuln:
+                    vuln.status = VulnStatus.FALSE_POSITIVE
         
         self.state = AgentState.COMPLETED
         
@@ -651,7 +705,7 @@ class ValidationAgent(BaseAgent):
             "filtered_count": len(false_positives)
         }
         
-        self.log_action(
+        await self.log_action(
             action="validation_complete",
             output_data=result,
             reasoning={"analysis": f"Validated {len(validated)}, filtered {len(false_positives)} findings"}
@@ -710,11 +764,18 @@ class SIEMAgent(BaseAgent):
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self.state = AgentState.RUNNING
         
-        self.log_action(action="start_siem_analysis", reasoning={"goal": "Analyze SIEM logs and trigger SOAR actions"})
+        await self.log_action(action="start_siem_analysis", reasoning={"goal": "Analyze SIEM logs and trigger SOAR actions"})
         
-        # 1. Fetch data (Placeholders for deprecated integrations)
-        elastic_alerts = [] # await elastic_service.fetch_recent_alerts()
-        wazuh_agents = [] # await wazuh_service.get_agents()
+        import os
+        from typing import List
+        elastic_alerts: List[Dict] = []
+        wazuh_agents: List[Dict] = []
+        
+        if not os.environ.get("ELASTIC_URL"):
+            await self.log_action(action="siem_error", output_data={"error": "ELASTIC_URL not configured in environment"})
+            
+        if not os.environ.get("WAZUH_URL"):
+            await self.log_action(action="siem_error", output_data={"error": "WAZUH_URL not configured in environment"})
         
         findings = []
         actions_taken = []
@@ -761,7 +822,7 @@ REASON: [Brief explanation]
             "threats_found": len(findings),
             "soar_actions": actions_taken
         }
-        self.log_action(action="siem_analysis_complete", output_data=result)
+        await self.log_action(action="siem_analysis_complete", output_data=result)
         return result
 
 
@@ -788,10 +849,28 @@ class ReportingAgent(BaseAgent):
             {report_markdown: str, executive_summary: str, poc_scripts: list}
         """
         self.state = AgentState.RUNNING
-        findings = context.get("validated_findings", [])
         scan_summary = context.get("scan_summary", {})
         
-        self.log_action(
+        # Explicit DB query to filter false positives
+        _f_res = await self.db.execute(
+            select(Vulnerability).filter(
+                Vulnerability.scan_id == self.scan_id,
+                Vulnerability.status != VulnStatus.FALSE_POSITIVE
+            )
+        )
+        findings_orm = _f_res.scalars().all()
+        findings = [
+            {
+                "type": f.type,
+                "severity": getattr(f.severity, "value", "unknown") if f.severity else "unknown",
+                "url": f.url,
+                "parameter": f.parameter,
+                "confidence": f.confidence_score,
+                "description": f.description
+            } for f in findings_orm
+        ]
+        
+        await self.log_action(
             action="start_reporting",
             input_data={"finding_count": len(findings)},
             reasoning={"goal": "Generate executive summary and technical report"}
@@ -808,30 +887,32 @@ class ReportingAgent(BaseAgent):
                 poc_scripts.append(poc)
                 
                 # Update database with PoC
-                vuln = self.db.query(Vulnerability).filter(
-                    Vulnerability.scan_id == self.scan_id,
-                    Vulnerability.url == finding["url"],
-                    Vulnerability.type == finding["type"]
-                ).first()
-                if vuln:
-                    vuln.proof_of_concept = poc["script"]
-                    vuln.remediation = poc["remediation"]
-        self.db.commit()
+                async with self.db.begin():
+                    _v_res = await self.db.execute(select(Vulnerability).filter(
+                        Vulnerability.scan_id == self.scan_id,
+                        Vulnerability.url == finding["url"],
+                        Vulnerability.type == finding["type"]
+                    ))
+                    vuln = _v_res.scalars().first()
+                    if vuln:
+                        vuln.proof_of_concept = poc["script"]
+                        vuln.remediation = poc["remediation"]
         
         # Build full markdown report
         report_markdown = self._build_report(findings, executive_summary, poc_scripts, scan_summary)
         
         # Save to scan safely
-        scan = self.db.query(Scan).filter(Scan.id == self.scan_id).first()
-        if scan:
-            new_thoughts = {
-                "executive_summary": executive_summary,
-                "finding_count": len(findings),
-                "poc_count": len(poc_scripts)
-            }
-            # Type-safe assignment for linter
-            scan.agent_thoughts = new_thoughts
-            self.db.commit()
+        async with self.db.begin():
+            _s_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
+            scan = _s_res.scalars().first()
+            if scan:
+                new_thoughts = {
+                    "executive_summary": executive_summary,
+                    "finding_count": len(findings),
+                    "poc_count": len(poc_scripts)
+                }
+                # Type-safe assignment for linter
+                scan.agent_thoughts = new_thoughts
         
         self.state = AgentState.COMPLETED
         
@@ -841,7 +922,7 @@ class ReportingAgent(BaseAgent):
             "poc_scripts": poc_scripts
         }
         
-        self.log_action(
+        await self.log_action(
             action="reporting_complete",
             output_data={"report_length": len(report_markdown)},
             reasoning={"summary": f"Generated report with {len(poc_scripts)} PoC scripts"}
@@ -989,9 +1070,9 @@ class AgentOrchestrator:
     Implements the found 404 agent workflow.
     """
     
-    def __init__(self, scan_id: str):
+    def __init__(self, scan_id: str, db_session: AsyncSession):
         self.scan_id = scan_id
-        self.db = SessionLocal()
+        self.db = db_session
     
     async def run_full_scan(self, target_url: str, auth_credentials: Optional[Dict] = None) -> Optional[Dict]:
         """
@@ -1011,17 +1092,32 @@ class AgentOrchestrator:
              results["stages"] = stages_dict
         
         # Update scan to running
-        scan = self.db.query(Scan).filter(Scan.id == self.scan_id).first()
+        _s_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
+        scan = _s_res.scalars().first()
         if scan:
             from app.models.scan import ScanStatus
             scan.status = ScanStatus.RUNNING
             scan.started_at = datetime.utcnow()
-            scan.start_time = scan.started_at # Sync legacy
-            self.db.commit()
+            scan.start_time = scan.started_at
+            await self.db.commit()
+            await manager.broadcast(f"[SYSTEM] Starting AI Scan for {target_url}")
+                
+        # Playwright context setup
+        playwright = None
+        browser = None
+        browser_context = None
+        
+        try:
+            from playwright.async_api import async_playwright
+            playwright = await async_playwright().start()
+            browser = await playwright.chromium.launch(headless=True)
+            browser_context = await browser.new_context()
+        except Exception as e:
+            logger.debug(f"Failed to initialize Playwright: {e}")
         
         try:
             # Stage 1: Reconnaissance
-            recon_agent = ReconAgent(self.scan_id, self.db)
+            recon_agent = ReconAgent(self.scan_id, self.db, browser_context=browser_context)
             recon_result = await recon_agent.execute({
                 "target_url": target_url,
                 "auth_credentials": auth_credentials
@@ -1066,7 +1162,6 @@ class AgentOrchestrator:
             # Stage 4: Reporting
             reporting_agent = ReportingAgent(self.scan_id, self.db)
             report_result = await reporting_agent.execute({
-                "validated_findings": validation_result.get("validated", []),
                 "scan_summary": {
                     "target_url": target_url,
                     "endpoint_count": len(recon_result.get("endpoints", [])),
@@ -1077,26 +1172,30 @@ class AgentOrchestrator:
                 stages_dict["reporting"] = report_result
             
             # Update scan with score and metadata using UnifiedRiskEngine
-            if scan:
-                risk_engine = UnifiedRiskEngine(self.db)
-                scan.risk_score = risk_engine.update_scan_risk(self.scan_id)
-                risk_engine.generate_action_items(self.scan_id)
-                
-                # INTEGRATION: Limited AI Advice for SME response
-                try:
-                    from app.services.intelligence_agent import IntelligenceAgent
-                    ai_agent = IntelligenceAgent(self.db)
-                    # Get advice for the top 3 assets found
-                    for asset in recon_result.get("assets", [])[:3]:
-                        ai_agent.analyze_asset(self.scan_id, asset)
-                except Exception as ai_err:
-                    logger.error(f"Failed to generate AI advisory: {ai_err}")
+            risk_engine = UnifiedRiskEngine(self.db)
+            risk_score = await risk_engine.update_scan_risk(self.scan_id)
+            await risk_engine.generate_action_items(self.scan_id)
+            
+            # INTEGRATION: Limited AI Advice for SME response
+            try:
+                from app.services.intelligence_agent import IntelligenceAgent
+                ai_agent = IntelligenceAgent(self.db)
+                # Get advice for the top 3 assets found
+                for asset in recon_result.get("assets", [])[:3]:
+                    await ai_agent.analyze_asset(self.scan_id, asset)
+            except Exception as ai_err:
+                logger.error(f"Failed to generate AI advisory: {ai_err}")
 
+            _s_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
+            scan = _s_res.scalars().first()
+            if scan:
+                scan.risk_score = risk_score
                 scan.status = ScanStatus.COMPLETED
                 scan.completed_at = datetime.utcnow()
                 scan.end_time = scan.completed_at
-                self.db.commit()
+                await self.db.commit()
             
+            await manager.broadcast("[SYSTEM] Scan cycle complete.")
             results["status"] = "completed"
             
         except Exception as e:
@@ -1104,12 +1203,22 @@ class AgentOrchestrator:
             results["status"] = "failed"
             results["error"] = str(e)
             
+            _s_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
+            scan = _s_res.scalars().first()
             if scan:
+                from app.models.scan import ScanStatus
                 scan.status = ScanStatus.FAILED
-                self.db.commit()
+                await self.db.commit()
+            await manager.broadcast(f"[ERROR] Orchestrator failed: {e}")
         
         finally:
-            self.db.close()
+            if browser_context:
+                await browser_context.close()
+            if browser:
+                await browser.close()
+            if playwright:
+                await playwright.stop()
+            await self.db.close()
         
         return results
 
@@ -1136,6 +1245,6 @@ class AgentOrchestrator:
             results["status"] = "failed"
             results["error"] = str(e)
         finally:
-            self.db.close()
+            await self.db.close()
             
         return results

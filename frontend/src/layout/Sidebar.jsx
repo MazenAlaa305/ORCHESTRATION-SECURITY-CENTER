@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, ChevronRight, Target, Brain, FileText } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, ChevronRight, Brain, FileText } from 'lucide-react';
 
 const NAV_SECTIONS = [
     {
@@ -25,120 +25,161 @@ const NAV_SECTIONS = [
     }
 ];
 
+const NavItem = ({ icon, label, collapsed, active, onClick }) => (
+    <div
+        onClick={onClick}
+        className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 flex-shrink-0 group mb-0.5 ${collapsed ? 'justify-center' : ''}`}
+        style={{
+            background: active
+                ? 'linear-gradient(135deg, rgba(0,255,255,0.1), rgba(0,255,255,0.05))'
+                : 'transparent',
+            border: active
+                ? '1px solid rgba(0,255,255,0.2)'
+                : '1px solid transparent',
+            boxShadow: active ? '0 0 12px rgba(0,255,255,0.1)' : 'none',
+        }}
+        title={collapsed ? label : undefined}
+    >
+        {/* Active left accent bar */}
+        {active && !collapsed && (
+            <div
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full"
+                style={{ background:'#00ffff', boxShadow:'0 0 6px #00ffff' }}
+            />
+        )}
+        {React.cloneElement(icon, {
+            className: `h-4 w-4 shrink-0 transition-colors`,
+            style: { color: active ? '#00ffff' : 'rgba(148,163,184,0.7)' }
+        })}
+        {!collapsed && (
+            <span
+                className="text-sm font-semibold whitespace-nowrap overflow-hidden text-ellipsis transition-colors"
+                style={{ color: active ? '#00ffff' : 'rgba(148,163,184,0.7)' }}
+            >
+                {label}
+            </span>
+        )}
+        {/* Hover glow */}
+        {!active && (
+            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                 style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }} />
+        )}
+    </div>
+);
+
 const Sidebar = ({ activeTab, onTabChange }) => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <aside className={`relative h-screen bg-black/80 backdrop-blur-xl border-r border-white/5 z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}>
-            {/* Logo Header */}
-            <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 shrink-0">
+        <aside
+            className={`relative h-screen z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}
+            style={{
+                background: 'linear-gradient(180deg, rgba(5,10,18,0.97), rgba(3,7,14,0.99))',
+                borderRight: '1px solid rgba(0,255,255,0.06)',
+                backdropFilter: 'blur(24px)',
+            }}
+        >
+            {/* Logo / Header */}
+            <div className="h-16 flex items-center justify-between px-4 flex-shrink-0"
+                 style={{ borderBottom:'1px solid rgba(0,255,255,0.05)' }}>
                 {!collapsed && (
-                    <div className="flex items-center gap-2 group cursor-pointer animate-fade-in w-full">
-                        <ShieldCheck className="text-cyber-accent h-6 w-6 shrink-0 group-hover:scale-110 transition-transform" />
-                        <div className="flex flex-col leading-none truncate">
-                            <h1 className="text-base font-black tracking-tight text-white">
-                                found <span className="text-cyber-accent">404</span>
+                    <div className="flex items-center gap-2.5 group cursor-pointer animate-fade-in">
+                        <div className="p-1.5 rounded-lg" style={{ background:'rgba(0,255,255,0.1)', border:'1px solid rgba(0,255,255,0.2)' }}>
+                            <ShieldCheck className="h-4 w-4" style={{ color:'#00ffff' }} />
+                        </div>
+                        <div className="flex flex-col leading-none">
+                            <h1 className="text-sm font-black tracking-tight text-white" style={{ fontFamily:'Syne, sans-serif' }}>
+                                found <span style={{ color:'#00ffff' }}>404</span>
                             </h1>
-                            <span className="text-[9px] text-gray-500 font-mono uppercase tracking-widest">SOC Platform</span>
+                            <span className="text-[8px] font-mono uppercase tracking-widest text-gray-600">SOC Platform</span>
                         </div>
                     </div>
                 )}
                 {collapsed && (
-                    <ShieldCheck
-                        className="text-cyber-accent h-6 w-6 mx-auto cursor-pointer shrink-0"
-                        onClick={() => setCollapsed(false)}
-                    />
+                    <div className="mx-auto p-1.5 rounded-lg cursor-pointer"
+                         style={{ background:'rgba(0,255,255,0.1)', border:'1px solid rgba(0,255,255,0.2)' }}
+                         onClick={() => setCollapsed(false)}>
+                        <ShieldCheck className="h-4 w-4" style={{ color:'#00ffff' }} />
+                    </div>
                 )}
                 {!collapsed && (
-                    <button
-                        onClick={() => setCollapsed(true)}
-                        className="p-1.5 rounded-md hover:bg-white/10 text-gray-400 hover:text-white transition-colors shrink-0 ml-2"
-                    >
+                    <button onClick={() => setCollapsed(true)}
+                        className="p-1.5 rounded-lg transition-all"
+                        style={{ color:'rgba(100,116,139,0.8)' }}
+                        onMouseOver={e => e.currentTarget.style.color = '#00ffff'}
+                        onMouseOut={e => e.currentTarget.style.color = 'rgba(100,116,139,0.8)'}>
                         <ChevronLeft className="h-4 w-4" />
                     </button>
                 )}
             </div>
 
             {/* System Status */}
-            {!collapsed && (
-                <div className="px-4 py-3 border-b border-white/5 animate-fade-in">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-success/5 border border-cyber-success/15">
+            <div className="px-3 py-3 flex-shrink-0" style={{ borderBottom:'1px solid rgba(0,255,255,0.04)' }}>
+                {!collapsed ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                         style={{ background:'rgba(0,255,136,0.06)', border:'1px solid rgba(0,255,136,0.12)' }}>
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-success opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyber-success"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                                  style={{ background:'#00ff88' }} />
+                            <span className="relative inline-flex rounded-full h-2 w-2"
+                                  style={{ background:'#00ff88', boxShadow:'0 0 4px #00ff88' }} />
                         </span>
-                        <span className="text-[10px] font-bold text-cyber-success uppercase tracking-widest">System Online</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color:'#00ff88' }}>System Online</span>
                     </div>
-                </div>
-            )}
-            {collapsed && (
-                <div className="py-3 flex justify-center border-b border-white/5">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-success opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyber-success"></span>
-                    </span>
-                </div>
-            )}
+                ) : (
+                    <div className="flex justify-center">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                                  style={{ background:'#00ff88' }} />
+                            <span className="relative inline-flex rounded-full h-2 w-2"
+                                  style={{ background:'#00ff88', boxShadow:'0 0 4px #00ff88' }} />
+                        </span>
+                    </div>
+                )}
+            </div>
 
-            {/* Nav Sections */}
-            <div className="flex-1 py-4 flex flex-col gap-1 px-3 overflow-y-auto custom-scrollbar">
-                {NAV_SECTIONS.map((section) => (
+            {/* Navigation */}
+            <div className="flex-1 py-4 flex flex-col gap-1 px-3 overflow-y-auto">
+                {NAV_SECTIONS.map(section => (
                     <div key={section.label} className="mb-3">
                         {!collapsed && (
-                            <p className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] px-2 mb-2">
+                            <p className="text-[8px] font-black uppercase tracking-[0.35em] px-2 mb-2"
+                               style={{ color:'rgba(71,85,105,0.8)' }}>
                                 {section.label}
                             </p>
                         )}
-                        {section.items.map((item) => (
+                        {section.items.map(item => (
                             <NavItem
                                 key={item.id}
                                 icon={item.icon}
                                 label={item.label}
                                 collapsed={collapsed}
                                 active={activeTab === item.id}
-                                onClick={() => onTabChange && onTabChange(item.id)}
+                                onClick={() => onTabChange?.(item.id)}
                             />
                         ))}
                     </div>
                 ))}
             </div>
 
-            {/* Expand button when collapsed */}
+            {/* Footer expand toggle */}
             {collapsed && (
-                <div className="p-3 border-t border-white/5">
-                    <button
-                        onClick={() => setCollapsed(false)}
-                        className="w-full flex justify-center p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
-                    >
+                <div className="p-3 flex-shrink-0" style={{ borderTop:'1px solid rgba(0,255,255,0.05)' }}>
+                    <button onClick={() => setCollapsed(false)}
+                        className="w-full flex justify-center p-2 rounded-xl transition-all"
+                        style={{ color:'rgba(100,116,139,0.6)' }}
+                        onMouseOver={e => e.currentTarget.style.color = '#00ffff'}
+                        onMouseOut={e => e.currentTarget.style.color = 'rgba(100,116,139,0.6)'}>
                         <ChevronRight className="h-4 w-4" />
                     </button>
                 </div>
             )}
+
+            {/* Vertical cyber accent line */}
+            <div className="absolute right-0 top-0 bottom-0 w-px"
+                 style={{ background:'linear-gradient(180deg, transparent, rgba(0,255,255,0.15) 40%, rgba(0,255,255,0.15) 60%, transparent)' }} />
         </aside>
     );
 };
-
-const NavItem = ({ icon, label, collapsed, active, onClick }) => (
-    <div
-        onClick={onClick}
-        className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all flex-shrink-0 group mb-0.5
-            ${active
-                ? 'bg-cyber-accent/10 border border-cyber-accent/20 text-cyber-accent shadow-neon-sm'
-                : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'}
-            ${collapsed ? 'justify-center' : ''}`}
-        title={collapsed ? label : undefined}
-    >
-        {/* Active left border accent */}
-        {active && !collapsed && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-cyber-accent rounded-full shadow-neon-sm" />
-        )}
-        {React.cloneElement(icon, {
-            className: `h-4 w-4 shrink-0 transition-colors ${active ? 'text-cyber-accent' : 'group-hover:text-white'}`
-        })}
-        {!collapsed && (
-            <span className="text-sm font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{label}</span>
-        )}
-    </div>
-);
 
 export default Sidebar;
