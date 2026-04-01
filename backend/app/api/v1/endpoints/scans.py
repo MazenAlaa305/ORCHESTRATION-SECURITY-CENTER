@@ -10,7 +10,7 @@ import asyncio
 from app.core.database import get_db, get_async_db, async_session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.scan import Scan, ScanStatus, Target
+from app.models.scan import Scan, ScanStatus, Target, ScanAsset
 from app.schemas.scan import (
     ScanCreate, ScanResponse, ScanDetail, ScanSummary,
     AgentLogResponse
@@ -102,7 +102,7 @@ async def create_ai_scan(scan_in: ScanCreate, background_tasks: BackgroundTasks,
     # Re-fetch with eager loading to avoid MissingGreenlet error during serialization
     _s_res = await db.execute(
         select(Scan)
-        .options(selectinload(Scan.vulnerabilities), selectinload(Scan.assets))
+        .options(selectinload(Scan.vulnerabilities), selectinload(Scan.assets), selectinload(Scan.actions))
         .filter(Scan.id == scan.id)
     )
     scan = _s_res.scalars().first()
@@ -144,7 +144,12 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_async_db)):
     """
     _s_res = await db.execute(
         select(Scan)
-        .options(selectinload(Scan.vulnerabilities), selectinload(Scan.assets), selectinload(Scan.agent_logs))
+        .options(
+            selectinload(Scan.vulnerabilities),
+            selectinload(Scan.assets).selectinload(ScanAsset.services),
+            selectinload(Scan.agent_logs),
+            selectinload(Scan.actions)
+        )
         .filter(Scan.id == scan_id)
     )
     scan = _s_res.scalars().first()

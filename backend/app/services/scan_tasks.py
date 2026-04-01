@@ -122,8 +122,15 @@ def run_scan_task(self, scan_id: int):
         # Import inside task to avoid circular deps
         try:
             from app.services.intelligence_agent import IntelligenceAgent
-            intelligence = IntelligenceAgent(db)
-            intelligence.batch_analyze(scan.id, results)
+            from app.core.database import async_session_maker
+            import asyncio
+            
+            async def run_ai_analysis():
+                async with async_session_maker() as async_db:
+                    intelligence = IntelligenceAgent(async_db)
+                    await intelligence.batch_analyze(scan.id, results)
+            
+            asyncio.run(run_ai_analysis())
         except Exception as e:
             logger.error(f"Intelligence analysis failed: {e}")
 
@@ -160,9 +167,22 @@ def run_scan_task(self, scan_id: int):
             logger.error(f"Nuclei scan failed or skipped: {e}")
 
         # Calculate Professional Risk Score and Actions via UnifiedRiskEngine
-        risk_engine = UnifiedRiskEngine(db)
-        risk_engine.update_scan_risk(scan.id)
-        risk_engine.generate_action_items(scan.id)
+        try:
+            from app.services.unified_risk_engine import UnifiedRiskEngine
+            from app.core.database import async_session_maker
+            import asyncio
+            
+            async def run_risk_analysis():
+                async with async_session_maker() as async_db:
+                    risk_engine = UnifiedRiskEngine(async_db)
+                    await risk_engine.update_scan_risk(scan.id)
+                    await risk_engine.generate_action_items(scan.id)
+            
+            asyncio.run(run_risk_analysis())
+        except Exception as e:
+            logger.error(f"Risk engine analysis failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
 
         # Phase 2: Process through Asset Monitor for new device/change detection
         AssetMonitor.process_scan_results(db, scan.id, results)
