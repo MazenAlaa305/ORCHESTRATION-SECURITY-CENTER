@@ -18,7 +18,7 @@ import { useRealTime } from '../context/RealTimeContext';
 import {
     LayoutDashboard, History, Settings, Activity,
     Network, FileText, Target, Bug, Brain,
-    Scan as ScanIcon, Zap,
+    Scan as ScanIcon, Zap, Server,
 } from 'lucide-react';
 
 // ── Lazy-loaded heavy panels (code-split to improve initial load time) ────────
@@ -34,6 +34,7 @@ const OpenVasScanButton    = lazy(() => import('../components/OpenVAS/ScanButton
 const RiskChart            = lazy(() => import('../components/OpenVAS/RiskChart'));
 const Scheduler            = lazy(() => import('../components/OpenVAS/Scheduler'));
 const VulnerabilitiesList  = lazy(() => import('../components/OpenVAS/VulnerabilitiesList'));
+const LabEnvironment       = lazy(() => import('../components/dashboard/LabEnvironment'));
 
 // ── Loading fallback ──────────────────────────────────────────────────────────
 const PanelLoader = () => (
@@ -217,6 +218,7 @@ const Dashboard = () => {
                             { id: 'scanner', label: 'Scan',    icon: <ScanIcon /> },
                             { id: 'history', label: 'History', icon: <History /> },
                             { id: 'targets', label: 'Nodes',   icon: <Target /> },
+                            { id: 'lab',     label: 'Lab',     icon: <Server /> },
                         ]}
                         active={activeSubTab}
                         onChange={setActiveSubTab}
@@ -247,6 +249,7 @@ const Dashboard = () => {
                         )}
                         {activeSubTab === 'history' && <ScanHistory refresh={refreshKey} />}
                         {activeSubTab === 'targets' && <TargetsManager onScanStarted={handleScanStarted} />}
+                        {activeSubTab === 'lab'     && <LabEnvironment />}
                     </Suspense>
                 </div>
             )}

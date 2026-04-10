@@ -1,0 +1,44 @@
+$ORIGIN sme-lab.local.
+$TTL 3600
+
+@       IN  SOA   dns.sme-lab.local. admin.sme-lab.local. (
+                   2024031501  ; Serial
+                   3600        ; Refresh
+                   900         ; Retry
+                   604800      ; Expire
+                   86400       ; Minimum TTL
+        )
+
+; Nameserver
+@             IN  NS    dns.sme-lab.local.
+
+; DMZ Zone
+dns           IN  A     10.10.10.30
+webserver     IN  A     10.10.10.10
+api-gw        IN  A     10.10.10.20
+portal        IN  CNAME webserver.sme-lab.local.
+shop          IN  CNAME webserver.sme-lab.local.
+
+; Corporate Zone
+fileserver    IN  A     10.10.20.10
+mail          IN  A     10.10.20.20
+workstation   IN  A     10.10.20.40
+printer       IN  A     10.10.20.50
+vpn           IN  A     10.10.20.60
+
+; Data Zone (should NOT be in public DNS - intentional leak)
+db            IN  A     10.10.30.10
+cache         IN  A     10.10.30.20
+db-backup     IN  A     10.10.30.30
+
+; Management Zone (should NEVER be in DNS - critical leak)
+monitoring    IN  A     10.10.40.10
+logserver     IN  A     10.10.40.20
+wazuh-agent   IN  A     10.10.40.30
+
+; MX Record
+@             IN  MX    10 mail.sme-lab.local.
+
+; TXT Records (information leak)
+@             IN  TXT   "v=spf1 include:_spf.sme-lab.local ~all"
+_dmarc        IN  TXT   "v=DMARC1; p=none; rua=mailto:admin@sme-lab.local"

@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     WAZUH_API_USER: str = "wazuh"
     WAZUH_API_PASSWORD: str = "wazuh"
     N8N_WEBHOOK_URL: str = "http://localhost:5678/webhook/"
+    # Living Lab
+    LAB_ENABLED: bool = True
+    LAB_COMPOSE_FILE: str = "docker-compose.lab.yml"
+    LAB_NETWORK_NAME: str = "the-dashboard-project-_lab_network"
+    LAB_DNS_SUFFIX: str = "sme-lab.local"
+    LAB_TRAFFIC_INTENSITY: str = "medium"  # low, medium, high
+    LAB_ELASTICSEARCH_INDEX: str = "sme-lab-events-*"
+    LAB_WAZUH_ALERT_INDEX: str = "wazuh-alerts-*"
     
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]

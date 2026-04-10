@@ -1,0 +1,13 @@
+Q1 Security Review Meeting Notes
+=================================
+Date: 2024-03-01
+Attendees: IT Team
+
+Action Items:
+- [ ] Change default passwords on all services (OVERDUE)
+- [ ] Enable SSL on PostgreSQL connections
+- [ ] Restrict Redis access to application subnet only
+- [ ] Disable zone transfers on DNS server
+- [ ] Remove API debug headers from production gateway
+
+NOTE: Delayed until Q3 due to budget constraints.

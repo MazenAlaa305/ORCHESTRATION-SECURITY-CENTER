@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.api.api import api_router
+from app.api.v1.endpoints import lab as lab_endpoints
 from app.core.database import engine, Base
 from app.services.ws_manager import manager
 
@@ -94,6 +95,7 @@ if settings.BACKEND_CORS_ORIGINS:
 
 # ── API router ────────────────────────────────────────────────────────────────
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(lab_endpoints.router, prefix=settings.API_V1_STR + "/lab", tags=["lab"])
 
 
 # ── Health endpoint (consumed by frontend TopBar) ────────────────────────────

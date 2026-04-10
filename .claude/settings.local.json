@@ -8,7 +8,11 @@
       "Bash(powershell -ExecutionPolicy Bypass -File \"d:/FINAL PROJECT/the-dashboard-project-/lab_setup.ps1\" seed)",
       "Bash(curl -s http://localhost:8000/)",
       "Bash(curl -s http://localhost:8000/health)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(pandoc --version)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(python convert_to_docx.py)"
     ]
   }
 }

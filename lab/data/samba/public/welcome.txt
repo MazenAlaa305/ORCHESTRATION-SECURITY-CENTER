@@ -1,0 +1,5 @@
+Welcome to SME Corp File Server
+================================
+For IT support: it-help@sme-corp.com
+VPN Guide: \\fileserver\shared\vpn_setup.pdf
+Admin contact: admin@sme-corp.com (password hint: company name + 123)

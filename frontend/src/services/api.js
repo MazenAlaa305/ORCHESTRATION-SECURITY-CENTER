@@ -120,4 +120,22 @@ export const dashboardService = {
     refreshRiskScores: () => api.post('/dashboard/refresh-risk'),
 };
 
+export const labService = {
+    // Get lab environment status (containers, network, telemetry)
+    getStatus: () => api.get('/lab/status'),
+
+    // Seed lab targets into dashboard database
+    seedTargets: () => api.post('/lab/seed'),
+
+    // Get recent lab events from Elasticsearch
+    getEvents: (limit = 50, category = null) =>
+        api.get('/lab/events', { params: { limit, category } }),
+
+    // Get lab target definitions (vulnerability profiles)
+    getTargets: () => api.get('/lab/targets'),
+
+    // Get telemetry stats
+    getTelemetry: () => api.get('/lab/telemetry'),
+};
+
 export default api;
