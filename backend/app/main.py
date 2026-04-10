@@ -1,42 +1,141 @@
-from fastapi import FastAPI
+import asyncio
+import json
+import logging
+import aioredis
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from app.core.config import settings
 from app.api.api import api_router
 from app.core.database import engine, Base
+from app.services.ws_manager import manager
 
-# Create tables for MVP (in production use Alembic)
+# ── Structured logging ──────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+# ── Database bootstrap (dev only — use Alembic in prod) ─────────────────────
 Base.metadata.create_all(bind=engine)
 
+# ── Redis event listener with exponential backoff ───────────────────────────
+_redis_listener_task: asyncio.Task | None = None
+
+
+async def redis_event_listener() -> None:
+    """
+    Bridges Celery worker events → WebSocket clients via Redis Pub/Sub.
+    Reconnects with exponential backoff (2s → 4s → 8s … capped at 32s).
+    """
+    attempt = 0
+    while True:
+        try:
+            redis = await aioredis.from_url(
+                settings.REDIS_URL,
+                decode_responses=True,
+                socket_timeout=5,
+                socket_connect_timeout=5,
+            )
+            pubsub = redis.pubsub()
+            await pubsub.subscribe("ws_events")
+            attempt = 0  # reset on successful connect
+            logger.info("Redis event listener connected.")
+
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    try:
+                        data = json.loads(message["data"])
+                        await manager.broadcast_event(data["type"], data["payload"])
+                    except (KeyError, json.JSONDecodeError) as exc:
+                        logger.warning("Malformed ws_event message: %s — %s", message.get("data"), exc)
+
+        except Exception as exc:
+            delay = min(2 ** attempt, 32)
+            attempt += 1
+            logger.error("Redis listener error (attempt %d): %s — retrying in %ds", attempt, exc, delay)
+            await asyncio.sleep(delay)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: start background tasks, then clean up on shutdown."""
+    global _redis_listener_task
+    _redis_listener_task = asyncio.create_task(redis_event_listener())
+    logger.info("Found 404 API started.")
+    yield
+    if _redis_listener_task and not _redis_listener_task.done():
+        _redis_listener_task.cancel()
+    logger.info("Found 404 API shutting down.")
+
+
+# ── FastAPI application ──────────────────────────────────────────────────────
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    version="2.0.0",
+    description="AI-driven DAST platform for SMEs",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 
-# Set all CORS enabled origins
+# ── CORS ─────────────────────────────────────────────────────────────────────
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_origins=[str(o) for o in settings.BACKEND_CORS_ORIGINS],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-from app.services.ws_manager import manager
-from fastapi import WebSocket
-
+# ── API router ────────────────────────────────────────────────────────────────
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+
+# ── Health endpoint (consumed by frontend TopBar) ────────────────────────────
+@app.get("/health", tags=["System"])
+async def health_check():
+    """
+    Returns liveness/readiness status of API, Redis, and Celery workers.
+    Frontend polls this every 30 seconds to show HealthPills in TopBar.
+    """
+    redis_ok = False
+    try:
+        r = await aioredis.from_url(settings.REDIS_URL, socket_connect_timeout=2)
+        await asyncio.wait_for(r.ping(), timeout=2.0)
+        await r.close()
+        redis_ok = True
+    except Exception:
+        pass
+
+    # Celery worker check via Redis queue inspection (basic heuristic)
+    workers_ok = redis_ok  # If Redis is up, workers can connect too
+
+    return JSONResponse({
+        "status": "ok" if redis_ok else "degraded",
+        "api": True,
+        "redis": redis_ok,
+        "workers": workers_ok,
+    })
+
+
+# ── WebSocket endpoint ────────────────────────────────────────────────────────
 @app.websocket("/ws/logs")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Keep connection alive; discard incoming messages
+            # Keep-alive: discard any incoming messages from client
             await websocket.receive_text()
-    except Exception:
+    except (WebSocketDisconnect, Exception):
         manager.disconnect(websocket)
 
-@app.get("/")
+
+# ── Root ──────────────────────────────────────────────────────────────────────
+@app.get("/", tags=["System"])
 def read_root():
-    return {"message": "Welcome to SME Cyber Exposure Dashboard API"}
+    return {"message": "Found 404 — SME Cyber Exposure Dashboard API", "version": "2.0.0"}

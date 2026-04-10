@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Bug, Monitor, Zap } from 'lucide-react';
+import { useRealTime } from '../../context/RealTimeContext';
 
 const SEV_COLORS = {
     CRITICAL: '#ff0055',
@@ -8,16 +9,18 @@ const SEV_COLORS = {
     LOW:      '#00ffff',
 };
 
-function useCountUp(target, duration = 1200) {
+function useCountUp(target, duration = 900) {
     const [value, setValue] = useState(0);
     useEffect(() => {
-        if (!target && target !== 0) return;
-        let start = 0;
-        const step = target / (duration / 16);
+        if (target === undefined || target === null) return;
+        const numTarget = Number(target);
+        if (isNaN(numTarget)) return;
+        let current = 0;
+        const step = numTarget / (duration / 16);
         const timer = setInterval(() => {
-            start = Math.min(start + step, target);
-            setValue(Math.round(start));
-            if (start >= target) clearInterval(timer);
+            current = Math.min(current + step, numTarget);
+            setValue(Math.round(current));
+            if (current >= numTarget) clearInterval(timer);
         }, 16);
         return () => clearInterval(timer);
     }, [target, duration]);
@@ -29,90 +32,103 @@ const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse }) =>
 
     return (
         <div
-            className="relative overflow-hidden rounded-xl p-5 flex flex-col gap-3 transition-all duration-300 group"
+            className="relative overflow-hidden rounded-lg p-4 flex flex-col gap-2 transition-all duration-300 group"
             style={{
-                background:  `linear-gradient(135deg, rgba(15,25,34,0.7), rgba(10,17,24,0.85))`,
-                border:      `1px solid ${color}28`,
-                boxShadow:   `0 0 24px ${color}12, inset 0 1px 0 rgba(255,255,255,0.04)`,
+                background: 'linear-gradient(135deg, rgba(15,25,34,0.7), rgba(10,17,24,0.85))',
+                border:     `1px solid ${color}20`,
+                boxShadow:  `0 0 16px ${color}08, inset 0 1px 0 rgba(255,255,255,0.02)`,
             }}
         >
-            {/* Hover glow */}
-            <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                style={{ background: `radial-gradient(circle at 50% 0, ${color}10, transparent 70%)` }}
-            />
-
-            {/* Header */}
             <div className="relative z-10 flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-500">{title}</span>
-                <span style={{ color, opacity: 0.55 }}>{icon}</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">{title}</span>
+                <span style={{ color, opacity: 0.4 }}>
+                    {React.cloneElement(icon, { className: 'h-3 w-3' })}
+                </span>
             </div>
 
-            {/* Value */}
-            <div className="relative z-10 flex items-end gap-2">
+            <div className="relative z-10 flex items-end gap-1.5">
                 <span
-                    className={`text-4xl font-black leading-none ${pulse ? 'animate-pulse' : ''}`}
+                    className={`text-2xl font-black leading-none ${pulse ? 'animate-pulse' : ''}`}
                     style={{ color: typeof value === 'string' ? color : 'white' }}
                 >
                     {typeof value === 'string' ? value : animValue}
                 </span>
-                {sub && <span className="text-[9px] text-gray-600 font-mono uppercase mb-0.5">{sub}</span>}
+                {sub && (
+                    <span className="text-[8px] text-gray-700 font-mono uppercase mb-0.5">{sub}</span>
+                )}
             </div>
 
-            {/* Bar */}
             {bar !== undefined && (
-                <div className="relative z-10 h-1 w-full rounded-full overflow-hidden" style={{ background:'rgba(255,255,255,0.06)' }}>
+                <div
+                    className="relative z-10 h-0.5 w-full rounded-full overflow-hidden"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
+                >
                     {barSegments ? (
                         <div className="flex h-full">
                             {barSegments.map(({ pct, c }, i) =>
                                 pct > 0 ? (
-                                    <div key={i} className="h-full transition-all duration-700" style={{ width:`${pct}%`, background: c }} />
+                                    <div
+                                        key={i}
+                                        className="h-full transition-all duration-700"
+                                        style={{ width: `${pct}%`, background: c }}
+                                    />
                                 ) : null
                             )}
                         </div>
                     ) : (
-                        <div className="h-full rounded-full transition-all duration-1000"
-                             style={{ width:`${bar}%`, background:`linear-gradient(90deg, ${color}60, ${color})` }} />
+                        <div
+                            className="h-full rounded-full transition-all duration-1000"
+                            style={{ width: `${bar}%`, background: `linear-gradient(90deg, ${color}40, ${color})` }}
+                        />
                     )}
                 </div>
             )}
-
-            {/* Bottom accent */}
-            <div className="absolute bottom-0 left-0 right-0 h-px"
-                 style={{ background:`linear-gradient(90deg, transparent, ${color}50, transparent)` }} />
         </div>
     );
 };
 
+/**
+ * StatCards — 4-card KPI grid.
+ * Severity counts are read directly from realTime.kpi.counts so they update
+ * live via WebSocket without needing to parse latestScan.vulnerabilities[].
+ */
 const StatCards = ({ latestScan, isScanning }) => {
-    const riskScore   = latestScan?.risk_score ?? 0;
-    const healthScore = Math.round(100 - riskScore);
-    const vulnCount   = latestScan?.vulnerabilities?.length ?? latestScan?.vulnerabilities_count ?? 0;
-    const assetCount  = latestScan?.assets?.length ?? latestScan?.assets_count ?? 0;
+    const { state: realTime } = useRealTime();
 
-    const vulns = latestScan?.vulnerabilities || [];
-    const sevMap = {};
-    vulns.forEach(v => {
-        const s = (v.severity || 'LOW').toUpperCase();
-        sevMap[s] = (sevMap[s] || 0) + 1;
-    });
-    const sevSegments = ['CRITICAL','HIGH','MEDIUM','LOW'].map(s => ({
-        pct: vulnCount ? ((sevMap[s] || 0) / vulnCount) * 100 : 0,
-        c:   SEV_COLORS[s],
-    }));
+    // Health / risk — prefer live KPI, fall back to latestScan
+    const riskScore   = realTime.kpi.overall_score ?? latestScan?.risk_score ?? 0;
+    const healthScore = Math.round(realTime.kpi.health_score ?? (100 - riskScore));
 
+    // Vulnerability count — sum live KPI counts
+    const { critical = 0, high = 0, medium = 0, low = 0 } = realTime.kpi.counts;
+    const vulnCount = critical + high + medium + low;
+
+    // Assets — prefer live KPI
+    const assetCount = realTime.kpi.total_assets ?? latestScan?.assets?.length ?? 0;
+
+    // Severity bar segments (proportional)
+    const sevSegments = vulnCount > 0
+        ? [
+            { pct: (critical / vulnCount) * 100, c: SEV_COLORS.CRITICAL },
+            { pct: (high     / vulnCount) * 100, c: SEV_COLORS.HIGH     },
+            { pct: (medium   / vulnCount) * 100, c: SEV_COLORS.MEDIUM   },
+            { pct: (low      / vulnCount) * 100, c: SEV_COLORS.LOW      },
+          ]
+        : undefined;
+
+    // Engine status
     let engineStatus = 'IDLE', engineColor = '#1a2332';
-    if (isScanning)                           { engineStatus = 'ACTIVE';    engineColor = '#00ffff'; }
-    else if (latestScan?.status === 'COMPLETED') { engineStatus = 'COMPLETE';  engineColor = '#00ff88'; }
-    else if (latestScan?.status === 'FAILED')    { engineStatus = 'FAILED';    engineColor = '#ff0055'; }
+    if (isScanning)                                { engineStatus = 'RUN';  engineColor = '#00ffff'; }
+    else if (latestScan?.status === 'completed')   { engineStatus = 'OK';   engineColor = '#00ff88'; }
+    else if (latestScan?.status === 'failed')      { engineStatus = 'FAIL'; engineColor = '#ff0055'; }
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-fade-in">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-fade-in">
             <KPICard
                 title="Security Health"
                 value={healthScore}
                 sub="/ 100"
-                icon={<ShieldCheck className="h-4 w-4" />}
+                icon={<ShieldCheck />}
                 color="#00ff88"
                 bar={healthScore}
             />
@@ -120,24 +136,24 @@ const StatCards = ({ latestScan, isScanning }) => {
                 title="Vulnerabilities"
                 value={vulnCount}
                 sub="Found"
-                icon={<Bug className="h-4 w-4" />}
+                icon={<Bug />}
                 color={vulnCount === 0 ? '#00ff88' : vulnCount > 5 ? '#ff0055' : '#ffaa00'}
                 bar={vulnCount > 0 ? 100 : 0}
-                barSegments={vulnCount > 0 ? sevSegments : undefined}
+                barSegments={sevSegments}
             />
             <KPICard
-                title="Assets Discovered"
+                title="Assets"
                 value={assetCount}
                 sub="Hosts"
-                icon={<Monitor className="h-4 w-4" />}
+                icon={<Monitor />}
                 color="#00ffff"
                 bar={Math.min(assetCount * 5, 100)}
             />
             <KPICard
-                title="Scan Engine"
+                title="Status"
                 value={engineStatus}
-                sub={latestScan ? new Date(latestScan.started_at || Date.now()).toLocaleDateString() : 'No scans yet'}
-                icon={<Zap className="h-4 w-4" />}
+                sub="System"
+                icon={<Zap />}
                 color={engineColor}
                 bar={isScanning ? 70 : undefined}
                 pulse={isScanning}

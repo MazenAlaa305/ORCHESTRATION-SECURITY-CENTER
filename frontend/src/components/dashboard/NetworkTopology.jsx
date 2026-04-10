@@ -38,7 +38,7 @@ function roundedRect(ctx, x, y, w, h, r) {
 }
 
 // ─── Component ────────────────────────────────────────────
-const NetworkTopology = ({ refresh }) => {
+const NetworkTopology = ({ refresh, compact = false }) => {
     const [graphData, setGraphData]     = useState({ nodes: [], links: [] });
     const [loading, setLoading]         = useState(true);
     const [selectedNode, setSelectedNode] = useState(null);
@@ -247,10 +247,10 @@ const NetworkTopology = ({ refresh }) => {
     );
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in w-full h-full">
+        <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6 animate-fade-in w-full h-full`}>
 
             {/* Graph Container */}
-            <div className="lg:col-span-2 relative overflow-hidden glass-card p-0" style={{ minHeight: 420 }}>
+            <div className={`${compact ? 'lg:col-span-1' : 'lg:col-span-2'} relative overflow-hidden glass-card p-0`} style={{ minHeight: compact ? 300 : 420 }}>
                 {/* Title Bar */}
                 <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-2.5"
                      style={{ borderBottom: '1px solid rgba(0,255,255,0.06)', background:'rgba(2,9,15,0.6)', backdropFilter:'blur(10px)' }}>
@@ -313,27 +313,29 @@ const NetworkTopology = ({ refresh }) => {
             </div>
 
             {/* Details Panel */}
-            <div className={`transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
-                {selectedNode && selectedNode.id !== 'hub' ? (
-                    <AssetDetailPanel
-                        node={selectedNode}
-                        onClose={() => { setSelectedNode(null); fgRef.current?.zoomToFit(600); }}
-                    />
-                ) : (
-                    <div className="h-full glass-card flex flex-col justify-center items-center text-center p-8 border-dashed group">
-                        <div className="p-5 rounded-full mb-6 group-hover:scale-110 transition-transform duration-500"
-                             style={{ background:'rgba(0,255,255,0.05)', border:'1px solid rgba(0,255,255,0.08)' }}>
-                            <Move className="h-8 w-8" style={{ color:'rgba(0,255,255,0.3)' }} />
+            {!compact && (
+                <div className={`transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
+                    {selectedNode && selectedNode.id !== 'hub' ? (
+                        <AssetDetailPanel
+                            node={selectedNode}
+                            onClose={() => { setSelectedNode(null); fgRef.current?.zoomToFit(600); }}
+                        />
+                    ) : (
+                        <div className="h-full glass-card flex flex-col justify-center items-center text-center p-8 border-dashed group">
+                            <div className="p-5 rounded-full mb-6 group-hover:scale-110 transition-transform duration-500"
+                                 style={{ background:'rgba(0,255,255,0.05)', border:'1px solid rgba(0,255,255,0.08)' }}>
+                                <Move className="h-8 w-8" style={{ color:'rgba(0,255,255,0.3)' }} />
+                            </div>
+                            <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">
+                                Infrastructure Insight
+                            </h3>
+                            <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
+                                Click any <span style={{ color:'#00ffff' }}>node</span> on the topology map to view deep packet inspection and AI-generated risk analysis.
+                            </p>
                         </div>
-                        <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">
-                            Infrastructure Insight
-                        </h3>
-                        <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
-                            Click any <span style={{ color:'#00ffff' }}>node</span> on the topology map to view deep packet inspection and AI-generated risk analysis.
-                        </p>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

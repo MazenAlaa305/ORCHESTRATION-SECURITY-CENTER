@@ -115,6 +115,7 @@ export const openvasService = {
 
 export const dashboardService = {
     getRiskOverview: () => api.get('/dashboard/risk-overview'),
+    getKpiSnapshot: () => api.get('/dashboard/kpi-snapshot'),
     getActionItems: () => api.get('/dashboard/actions'),
     refreshRiskScores: () => api.post('/dashboard/refresh-risk'),
 };

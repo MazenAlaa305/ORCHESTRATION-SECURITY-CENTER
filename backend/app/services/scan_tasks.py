@@ -1,220 +1,263 @@
-from app.core.celery_app import celery_app
-from app.services.nmap_wrapper import NmapWrapper
-from app.core.database import SessionLocal
-from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService, ActionItem, Target
-from app.services.unified_risk_engine import UnifiedRiskEngine
-from app.services.asset_monitor import AssetMonitor
-from datetime import datetime
+"""
+Celery scan tasks — Nmap infrastructure scan → Nuclei deep scan → Risk Engine → AI → Event publish.
+
+Key design decisions:
+  - All async helpers are called through _run_async() to safely use asyncio inside
+    a synchronous Celery worker without nested event-loop conflicts.
+  - Each phase (intelligence, nuclei, risk) fails independently so one broken
+    integration never aborts the entire scan pipeline.
+  - Scan status is always updated (COMPLETED or FAILED) in the finally block.
+"""
+
+import asyncio
 import logging
+from datetime import datetime
+from urllib.parse import urlparse
+
+from app.core.celery_app import celery_app
+from app.core.database import SessionLocal
+from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService
+from app.services.nmap_wrapper import NmapWrapper
+from app.services.event_publisher import publisher
 
 logger = logging.getLogger(__name__)
 
-@celery_app.task(bind=True)
+
+# ── Async helper ─────────────────────────────────────────────────────────────
+
+def _run_async(coro):
+    """
+    Run an async coroutine safely from within a synchronous Celery task.
+    Creates a dedicated event loop to avoid RuntimeError on already-running loops.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+# ── URL / host sanitiser ──────────────────────────────────────────────────────
+
+def _sanitise_target(raw: str) -> str:
+    """
+    Extract a clean hostname or IP from a URL string.
+    Preserves CIDR notation (e.g. 192.168.1.0/24).
+    """
+    if "://" in raw:
+        parsed = urlparse(raw)
+        return parsed.hostname or raw.split("/")[0]
+    # CIDR — keep as-is
+    if "/" in raw and not raw.startswith("/"):
+        return raw
+    return raw
+
+
+# ── Main scan task ─────────────────────────────────────────────────────────────
+
+@celery_app.task(bind=True, max_retries=2, default_retry_delay=30)
 def run_scan_task(self, scan_id: int):
+    """
+    Full scan pipeline:
+      1. Nmap  — port/service enumeration
+      2. IntelligenceAgent — Gemini AI analysis of findings
+      3. Nuclei — template-based vulnerability detection
+      4. UnifiedRiskEngine — risk score + action items
+      5. AssetMonitor — new device / change detection
+      6. EventPublisher — push RISK_UPDATE to WebSocket clients
+    """
     db = SessionLocal()
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
-    
+
     if not scan:
-        logger.error(f"Scan {scan_id} not found")
+        logger.error("Scan %s not found — aborting.", scan_id)
+        db.close()
         return
 
+    vuln_count = 0
+
     try:
-        # Update status to RUNNING and set actual start time
+        # ── Status: RUNNING ──────────────────────────────────────────────────
         scan.status = ScanStatus.RUNNING
         scan.started_at = datetime.utcnow()
         if scan.configuration is None:
             scan.configuration = {}
         db.commit()
-        
-        # Execute Scan
+
+        # ── Resolve target host ──────────────────────────────────────────────
+        raw_target = (scan.target.base_url if scan.target else None) or scan.target_url
+        if not raw_target:
+            raise ValueError(f"No valid target URL for scan {scan_id}")
+        clean_target = _sanitise_target(raw_target)
+
+        # ── Phase 1: Nmap ────────────────────────────────────────────────────
+        logger.info("[Scan %s] Phase 1: Nmap → %s", scan_id, clean_target)
         scanner = NmapWrapper()
-        
-        # Determine target URL
-        target_host = scan.target_url # Legacy fallback
-        if scan.target and scan.target.base_url:
-            target_host = scan.target.base_url
-            
-        if not target_host:
-            raise ValueError(f"No valid target URL found for scan {scan.id}")
-        
-        # SANITIZE TARGET FOR NMAP (Strip protocol, path, port while preserving CIDR)
-        clean_target = target_host
-        if "://" in target_host:
-            from urllib.parse import urlparse
-            parsed = urlparse(target_host)
-            clean_target = parsed.hostname or parsed.path.split('/')[0]
-        elif "/" in target_host and not target_host.startswith("/"):
-            # Likely CIDR notation like 192.168.1.0/24
-            clean_target = target_host
-            
         results = scanner.scan_target(clean_target, scan.scan_type)
-        
-        # Save Results
-        total_risk = 0.0
-        vuln_count = 0
-        all_vulns = []
-        
-        # Track seen hosts to create unique assets
-        seen_hosts = set()
-        
+
+        seen_hosts: set[str] = set()
+        all_vulns: list[dict] = []
+
         for host_data in results:
-            ip = host_data['ip']
-            
-            # 1. Create/Update Scan Asset
-            if ip not in seen_hosts:
-                asset = ScanAsset(
-                    scan_id=scan.id,
-                    ip_address=ip,
-                    hostname=host_data.get('hostnames'),
-                    mac_address=host_data.get('mac'),
-                    mac_vendor=host_data.get('mac_vendor'),
-                    os_name=host_data.get('os_name'),
-                    os_accuracy=host_data.get('os_accuracy'),
-                    device_type=host_data.get('device_type', 'unknown'),
-                    is_new="true" # Flag for notification
-                )
-                db.add(asset)
-                db.flush() # Flush to get asset.id for services
-                seen_hosts.add(ip)
-            
-                # 2. Save Services
-                for port_data in host_data['ports']:
-                    # Add to AssetService table
-                    service = AssetService(
-                        asset_id=asset.id,
-                        port=port_data['port'],
-                        protocol=port_data['protocol'],
-                        state=port_data['state'],
-                        service_name=port_data['service'],
-                        product=port_data['product'],
-                        version=port_data['version'],
-                        cpe=port_data.get('cpe'),
-                        extra_info=port_data.get('extra_info')
-                    )
-                    db.add(service)
+            ip = host_data["ip"]
+            if ip in seen_hosts:
+                continue
+            seen_hosts.add(ip)
 
-                    # Add to Vulnerabilities table (Active Risks)
-                    vuln = Vulnerability(
-                        scan_id=scan.id,
-                        host=host_data['ip'],
-                        port=port_data['port'],
-                        protocol=port_data['protocol'],
-                        service=port_data['service'],
-                        type="Service Exposure",
-                        severity=port_data['severity'].lower(),
-                        url=f"{port_data['protocol']}://{host_data['ip']}:{port_data['port']}",
-                        description=f"Service: {port_data['product']} {port_data['version']}",
-                        remediation="Update service or firewall port."
-                    )
-                    
-                    db.add(vuln)
-                    vuln_count += 1
-                    
-                    # Collect for Risk Engine
-                    all_vulns.append({
-                        "host": host_data['ip'],
-                        "severity": port_data['severity'].lower(),
-                        "cve_id": "",
-                        "description": f"Service: {port_data['product']}"
-                    })
+            asset = ScanAsset(
+                scan_id=scan.id,
+                ip_address=ip,
+                hostname=host_data.get("hostnames"),
+                mac_address=host_data.get("mac"),
+                mac_vendor=host_data.get("mac_vendor"),
+                os_name=host_data.get("os_name"),
+                os_accuracy=host_data.get("os_accuracy"),
+                device_type=host_data.get("device_type", "unknown"),
+                is_new="true",
+            )
+            db.add(asset)
+            db.flush()
 
-        # Phase 1.5: Intelligence Analysis (Gemini)
-        # Import inside task to avoid circular deps
-        try:
-            from app.services.intelligence_agent import IntelligenceAgent
-            from app.core.database import async_session_maker
-            import asyncio
-            
-            async def run_ai_analysis():
-                async with async_session_maker() as async_db:
-                    intelligence = IntelligenceAgent(async_db)
-                    await intelligence.batch_analyze(scan.id, results)
-            
-            asyncio.run(run_ai_analysis())
-        except Exception as e:
-            logger.error(f"Intelligence analysis failed: {e}")
-
-        # 3. Deep Vulnerability Scan (Nuclei)
-        try:
-            from app.services.nuclei_wrapper import NucleiWrapper
-            nuclei = NucleiWrapper()
-            nuclei_findings = nuclei.scan_target(clean_target, scan_type=scan.scan_type)
-            
-            for finding in nuclei_findings:
+            for port_data in host_data["ports"]:
+                db.add(AssetService(
+                    asset_id=asset.id,
+                    port=port_data["port"],
+                    protocol=port_data["protocol"],
+                    state=port_data["state"],
+                    service_name=port_data["service"],
+                    product=port_data["product"],
+                    version=port_data["version"],
+                    cpe=port_data.get("cpe"),
+                    extra_info=port_data.get("extra_info"),
+                ))
                 vuln = Vulnerability(
                     scan_id=scan.id,
-                    type=finding['type'],
-                    severity=finding['severity'],
-                    description=finding['description'],
-                    url=finding['url'],
-                    host=clean_target,
-                    service="http" if "http" in finding['url'] else "unknown", # Deduce service
-                    cve_id=finding.get('cve_id', ''), # Use .get for safety
-                    proof_of_concept=str(finding.get('evidence', '')), # Use .get for safety
-                    remediation="Refer to CVE mitigation.",
-                    status="OPEN"
+                    host=ip,
+                    port=port_data["port"],
+                    protocol=port_data["protocol"],
+                    service=port_data["service"],
+                    type="Service Exposure",
+                    severity=port_data["severity"].lower(),
+                    url=f"{port_data['protocol']}://{ip}:{port_data['port']}",
+                    description=f"Service: {port_data['product']} {port_data['version']}",
+                    remediation="Update service or restrict access with firewall rules.",
                 )
                 db.add(vuln)
                 vuln_count += 1
                 all_vulns.append({
-                    "host": clean_target,
-                    "severity": finding['severity'],
-                    "cve_id": finding.get('cve_id', ''), # Use .get for safety
-                    "description": finding['description']
+                    "host": ip,
+                    "severity": port_data["severity"].lower(),
+                    "cve_id": "",
+                    "description": f"Service: {port_data['product']}",
                 })
-                
-        except Exception as e:
-            logger.error(f"Nuclei scan failed or skipped: {e}")
 
-        # Calculate Professional Risk Score and Actions via UnifiedRiskEngine
+        # ── Phase 2: AI Intelligence (Gemini) ─────────────────────────────
+        logger.info("[Scan %s] Phase 2: AI Intelligence analysis", scan_id)
+        try:
+            from app.services.intelligence_agent import IntelligenceAgent
+            from app.core.database import async_session_maker
+
+            async def _ai_analysis():
+                async with async_session_maker() as async_db:
+                    await IntelligenceAgent(async_db).batch_analyze(scan.id, results)
+
+            _run_async(_ai_analysis())
+        except Exception as exc:
+            logger.warning("[Scan %s] Intelligence analysis skipped: %s", scan_id, exc)
+
+        # ── Phase 3: Nuclei deep scan ──────────────────────────────────────
+        logger.info("[Scan %s] Phase 3: Nuclei → %s", scan_id, clean_target)
+        try:
+            from app.services.nuclei_wrapper import NucleiWrapper
+            for finding in NucleiWrapper().scan_target(clean_target, scan_type=scan.scan_type):
+                db.add(Vulnerability(
+                    scan_id=scan.id,
+                    type=finding["type"],
+                    severity=finding["severity"],
+                    description=finding["description"],
+                    url=finding["url"],
+                    host=clean_target,
+                    service="http" if "http" in finding["url"] else "unknown",
+                    cve_id=finding.get("cve_id", ""),
+                    proof_of_concept=str(finding.get("evidence", "")),
+                    remediation="Refer to CVE mitigation guidance.",
+                    status="OPEN",
+                ))
+                vuln_count += 1
+                all_vulns.append({
+                    "host": clean_target,
+                    "severity": finding["severity"],
+                    "cve_id": finding.get("cve_id", ""),
+                    "description": finding["description"],
+                })
+        except Exception as exc:
+            logger.warning("[Scan %s] Nuclei scan skipped: %s", scan_id, exc)
+
+        # ── Phase 4: Risk Engine ───────────────────────────────────────────
+        logger.info("[Scan %s] Phase 4: Risk Engine", scan_id)
         try:
             from app.services.unified_risk_engine import UnifiedRiskEngine
             from app.core.database import async_session_maker
-            import asyncio
-            
-            async def run_risk_analysis():
+
+            async def _risk_analysis():
                 async with async_session_maker() as async_db:
-                    risk_engine = UnifiedRiskEngine(async_db)
-                    await risk_engine.update_scan_risk(scan.id)
-                    await risk_engine.generate_action_items(scan.id)
-            
-            asyncio.run(run_risk_analysis())
-        except Exception as e:
-            logger.error(f"Risk engine analysis failed: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+                    engine = UnifiedRiskEngine(async_db)
+                    await engine.update_scan_risk(scan.id)
+                    await engine.generate_action_items(scan.id)
 
-        # Phase 2: Process through Asset Monitor for new device/change detection
-        AssetMonitor.process_scan_results(db, scan.id, results)
+            _run_async(_risk_analysis())
+        except Exception as exc:
+            logger.error("[Scan %s] Risk Engine failed: %s", scan_id, exc)
 
+        # ── Phase 5: Asset Monitor ─────────────────────────────────────────
+        try:
+            from app.services.asset_monitor import AssetMonitor
+            AssetMonitor.process_scan_results(db, scan.id, results)
+        except Exception as exc:
+            logger.warning("[Scan %s] Asset monitor skipped: %s", scan_id, exc)
+
+        # ── Finalise: COMPLETED ────────────────────────────────────────────
         scan.status = ScanStatus.COMPLETED
         scan.completed_at = datetime.utcnow()
-        
-    except Exception as e:
-        logger.error(f"Scan failed: {e}")
+        db.commit()
+        db.refresh(scan)
+
+        thoughts = scan.agent_thoughts or {}
+        _run_async(publisher.publish("RISK_UPDATE", {
+            "scan_id": scan.id,
+            "overall_score": round(scan.risk_score or 0.0, 2),
+            "health_score": round(float(thoughts.get("health_score", 100.0 - (scan.risk_score or 0))), 2),
+            "vuln_count": vuln_count,
+        }))
+        logger.info("[Scan %s] Completed — %d vulnerabilities found.", scan_id, vuln_count)
+
+    except Exception as exc:
+        logger.exception("[Scan %s] Fatal error: %s", scan_id, exc)
         scan.status = ScanStatus.FAILED
         scan.risk_score = 0
+        try:
+            self.retry(exc=exc)
+        except Exception:
+            pass  # max_retries exceeded — final failure logged above
     finally:
         db.commit()
         db.close()
 
+
+# ── Periodic scan trigger ─────────────────────────────────────────────────────
+
 @celery_app.task
 def trigger_periodic_scan(target: str = "localhost"):
-    """
-    Creates a new scan record and triggers the scan task.
-    """
+    """Create a new scan record and enqueue it for processing."""
     db = SessionLocal()
     try:
-        # Create new scan record
         scan = Scan(target_url=target, scan_type="quick")
         db.add(scan)
         db.commit()
         db.refresh(scan)
-        
-        # Trigger the actual scan logic
         run_scan_task.delay(scan_id=scan.id)
-        logger.info(f"Triggered periodic scan {scan.id} for {target}")
-    except Exception as e:
-        logger.error(f"Failed to trigger periodic scan: {e}")
+        logger.info("Triggered periodic scan %s for %s", scan.id, target)
+    except Exception as exc:
+        logger.error("Failed to trigger periodic scan: %s", exc)
     finally:
         db.close()

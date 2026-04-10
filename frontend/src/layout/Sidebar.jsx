@@ -1,183 +1,194 @@
-import React, { useState } from 'react';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, ChevronRight, Brain, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText } from 'lucide-react';
+import { useRealTime } from '../context/RealTimeContext';
 
 const NAV_SECTIONS = [
     {
         label: 'Security',
         items: [
-            { icon: <LayoutDashboard />, label: 'Command Center', id: 'overview' },
-            { icon: <Activity />, label: 'Threat Center', id: 'threat-center' },
-        ]
+            { icon: <LayoutDashboard />, label: 'Command Center', id: 'overview'      },
+            { icon: <Activity />,        label: 'Threat Center',  id: 'threat-center' },
+        ],
     },
     {
         label: 'Operations',
         items: [
-            { icon: <Scan />, label: 'Scanner', id: 'operations' },
-            { icon: <Brain />, label: 'AI Brain', id: 'ai-brain' },
-        ]
+            { icon: <Scan />,  label: 'Scanner',  id: 'operations' },
+            { icon: <Brain />, label: 'AI Brain',  id: 'ai-brain'   },
+        ],
     },
     {
         label: 'System',
         items: [
-            { icon: <FileText />, label: 'Reports', id: 'reports' },
-            { icon: <Settings />, label: 'Settings', id: 'settings' },
-        ]
-    }
+            { icon: <FileText />,  label: 'Reports',  id: 'reports'  },
+            { icon: <Settings />,  label: 'Settings', id: 'settings' },
+        ],
+    },
 ];
 
-const NavItem = ({ icon, label, collapsed, active, onClick }) => (
+const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
     <div
         onClick={onClick}
-        className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 flex-shrink-0 group mb-0.5 ${collapsed ? 'justify-center' : ''}`}
+        className={`relative flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-all duration-200 flex-shrink-0 group mb-0.5 ${collapsed ? 'justify-center' : ''}`}
         style={{
             background: active
-                ? 'linear-gradient(135deg, rgba(0,255,255,0.1), rgba(0,255,255,0.05))'
+                ? 'linear-gradient(135deg, rgba(0,255,255,0.08), rgba(0,255,255,0.04))'
                 : 'transparent',
             border: active
-                ? '1px solid rgba(0,255,255,0.2)'
+                ? '1px solid rgba(0,255,255,0.15)'
                 : '1px solid transparent',
-            boxShadow: active ? '0 0 12px rgba(0,255,255,0.1)' : 'none',
         }}
         title={collapsed ? label : undefined}
     >
         {/* Active left accent bar */}
         {active && !collapsed && (
             <div
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full"
-                style={{ background:'#00ffff', boxShadow:'0 0 6px #00ffff' }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full"
+                style={{ background: '#00ffff', boxShadow: '0 0 6px #00ffff' }}
             />
         )}
-        {React.cloneElement(icon, {
-            className: `h-4 w-4 shrink-0 transition-colors`,
-            style: { color: active ? '#00ffff' : 'rgba(148,163,184,0.7)' }
-        })}
+
+        {/* Icon */}
+        <div className="relative">
+            {icon && (
+                <span style={{ color: active ? '#00ffff' : 'rgba(148,163,184,0.6)' }}>
+                    {typeof icon === 'object'
+                        ? { ...icon, props: { ...icon.props, className: 'h-3.5 w-3.5 shrink-0' } }
+                        : icon
+                    }
+                </span>
+            )}
+            {badge && (
+                <span
+                    className="absolute -top-1 -right-1 h-2 w-2 rounded-full animate-pulse"
+                    style={{ background: '#00ffff', boxShadow: '0 0 6px #00ffff' }}
+                />
+            )}
+        </div>
+
+        {/* Label */}
         {!collapsed && (
             <span
-                className="text-sm font-semibold whitespace-nowrap overflow-hidden text-ellipsis transition-colors"
-                style={{ color: active ? '#00ffff' : 'rgba(148,163,184,0.7)' }}
+                className="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis transition-colors"
+                style={{ color: active ? '#00ffff' : 'rgba(148,163,184,0.6)' }}
             >
                 {label}
             </span>
-        )}
-        {/* Hover glow */}
-        {!active && (
-            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                 style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }} />
         )}
     </div>
 );
 
 const Sidebar = ({ activeTab, onTabChange }) => {
-    const [collapsed, setCollapsed] = useState(false);
+    const { state: realTime } = useRealTime();
+    const [collapsed, setCollapsed] = useState(() => {
+        try { return localStorage.getItem('sidebar-collapsed') === 'true'; } catch { return false; }
+    });
+
+    const isScanning   = realTime.scanStatus === 'RUNNING';
+    const isConnected  = realTime.isConnected;
+
+    // Persist collapse state
+    const toggleCollapse = () => {
+        setCollapsed(prev => {
+            const next = !prev;
+            try { localStorage.setItem('sidebar-collapsed', String(next)); } catch {}
+            return next;
+        });
+    };
 
     return (
         <aside
-            className={`relative h-screen z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}
+            className={`relative h-screen z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-14' : 'w-52'}`}
             style={{
-                background: 'linear-gradient(180deg, rgba(5,10,18,0.97), rgba(3,7,14,0.99))',
-                borderRight: '1px solid rgba(0,255,255,0.06)',
+                background:     'linear-gradient(180deg, rgba(5,10,18,0.98), rgba(3,7,14,0.99))',
+                borderRight:    '1px solid rgba(0,255,255,0.06)',
                 backdropFilter: 'blur(24px)',
             }}
         >
-            {/* Logo / Header */}
-            <div className="h-16 flex items-center justify-between px-4 flex-shrink-0"
-                 style={{ borderBottom:'1px solid rgba(0,255,255,0.05)' }}>
-                {!collapsed && (
-                    <div className="flex items-center gap-2.5 group cursor-pointer animate-fade-in">
-                        <div className="p-1.5 rounded-lg" style={{ background:'rgba(0,255,255,0.1)', border:'1px solid rgba(0,255,255,0.2)' }}>
-                            <ShieldCheck className="h-4 w-4" style={{ color:'#00ffff' }} />
-                        </div>
-                        <div className="flex flex-col leading-none">
-                            <h1 className="text-sm font-black tracking-tight text-white" style={{ fontFamily:'Syne, sans-serif' }}>
-                                found <span style={{ color:'#00ffff' }}>404</span>
-                            </h1>
-                            <span className="text-[8px] font-mono uppercase tracking-widest text-gray-600">SOC Platform</span>
-                        </div>
-                    </div>
-                )}
-                {collapsed && (
-                    <div className="mx-auto p-1.5 rounded-lg cursor-pointer"
-                         style={{ background:'rgba(0,255,255,0.1)', border:'1px solid rgba(0,255,255,0.2)' }}
-                         onClick={() => setCollapsed(false)}>
-                        <ShieldCheck className="h-4 w-4" style={{ color:'#00ffff' }} />
-                    </div>
-                )}
-                {!collapsed && (
-                    <button onClick={() => setCollapsed(true)}
-                        className="p-1.5 rounded-lg transition-all"
-                        style={{ color:'rgba(100,116,139,0.8)' }}
-                        onMouseOver={e => e.currentTarget.style.color = '#00ffff'}
-                        onMouseOut={e => e.currentTarget.style.color = 'rgba(100,116,139,0.8)'}>
-                        <ChevronLeft className="h-4 w-4" />
-                    </button>
-                )}
-            </div>
-
-            {/* System Status */}
-            <div className="px-3 py-3 flex-shrink-0" style={{ borderBottom:'1px solid rgba(0,255,255,0.04)' }}>
+            {/* ── Logo / Header ─────────────────────────────────────────── */}
+            <div
+                className="h-14 flex items-center justify-between px-3 flex-shrink-0"
+                style={{ borderBottom: '1px solid rgba(0,255,255,0.05)' }}
+            >
                 {!collapsed ? (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                         style={{ background:'rgba(0,255,136,0.06)', border:'1px solid rgba(0,255,136,0.12)' }}>
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                                  style={{ background:'#00ff88' }} />
-                            <span className="relative inline-flex rounded-full h-2 w-2"
-                                  style={{ background:'#00ff88', boxShadow:'0 0 4px #00ff88' }} />
-                        </span>
-                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color:'#00ff88' }}>System Online</span>
-                    </div>
+                    <>
+                        <div className="flex items-center gap-2">
+                            <div
+                                className="p-1 rounded-md"
+                                style={{ background: 'rgba(0,255,255,0.1)', border: '1px solid rgba(0,255,255,0.2)' }}
+                            >
+                                <ShieldCheck className="h-3.5 w-3.5" style={{ color: '#00ffff' }} />
+                            </div>
+                            <h1
+                                className="text-xs font-black tracking-tight text-white uppercase"
+                                style={{ fontFamily: 'Syne, sans-serif' }}
+                            >
+                                found <span style={{ color: '#00ffff' }}>404</span>
+                            </h1>
+                        </div>
+                        <button
+                            onClick={toggleCollapse}
+                            className="p-1 text-gray-600 hover:text-cyan-400 transition-colors"
+                            title="Collapse sidebar"
+                        >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                    </>
                 ) : (
-                    <div className="flex justify-center">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                                  style={{ background:'#00ff88' }} />
-                            <span className="relative inline-flex rounded-full h-2 w-2"
-                                  style={{ background:'#00ff88', boxShadow:'0 0 4px #00ff88' }} />
-                        </span>
+                    <div className="mx-auto p-1 cursor-pointer" onClick={toggleCollapse} title="Expand sidebar">
+                        <ShieldCheck className="h-4 w-4" style={{ color: '#00ffff' }} />
                     </div>
                 )}
             </div>
 
-            {/* Navigation */}
-            <div className="flex-1 py-4 flex flex-col gap-1 px-3 overflow-y-auto">
+            {/* ── Navigation ────────────────────────────────────────────── */}
+            <div className="flex-1 py-4 flex flex-col gap-1 px-2.5 overflow-y-auto">
                 {NAV_SECTIONS.map(section => (
-                    <div key={section.label} className="mb-3">
+                    <div key={section.label} className="mb-4">
                         {!collapsed && (
-                            <p className="text-[8px] font-black uppercase tracking-[0.35em] px-2 mb-2"
-                               style={{ color:'rgba(71,85,105,0.8)' }}>
+                            <p className="text-[7px] font-black uppercase tracking-[0.4em] px-2 mb-2 text-gray-700">
                                 {section.label}
                             </p>
                         )}
                         {section.items.map(item => (
                             <NavItem
                                 key={item.id}
-                                icon={item.icon}
+                                icon={item.id === 'ai-brain'
+                                    ? <Brain className="h-3.5 w-3.5 shrink-0" style={{ color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' }} />
+                                    : { ...item.icon, props: { ...item.icon.props, className: 'h-3.5 w-3.5 shrink-0', style: { color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' } } }
+                                }
                                 label={item.label}
                                 collapsed={collapsed}
                                 active={activeTab === item.id}
                                 onClick={() => onTabChange?.(item.id)}
+                                badge={item.id === 'ai-brain' && isScanning}
                             />
                         ))}
                     </div>
                 ))}
             </div>
 
-            {/* Footer expand toggle */}
-            {collapsed && (
-                <div className="p-3 flex-shrink-0" style={{ borderTop:'1px solid rgba(0,255,255,0.05)' }}>
-                    <button onClick={() => setCollapsed(false)}
-                        className="w-full flex justify-center p-2 rounded-xl transition-all"
-                        style={{ color:'rgba(100,116,139,0.6)' }}
-                        onMouseOver={e => e.currentTarget.style.color = '#00ffff'}
-                        onMouseOut={e => e.currentTarget.style.color = 'rgba(100,116,139,0.6)'}>
-                        <ChevronRight className="h-4 w-4" />
-                    </button>
-                </div>
-            )}
+            {/* ── Connection status footer ──────────────────────────────── */}
+            <div
+                className="px-3 py-3 flex-shrink-0 flex items-center gap-2"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}
+            >
+                <div
+                    className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${isConnected ? 'animate-pulse' : ''}`}
+                    style={{ background: isConnected ? '#00ff88' : '#ff0055' }}
+                />
+                {!collapsed && (
+                    <span
+                        className="text-[8px] font-bold uppercase tracking-widest"
+                        style={{ color: isConnected ? '#00ff88' : '#ff4444' }}
+                    >
+                        {isConnected ? 'Live' : 'Offline'}
+                    </span>
+                )}
+            </div>
 
-            {/* Vertical cyber accent line */}
-            <div className="absolute right-0 top-0 bottom-0 w-px"
-                 style={{ background:'linear-gradient(180deg, transparent, rgba(0,255,255,0.15) 40%, rgba(0,255,255,0.15) 60%, transparent)' }} />
+            {/* Right edge separator */}
+            <div className="absolute right-0 top-0 bottom-0 w-px bg-white/5" />
         </aside>
     );
 };

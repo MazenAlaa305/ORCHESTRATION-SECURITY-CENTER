@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker info:*)",
+      "Bash(docker network:*)",
+      "Bash(docker compose:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File .\\\\lab_setup.ps1 seed)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"d:/FINAL PROJECT/the-dashboard-project-/lab_setup.ps1\" seed)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(docker exec:*)"
+    ]
+  }
+}
