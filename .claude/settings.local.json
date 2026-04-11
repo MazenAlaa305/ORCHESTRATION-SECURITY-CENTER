@@ -12,7 +12,24 @@
       "Bash(pandoc --version)",
       "Bash(pip show:*)",
       "Bash(pip install:*)",
-      "Bash(python convert_to_docx.py)"
+      "Bash(python convert_to_docx.py)",
+      "Bash(grep -E \"\\\\.\\(py|yml|yaml|json|txt|sh\\)$\")",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(wc -l backend/app/services/*.py frontend/src/components/dashboard/*.jsx)",
+      "Bash(curl -s http://localhost:8081/ -I)",
+      "Bash(curl -s http://localhost:8081/ -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:8083/ -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:8000/api/v1/targets/)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:8000/api/v1/lab/targets)",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/lab/seed -H \"Content-Type: application/json\")",
+      "Bash(curl -s http://localhost:8000/api/v1/scans/)",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/scans/ -H 'Content-Type: application/json' -d '{\"target_id\": \"67e813f7-968d-43fc-8623-1f3fa8112e50\", \"scan_type\": \"full\"}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/scans/ -H 'Content-Type: application/json' -d '{\"target_id\": \"cef41c59-5f29-4c56-8e66-1683e14e89b0\", \"scan_type\": \"full\"}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/scans/ -H 'Content-Type: application/json' -d '{\"target_id\": \"3426c88c-739e-4ca4-98c9-586738c41d78\", \"scan_type\": \"full\"}')",
+      "Bash(curl -s http://localhost:8000/api/v1/scans/f6fa8160-ade5-4b46-80a5-6233d49d5630)",
+      "Bash(curl -s http://localhost:8000/api/v1/scans/6a7cd078-dbf5-4c33-b6e6-3bff166b3981)",
+      "Bash(curl -s http://localhost:8000/api/v1/scans/fade5e19-511d-431d-a995-51834e2f7bb4)"
     ]
   }
 }

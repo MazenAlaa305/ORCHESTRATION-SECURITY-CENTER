@@ -37,48 +37,8 @@ services:
     image: nginx:alpine
     container_name: lab_api_gateway
     hostname: api-gw.sme-lab.local
-    command: >
-      sh -c "mkdir -p /etc/nginx/conf.d && cat > /etc/nginx/conf.d/default.conf << 'NGINX'
-      server {
-          listen 8081;
-          server_tokens on;
-
-          # Exposed Swagger / API docs (information disclosure)
-          location /api/docs {
-              default_type application/json;
-              return 200 '{\"swagger\": \"2.0\", \"info\": {\"title\": \"Internal HR API\", \"version\": \"1.0.0\"}, \"basePath\": \"/api/v1\", \"paths\": {\"/employees\": {\"get\": {\"summary\": \"List all employees\"}}, \"/payroll\": {\"get\": {\"summary\": \"Get payroll data\"}}}}';
-          }
-
-          # Version leak via headers
-          location / {
-              default_type text/html;
-              add_header Server 'Apache/2.2.14 (Unix)';
-              add_header X-Powered-By 'PHP/5.3.2';
-              add_header X-AspNet-Version '4.0.30319';
-              add_header X-Debug-Token 'dev-abc123';
-              return 200 '<html><head><title>SME Corp Portal</title></head><body><h1>Welcome to SME Corp</h1><p>Internal portal v2.1.3-beta</p><!-- TODO: Remove admin backdoor at /admin?debug=true --></body></html>';
-          }
-
-          # Directory listing enabled (misconfiguration)
-          location /files/ {
-              alias /usr/share/nginx/html/;
-              autoindex on;
-          }
-
-          # Fake admin panel (weak auth)
-          location /admin {
-              default_type application/json;
-              return 200 '{\"admin\": true, \"users\": [{\"username\": \"admin\", \"role\": \"superuser\"}, {\"username\": \"backup\", \"password_hint\": \"company name + 123\"}]}';
-          }
-
-          # Health endpoint (allows enumeration)
-          location /health {
-              default_type application/json;
-              return 200 '{\"status\": \"ok\", \"hostname\": \"api-gw-01\", \"uptime\": \"47d 3h\", \"db_host\": \"10.10.30.10:5432\", \"redis\": \"10.10.30.20:6379\"}';
-          }
-      }
-      NGINX
-      nginx -g 'daemon off;'"
+    volumes:
+      - ./lab/config/nginx/api_gateway.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "8081:8081"
     networks:
@@ -102,13 +62,14 @@ services:
     image: coredns/coredns:latest
     container_name: lab_dns_server
     hostname: dns.sme-lab.local
+    user: "0"
     volumes:
-      - ./lab/config/coredns/Corefile:/root/Corefile
-      - ./lab/config/coredns/sme-lab.local.zone:/root/sme-lab.local.zone
-    command: ["-conf", "/root/Corefile"]
+      - ./lab/config/coredns/Corefile:/etc/coredns/Corefile:ro
+      - ./lab/config/coredns/sme-lab.local.zone:/etc/coredns/sme-lab.local.zone:ro
+    command: ["-conf", "/etc/coredns/Corefile"]
     ports:
-      - "5353:53/udp"
-      - "5353:53/tcp"
+      - "15353:53/udp"
+      - "15353:53/tcp"
     networks:
       dmz:
         ipv4_address: 10.10.10.30
@@ -201,21 +162,8 @@ services:
     image: nginx:alpine
     container_name: lab_workstation
     hostname: ws01.sme-lab.local
-    command: >
-      sh -c "cat > /etc/nginx/conf.d/default.conf << 'NGINX'
-      server {
-          listen 80;
-          location / {
-              default_type text/html;
-              return 200 '<html><body><h1>HR Workstation</h1><p>Employee: Jane Smith</p><p>Department: Human Resources</p><p>Last login: 2024-03-15</p><p>Printers: \\\\10.10.20.10\\shared</p></body></html>';
-          }
-          location /cgi-bin/ {
-              default_type text/plain;
-              return 200 'CGI interface active';
-          }
-      }
-      NGINX
-      nginx -g 'daemon off;'"
+    volumes:
+      - ./lab/config/nginx/workstation.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "8083:80"
     networks:
