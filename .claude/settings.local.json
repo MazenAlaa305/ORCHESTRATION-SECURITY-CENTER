@@ -29,7 +29,12 @@
       "Bash(curl -s -X POST http://localhost:8000/api/v1/scans/ -H 'Content-Type: application/json' -d '{\"target_id\": \"3426c88c-739e-4ca4-98c9-586738c41d78\", \"scan_type\": \"full\"}')",
       "Bash(curl -s http://localhost:8000/api/v1/scans/f6fa8160-ade5-4b46-80a5-6233d49d5630)",
       "Bash(curl -s http://localhost:8000/api/v1/scans/6a7cd078-dbf5-4c33-b6e6-3bff166b3981)",
-      "Bash(curl -s http://localhost:8000/api/v1/scans/fade5e19-511d-431d-a995-51834e2f7bb4)"
+      "Bash(curl -s http://localhost:8000/api/v1/scans/fade5e19-511d-431d-a995-51834e2f7bb4)",
+      "Bash(curl -s http://localhost:8000/api/v1/scans/67dc1715-39d9-40cd-80bb-055bf2a11ca5)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Status:', d['status'], '| Vulns:', d['vulnerabilities_count'], '| Assets:', d['assets_count'], '| Risk:', d['risk_score']\\)\")",
+      "Bash(curl -s http://localhost:8000/api/v1/scans/2be78b3d-ab50-4fd2-9cd2-8185a927b407)",
+      "Bash(curl -s http://localhost:8000/api/v1/scans/8c6a50dc-b4d6-4642-8494-58c5906e3fb6)",
+      "Bash(docker cp:*)"
     ]
   }
 }

@@ -28,13 +28,32 @@ logger = logging.getLogger(__name__)
 def _run_async(coro):
     """
     Run an async coroutine safely from within a synchronous Celery task.
-    Creates a dedicated event loop to avoid RuntimeError on already-running loops.
+    Creates a fresh event loop and sets it as current to avoid "Future attached
+    to a different loop" errors from inherited module-level async engines.
     """
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
+        try:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        except Exception:
+            pass
         loop.close()
+        asyncio.set_event_loop(None)
+
+
+def _make_async_session():
+    """
+    Create a fresh async engine + session factory bound to the current event loop.
+    Required in Celery workers to avoid the module-level engine's pool being
+    attached to the main process's event loop.
+    """
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from app.core.config import settings
+    engine = create_async_engine(settings.ASYNC_DATABASE_URL, pool_pre_ping=True)
+    return engine, async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # ── URL / host sanitiser ──────────────────────────────────────────────────────
@@ -155,21 +174,27 @@ def run_scan_task(self, scan_id: int):
         logger.info("[Scan %s] Phase 2: AI Intelligence analysis", scan_id)
         try:
             from app.services.intelligence_agent import IntelligenceAgent
-            from app.core.database import async_session_maker
 
             async def _ai_analysis():
-                async with async_session_maker() as async_db:
-                    await IntelligenceAgent(async_db).batch_analyze(scan.id, results)
+                _engine, _maker = _make_async_session()
+                try:
+                    async with _maker() as async_db:
+                        await IntelligenceAgent(async_db).batch_analyze(scan.id, results)
+                finally:
+                    await _engine.dispose()
 
             _run_async(_ai_analysis())
         except Exception as exc:
             logger.warning("[Scan %s] Intelligence analysis skipped: %s", scan_id, exc)
 
         # ── Phase 3: Nuclei deep scan ──────────────────────────────────────
-        logger.info("[Scan %s] Phase 3: Nuclei → %s", scan_id, clean_target)
+        # Use the full URL (raw_target) so Nuclei scans the correct port,
+        # not just the sanitised hostname which strips non-standard ports.
+        nuclei_target = raw_target if raw_target and "://" in raw_target else clean_target
+        logger.info("[Scan %s] Phase 3: Nuclei → %s", scan_id, nuclei_target)
         try:
             from app.services.nuclei_wrapper import NucleiWrapper
-            for finding in NucleiWrapper().scan_target(clean_target, scan_type=scan.scan_type):
+            for finding in NucleiWrapper().scan_target(nuclei_target, scan_type=scan.scan_type):
                 db.add(Vulnerability(
                     scan_id=scan.id,
                     type=finding["type"],
@@ -197,13 +222,16 @@ def run_scan_task(self, scan_id: int):
         logger.info("[Scan %s] Phase 4: Risk Engine", scan_id)
         try:
             from app.services.unified_risk_engine import UnifiedRiskEngine
-            from app.core.database import async_session_maker
 
             async def _risk_analysis():
-                async with async_session_maker() as async_db:
-                    engine = UnifiedRiskEngine(async_db)
-                    await engine.update_scan_risk(scan.id)
-                    await engine.generate_action_items(scan.id)
+                _engine, _maker = _make_async_session()
+                try:
+                    async with _maker() as async_db:
+                        risk_engine = UnifiedRiskEngine(async_db)
+                        await risk_engine.update_scan_risk(scan.id)
+                        await risk_engine.generate_action_items(scan.id)
+                finally:
+                    await _engine.dispose()
 
             _run_async(_risk_analysis())
         except Exception as exc:
