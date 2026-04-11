@@ -85,24 +85,24 @@ class NmapWrapper:
                 lport = self.nm[host][proto].keys()
                 for port in lport:
                     service_info = self.nm[host][proto][port]
-                port_data = {
-                    "port": port,
-                    "protocol": proto,
-                    "state": service_info['state'],
-                    "service": service_info.get('name', 'unknown'),
-                    "product": service_info.get('product', ''),
-                    "version": service_info.get('version', ''),
-                    "cpe": service_info.get('cpe', ''),
-                    "extra_info": service_info.get('extrainfo', ''),
-                    "severity": "info"
-                }
-                
-                # Check for script output (vulnerabilities)
-                if 'script' in service_info:
-                    port_data['scripts'] = service_info['script']
-                    if any('vuln' in k or 'cve' in k for k in service_info['script']):
-                        port_data['severity'] = "high"
-                            
+                    port_data = {
+                        "port": port,
+                        "protocol": proto,
+                        "state": service_info['state'],
+                        "service": service_info.get('name', 'unknown'),
+                        "product": service_info.get('product', ''),
+                        "version": service_info.get('version', ''),
+                        "cpe": service_info.get('cpe', ''),
+                        "extra_info": service_info.get('extrainfo', ''),
+                        "severity": "info"
+                    }
+
+                    # Check for script output (vulnerabilities)
+                    if 'script' in service_info:
+                        port_data['scripts'] = service_info['script']
+                        if any('vuln' in k or 'cve' in k for k in service_info['script']):
+                            port_data['severity'] = "high"
+
                     host_info['ports'].append(port_data)
             
             scan_data.append(host_info)
