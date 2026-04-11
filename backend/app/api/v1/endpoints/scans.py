@@ -55,6 +55,13 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
     db.add(scan)
     db.commit()
     db.refresh(scan)
+
+    scan = db.query(Scan).options(
+        selectinload(Scan.vulnerabilities),
+        selectinload(Scan.assets),
+        selectinload(Scan.actions),
+        selectinload(Scan.agent_logs)
+    ).filter(Scan.id == scan.id).first()
     
     # Trigger Celery Task (legacy Nmap scan)
     # For AI-powered scans, use /ai endpoint below

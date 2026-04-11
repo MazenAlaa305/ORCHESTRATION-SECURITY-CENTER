@@ -1,5 +1,5 @@
 sme-lab.local:53 {
-    file /root/sme-lab.local.zone
+    file /etc/coredns/sme-lab.local.zone
     transfer {
         to *
     }
