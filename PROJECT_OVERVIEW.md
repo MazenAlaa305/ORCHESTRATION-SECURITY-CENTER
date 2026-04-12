@@ -276,41 +276,50 @@ Message types handled: `KPI_UPDATE`, `SCAN_STATUS`, `LOG_MESSAGE`, `ORCHESTRATIO
 
 ## Lab Environment
 
-The lab is a self-contained, multi-subnet network of intentionally vulnerable Docker containers that simulate a realistic SME environment. It is used to demonstrate and test Found 404's scanning capabilities.
+The lab is a self-contained, multi-subnet network of intentionally vulnerable Docker containers that simulates a realistic SME enterprise topology. It now spans **4 subnets and 10 active containers** across DMZ, Corporate, Data, and Management zones, used to demonstrate and test Found 404's scanning capabilities.
 
 ### Lab Target Personas
 
-| Subnet | Container Name | Service | Vulnerability | Risk Score |
-|--------|---------------|---------|---------------|------------|
-| `frontend-dmz` | `lab_juice_shop` | OWASP Juice Shop (`:3000`) | BOLA, SQL Injection | **9.5 Critical** |
-| `frontend-dmz` | `lab_api_gateway` | Legacy REST API (`:8081`) | Verbose headers, exposed Swagger | **6.0 Medium** |
-| `internal-srv` | `lab_misconfig_infra` | Corporate Samba (`1139`, `4445`) | Exposed SMB, default credentials `admin:admin123` | **8.0 High** |
-| `data-vault` | `lab_shadow_asset` | Forgotten Redis (`:63790`) | Unauthenticated database on non-standard port | **8.5 High** |
+| Zone | Container Name | Hostname | Service / Ports | Vulnerabilities | CVSS |
+|------|---------------|----------|-----------------|-----------------|------|
+| `dmz` | `lab_webserver` | `webserver.sme-lab.local` | OWASP Juice Shop (`:3000`) | SQLi, XSS, BOLA, IDOR, broken-auth, SSRF | **9.5** |
+| `dmz` | `lab_api_gateway` | `api-gw.sme-lab.local` | Nginx legacy API (`:8081`) | Info disclosure, header leak, directory listing, exposed Swagger | **6.0** |
+| `dmz` | `lab_dns_server` | `dns.sme-lab.local` | CoreDNS (`:5353` udp/tcp) | DNS zone transfer, DNS amplification | **5.0** |
+| `corp` | `lab_fileserver` | `fileserver.sme-lab.local` | Samba (`:1139`, `:4445`) | Weak credentials (`admin:admin123`), SMB enum, sensitive HR data exposure | **8.0** |
+| `corp` | `lab_mailserver` | `mail.sme-lab.local` | GreenMail SMTP/POP3/IMAP (`:3025`, `:3110`, `:3143`, `:8082`) | Plaintext protocols, weak credentials, user enumeration | **7.0** |
+| `corp` | `lab_workstation` | `ws01.sme-lab.local` | Nginx HR workstation (`:8083`) | Info disclosure, internal network leak | **4.0** |
+| `data` | `lab_database` | `db.sme-lab.local` | PostgreSQL 13 (`:5433`) | Weak password (`password123`), no SSL, sensitive employee/financial data | **9.0** |
+| `data` | `lab_redis_cache` | `cache.sme-lab.local` | Redis 6 (`:6380`) | No authentication, protected-mode disabled, cross-subnet reachable | **8.5** |
 
 ### Lab Support Services
 
-| Container | Purpose |
-|-----------|---------|
-| `lab_traffic_generator` | Generates background network traffic for realistic SIEM data |
-| `lab_log_shipper` | Forwards container logs to Elasticsearch/Wazuh |
-| `coredns` | Internal DNS resolution for lab hostnames |
-| `postgres` | Lab-specific database (separate from main app DB) |
-| `nginx` | Reverse proxy for lab services |
+| Zone | Container | Purpose |
+|------|-----------|---------|
+| `mgmt` | `lab_traffic_gen` | Generates realistic background traffic across all lab subnets for SIEM data |
+| `mgmt` | `lab_log_shipper` | Ships lab events and traffic logs to Elasticsearch and Wazuh |
 
 ### Lab Network Topology
 
 ```
 the-dashboard-project-_lab_network (external bridge)
 │
-├── frontend-dmz subnet (172.30.0.0/24)
-│   ├── lab_juice_shop     172.30.0.50:3000
-│   └── lab_api_gateway    172.30.0.51:8081
+├── dmz subnet (10.10.10.0/24) — Internet-facing services
+│   ├── lab_webserver      10.10.10.10  → :3000   (Juice Shop)
+│   ├── lab_api_gateway    10.10.10.20  → :8081   (Nginx legacy API)
+│   └── lab_dns_server     10.10.10.30  → :5353   (CoreDNS)
 │
-├── internal-srv subnet (172.31.0.0/24)
-│   └── lab_misconfig_infra  172.31.0.50 (SMB: 1139, 4445)
+├── corp subnet (10.10.20.0/24) — Internal office network
+│   ├── lab_fileserver     10.10.20.10  → :1139, :4445  (Samba)
+│   ├── lab_mailserver     10.10.20.20  → :3025, :3110, :3143, :8082
+│   └── lab_workstation    10.10.20.40  → :8083   (HR workstation)
 │
-└── data-vault subnet (172.32.0.0/24)
-    └── lab_shadow_asset   172.32.0.50:63790 (Redis)
+├── data subnet (10.10.30.0/24) — Database and cache tier
+│   ├── lab_database       10.10.30.10  → :5433   (PostgreSQL)
+│   └── lab_redis_cache    10.10.30.20  → :6380   (Redis)
+│
+└── mgmt subnet (10.10.40.0/24) — Monitoring & utilities
+    ├── lab_traffic_gen    10.10.40.10  (multi-homed: dmz, corp, data)
+    └── lab_log_shipper    10.10.40.20
 ```
 
 ---
@@ -444,15 +453,18 @@ This output is displayed in the `AssetDetailPanel` component under "SME Security
 
 ### Lab Stack (`docker-compose.lab.yml`)
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| `lab_juice_shop` | 3000 | Vulnerable web app target |
-| `lab_api_gateway` | 8081 | Exposed legacy API target |
-| `lab_misconfig_infra` | 1139, 4445 | Misconfigured SMB target |
-| `lab_shadow_asset` | 63790 | Unauthenticated Redis target |
-| `lab_traffic_generator` | — | Background traffic simulation |
-| `lab_log_shipper` | — | Log forwarding to SIEM |
-| `coredns` | 53 | Internal DNS |
+| Service | Subnet | Port(s) | Purpose |
+|---------|--------|---------|---------|
+| `lab_webserver` | dmz | 3000 | OWASP Juice Shop — primary web app target |
+| `lab_api_gateway` | dmz | 8081 | Nginx legacy API with info disclosure |
+| `lab_dns_server` | dmz | 5353 | CoreDNS with zone transfer / amplification |
+| `lab_fileserver` | corp | 1139, 4445 | Samba with weak credentials |
+| `lab_mailserver` | corp | 3025, 3110, 3143, 8082 | GreenMail SMTP/POP3/IMAP target |
+| `lab_workstation` | corp | 8083 | HR workstation info disclosure |
+| `lab_database` | data | 5433 | PostgreSQL with weak credentials |
+| `lab_redis_cache` | data | 6380 | Unauthenticated Redis cache |
+| `lab_traffic_gen` | mgmt | — | Background traffic simulation |
+| `lab_log_shipper` | mgmt | — | Log forwarding to Elasticsearch/Wazuh |
 
 ---
 
@@ -509,4 +521,4 @@ Recommendation
 
 ---
 
-*Last updated: April 10, 2026*
+*Last updated: April 12, 2026*
