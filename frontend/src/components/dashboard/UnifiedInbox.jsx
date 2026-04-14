@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { ShieldOff } from 'lucide-react';
 import api from '../../services/api';
+import { useConfig } from '../../context/ConfigContext';
 
 const UnifiedInbox = () => {
+    const { siem_enabled, loaded: configLoaded } = useConfig();
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetchAlerts();
-    }, []);
+        // Only attempt to fetch when SIEM is actually enabled
+        if (configLoaded && siem_enabled) {
+            fetchAlerts();
+        } else if (configLoaded) {
+            setLoading(false);
+        }
+    }, [configLoaded, siem_enabled]);
 
     const fetchAlerts = async () => {
         try {
@@ -24,7 +32,31 @@ const UnifiedInbox = () => {
         }
     };
 
-    if (loading) return <div className="p-4 text-center text-gray-400">Loading SIEM Alerts...</div>;
+    // ── Loading state ─────────────────────────────────────────────────────────
+    if (!configLoaded || loading) {
+        return <div className="p-4 text-center text-gray-400">Loading SIEM Alerts...</div>;
+    }
+
+    // ── Disabled state — honest empty state, not fake data ───────────────────
+    if (!siem_enabled) {
+        return (
+            <div className="bg-[#1e1e2d] rounded-xl border border-dashed border-gray-700 p-10 flex flex-col items-center justify-center text-center h-full gap-4">
+                <div className="w-14 h-14 rounded-full bg-gray-800 flex items-center justify-center">
+                    <ShieldOff className="w-7 h-7 text-gray-500" />
+                </div>
+                <div>
+                    <p className="text-gray-300 font-semibold text-base mb-1">SIEM Not Configured</p>
+                    <p className="text-gray-500 text-sm max-w-xs">
+                        The SIEM integration is disabled. Set{' '}
+                        <code className="bg-gray-800 text-indigo-400 px-1 py-0.5 rounded text-xs">SIEM_ENABLED=true</code>{' '}
+                        in the backend <code className="bg-gray-800 text-indigo-400 px-1 py-0.5 rounded text-xs">.env</code>{' '}
+                        file to activate the Unified Inbox.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     if (error) return <div className="p-4 text-center text-red-400 bg-red-900/20 rounded">{error}</div>;
 
     return (

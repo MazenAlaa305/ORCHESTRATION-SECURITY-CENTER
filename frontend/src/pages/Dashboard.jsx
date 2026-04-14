@@ -14,6 +14,7 @@ import Tabs from '../components/ui/Tabs';
 
 import { scanService, dashboardService } from '../services/api';
 import { useRealTime } from '../context/RealTimeContext';
+import { useConfig } from '../context/ConfigContext';
 
 import {
     LayoutDashboard, History, Settings, Activity,
@@ -53,21 +54,26 @@ const MAIN_TABS = [
     { id: 'settings',      label: 'Config',  icon: <Settings /> },
 ];
 
-const SUB_TAB_DEFAULTS = {
-    overview:       'overview',
-    operations:     'scanner',
-    'threat-center':'siem',
-    'ai-brain':     'ai-console',
-    reports:        'reports',
-    settings:       'settings',
-};
+// SUB_TAB_DEFAULTS are computed at render time (see Dashboard component)
+// so SIEM can be excluded when siem_enabled=false.
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const Dashboard = () => {
     const { state: realTime, dispatch } = useRealTime();
+    const { siem_enabled } = useConfig();
     const [activeTab,    setActiveTab]    = useState('overview');
     const [activeSubTab, setActiveSubTab] = useState('overview');
     const [refreshKey,   setRefreshKey]   = useState(0);
+
+    // Sub-tab defaults depend on SIEM flag — SIEM tab is hidden when disabled
+    const SUB_TAB_DEFAULTS = {
+        overview:       'overview',
+        operations:     'scanner',
+        'threat-center': siem_enabled ? 'siem' : 'vulnerabilities',
+        'ai-brain':     'ai-console',
+        reports:        'reports',
+        settings:       'settings',
+    };
 
     // ── Server data ──────────────────────────────────────────────────────────
     const { refetch: refetchKpi } = useQuery({
@@ -261,7 +267,8 @@ const Dashboard = () => {
                 <div className="animate-fade-in">
                     <SubTabBar
                         tabs={[
-                            { id: 'siem',            label: 'SIEM',     icon: <Activity /> },
+                            // SIEM tab is only shown when the backend integration is enabled
+                            ...(siem_enabled ? [{ id: 'siem', label: 'SIEM', icon: <Activity /> }] : []),
                             { id: 'vulnerabilities', label: 'Vulns',    icon: <Bug /> },
                             { id: 'network',         label: 'Topology', icon: <Network /> },
                         ]}
