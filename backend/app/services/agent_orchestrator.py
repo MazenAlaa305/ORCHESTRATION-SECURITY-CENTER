@@ -38,13 +38,24 @@ class AgentState(str, Enum):
 class BaseAgent(ABC):
     """Abstract base class for all PentesterFlow agents"""
     
-    def __init__(self, name: str, scan_id: str, db_session: AsyncSession):
+    def __init__(self, name: str, scan_id: str, db_session: AsyncSession, max_rps: int = 10):
         self.name = name
         self.scan_id = scan_id
         self.db = db_session
         self.state = AgentState.IDLE
         self.llm = None
-        
+
+        # ── Rate limiter (Phase 2.4 hardening) ──────────────────────────────
+        # Shared across all HTTP calls made by this agent instance.
+        # max_rps is read from Target.max_rps by the orchestrator and passed down.
+        try:
+            from aiolimiter import AsyncLimiter
+            self.rate_limiter: Optional[Any] = AsyncLimiter(max(1, max_rps), time_period=1)
+        except ImportError:
+            # aiolimiter not yet installed — degrade gracefully (no rate limiting)
+            self.rate_limiter = None
+            logger.warning("aiolimiter not installed — RPS rate limiting is disabled.")
+
         # Initialize LLM if available
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -97,24 +108,25 @@ class ReconAgent(BaseAgent):
     Crawls application, discovers endpoints, and profiles tech stack.
     Uses Playwright for JS rendering (or falls back to requests).
     """
-    
-    def __init__(self, scan_id: str, db_session=None, browser_context=None):
-        super().__init__("recon_agent", scan_id, db_session)
+
+    def __init__(self, scan_id: str, db_session=None, browser_context=None, max_rps: int = 10):
+        super().__init__("recon_agent", scan_id, db_session, max_rps=max_rps)
         self.browser_context = browser_context
-    
+
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute reconnaissance on target.
-        
+
         Args:
-            context: {target_url: str, auth_credentials: dict}
-        
+            context: {target_url: str, auth_credentials: dict, scope_guard: ScopeGuard}
+
         Returns:
             {endpoints: list, tech_stack: dict, forms: list}
         """
         self.state = AgentState.RUNNING
         target_url = context.get("target_url", "")
-        
+        scope_guard = context.get("scope_guard")  # ScopeGuard | None
+
         await self.log_action(
             action="start_recon",
             input_data={"target_url": target_url},
@@ -189,16 +201,18 @@ class ReconAgent(BaseAgent):
                     
                     tech_stack = self._detect_tech_stack(headers, await page.content())
                     
-                    # Filter and dedupe links
-                    base_domain = target_url.split("//")[-1].split("/")[0]
+                    # Filter and dedupe links — scope_guard drops out-of-scope URLs
                     for link in links:
-                        if base_domain in link and link not in [e["url"] for e in discovered_endpoints]:
-                            discovered_endpoints.append({
-                                "url": link,
-                                "method": "GET",
-                                "parameters": {}
-                            })
-                    
+                        if link in [e["url"] for e in discovered_endpoints]:
+                            continue
+                        if scope_guard and not scope_guard.is_in_scope(link):
+                            continue  # silently drop — cross-origin links are expected
+                        discovered_endpoints.append({
+                            "url": link,
+                            "method": "GET",
+                            "parameters": {}
+                        })
+
                     await page.close()
                     playwright_success = True
                     
@@ -295,341 +309,177 @@ class ReconAgent(BaseAgent):
 
 class AttackAgent(BaseAgent):
     """
-    Generates and executes test payloads based on endpoint context.
-    Integrates with Nuclei for vulnerability scanning.
+    Executes vulnerability scanning via Nuclei.
+
+    Phase 1.2 hardening: the previous implementation used hardcoded
+    SQLi/XSS/SSRF/BOLA payloads and port-number heuristics.  These were
+    neither DAST nor defensible — Nuclei findings had no raw evidence.
+
+    This version delegates entirely to NucleiWrapper and stores
+    raw_request / raw_response / evidence_hash on every Vulnerability
+    so findings are auditable and deduplicable.
     """
-    
-    def __init__(self, scan_id: str, db_session=None):
-        super().__init__("attack_agent", scan_id, db_session)
-        
-        # Common test payloads by context
-        self.payloads = {
-            "sqli": ["'", "' OR '1'='1", "1; DROP TABLE users--", "' UNION SELECT NULL--"],
-            "xss": ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "javascript:alert(1)"],
-            "bola": ["../../../etc/passwd", "/api/users/999999", "/admin"],
-            "ssrf": ["http://127.0.0.1", "http://localhost:22", "file:///etc/passwd"]
-        }
-        
-        # Maps Nmap Services to exact Nuclei template directories/tags
-        self.SERVICE_TO_TEMPLATE = {
-            "http": ["tags:cve,exposures,misconfiguration", "tags:default-logins,takeovers"],
-            "https": ["tags:cve,exposures,misconfiguration", "tags:ssl,takeovers"],
+
+    def __init__(self, scan_id: str, db_session=None, max_rps: int = 10):
+        super().__init__("attack_agent", scan_id, db_session, max_rps=max_rps)
+
+        # Maps Nmap service names → Nuclei template tags
+        # Used to narrow template selection based on what Recon discovered.
+        self.SERVICE_TO_TEMPLATE: Dict[str, List[str]] = {
+            "http":       ["tags:cve,exposures,misconfiguration", "tags:default-logins,takeovers"],
+            "https":      ["tags:cve,exposures,misconfiguration", "tags:ssl,takeovers"],
             "http-proxy": ["tags:misconfiguration,exposures"],
-            "ftp": ["tags:default-logins,misconfiguration,cve"],
-            "ssh": ["tags:default-logins,misconfiguration"],
-            "smtp": ["tags:misconfiguration,cve"],
-            "mysql": ["tags:default-logins,misconfiguration"],
+            "ftp":        ["tags:default-logins,misconfiguration,cve"],
+            "ssh":        ["tags:default-logins,misconfiguration"],
+            "smtp":       ["tags:misconfiguration,cve"],
+            "mysql":      ["tags:default-logins,misconfiguration"],
             "postgresql": ["tags:default-logins,misconfiguration"],
-            "redis": ["tags:default-logins,misconfiguration"],
-            "smb": ["tags:cve,misconfiguration"]
+            "redis":      ["tags:default-logins,misconfiguration"],
+            "smb":        ["tags:cve,misconfiguration"],
         }
-    
+
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute attack payloads on discovered endpoints and assets.
-        
+        Run Nuclei against the target URL, persist findings with evidence.
+
         Args:
-            context: {endpoints: list, forms: list, assets: list, auth_token: str}
-        
+            context: {target_url: str, assets: list[dict]}
+
         Returns:
-            {findings: list, tested_count: int}
+            {findings: list, tested_count: int, vulnerability_count: int}
         """
+        import asyncio
+
         self.state = AgentState.RUNNING
-        endpoints = context.get("endpoints", [])
-        forms = context.get("forms", [])
-        assets = context.get("assets", [])
-        
+        target_url: str = context.get("target_url", "")
+        assets: List[Dict] = context.get("assets", [])
+        scope_guard = context.get("scope_guard")  # ScopeGuard | None — blocks out-of-scope
+        max_rps: int = context.get("max_rps", 10)  # Passed from orchestrator, read from Target
+
         await self.log_action(
             action="start_attack",
-            input_data={
-                "endpoint_count": len(endpoints), 
-                "form_count": len(forms),
-                "asset_count": len(assets)
-            },
-            reasoning={"strategy": "Test endpoints with payloads and evaluate infrastructure assets"}
+            input_data={"target_url": target_url, "asset_count": len(assets)},
+            reasoning={"strategy": "Delegate to Nuclei with templates mapped from Nmap-discovered services"},
         )
-        
-        findings = []
-        tested_count = 0
-        
+
+        # ── Scope check before touching the network ─────────────────────────────
+        if scope_guard:
+            from app.services.scope_guard import ScopeViolation
+            try:
+                scope_guard.assert_in_scope(target_url)
+            except ScopeViolation as sv:
+                await self.log_action(
+                    action="scope_violation",
+                    input_data={"url": target_url},
+                    reasoning={"reason": str(sv)},
+                )
+                return {"findings": [], "tested_count": 0, "vulnerability_count": 0,
+                        "error": str(sv)}
+
+        findings: List[Dict] = []
+
         try:
-            import httpx
-            
-            # 1. Determine Targeted Templates based on Assets (Nmap Results)
-            targeted_templates = set()
+            from app.services.nuclei_wrapper import NucleiWrapper
+
+            nuclei = NucleiWrapper()
+
+            # ── Template selection from Nmap service map ──────────────────────
+            targeted_templates: set = set()
             for host in assets:
-                if not isinstance(host, dict): continue
-                for port_data in host.get('ports', []):
-                    if not isinstance(port_data, dict): continue
-                    service = port_data.get('service', 'unknown').lower()
+                if not isinstance(host, dict):
+                    continue
+                for port_data in host.get("ports", []):
+                    if not isinstance(port_data, dict):
+                        continue
+                    service = port_data.get("service", "unknown").lower()
                     if service in self.SERVICE_TO_TEMPLATE:
                         targeted_templates.update(self.SERVICE_TO_TEMPLATE[service])
-            
-            # Fallback if extremely barren
+
             if not targeted_templates:
                 targeted_templates.add("tags:cve,exposures")
-                
+
             await self.log_action(
                 action="template_selection",
-                input_data={"services": [p.get('service') for h in assets for p in h.get('ports', [])]},
+                input_data={
+                    "services": [
+                        p.get("service")
+                        for h in assets
+                        for p in (h.get("ports", []) if isinstance(h, dict) else [])
+                    ]
+                },
                 output_data={"templates": list(targeted_templates)},
-                reasoning={"strategy": "Mapped discovered services to targeted Nuclei logic"}
+                reasoning={"strategy": "Mapped discovered services to targeted Nuclei template tags"},
             )
-            
-            # FUTURE INTEGRATION: Pass these `targeted_templates` to the Nuclei engine
-            # For this execution flow, we simulate the logic: we evaluate the mapped heuristics.
-            
-            import os
-            import asyncio
-            
-            async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-                # Test each endpoint
-                max_endpoints = int(os.environ.get("MAX_ATTACK_ENDPOINTS", "50"))
-                max_test = min(max_endpoints, len(endpoints))
-                safe_targets = [endpoints[i] for i in range(max_test)]
-                
-                sem = asyncio.Semaphore(10)
-                tasks = []
-                
-                async def fetch_and_analyze(c_url, c_attack_type, c_payload):
-                    async with sem:
-                        test_url = f"{c_url}?test={c_payload}"
-                        try:
-                            response = await client.get(test_url)
-                            return self._analyze_response(
-                                c_url, c_attack_type, c_payload, 
-                                response.status_code, response.text
-                            )
-                        except httpx.TimeoutException as e:
-                            await self.log_action(
-                                action="attack_timeout",
-                                input_data={"url": test_url},
-                                output_data={"error": str(e)}
-                            )
-                            return None
-                        except httpx.ConnectError as e:
-                            await self.log_action(
-                                action="attack_connect_error",
-                                input_data={"url": test_url},
-                                output_data={"error": str(e)}
-                            )
-                            return None
-                        except Exception as e:
-                            logger.debug(f"Request failed for {c_url}: {e}")
-                            return None
 
-                for ep in safe_targets:
-                    url = ep["url"]
-                    tested_count += 1
-                    
-                    # Determine likely attack vectors based on URL
-                    attack_types = self._analyze_endpoint(url)
-                    
-                    for attack_type in attack_types:
-                        p_list = self.payloads.get(attack_type, [])
-                        max_p = min(2, len(p_list))
-                        safe_payloads = [p_list[i] for i in range(max_p)]
-                        for payload in safe_payloads:
-                            tasks.append(fetch_and_analyze(url, attack_type, payload))
-                
-                # Execute payload tasks concurrently
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                for res in results:
-                    if isinstance(res, dict) and "type" in res:
-                        findings.append(res)
-                        
-                # PROCESS ASSETS (Infrastructure Findings)
-                for host in assets:
-                    if not isinstance(host, dict): continue
-                    ip = host.get('ip')
-                    for port_data in host.get('ports', []):
-                        if not isinstance(port_data, dict): continue
-                        port = port_data.get('port')
-                        service = port_data.get('service', 'unknown')
-                        
-                        # High-Risk Port Heuristics for the Simulation Lab
-                        if port == 6379:
-                            findings.append({
-                                "type": "Unprotected Redis Database",
-                                "severity": "critical",
-                                "url": f"redis://{ip}:{port}",
-                                "description": "Redis database found without authentication. Remote attackers can read/write data.",
-                                "evidence": {"port": port, "service": service},
-                                "confidence": 1.0 # Certain because it's in the lab
-                            })
-                        elif port == 3000:
-                             findings.append({
-                                "type": "Vulnerable Web Application",
-                                "severity": "high",
-                                "url": f"http://{ip}:{port}",
-                                "description": "Known vulnerable application (Juice Shop) detected on port 3000.",
-                                "evidence": {"port": port, "service": service},
-                                "confidence": 0.9
-                            })
-                        elif port == 80 and "nginx" in service.lower():
-                            findings.append({
-                                "type": "Outdated Web Server",
-                                "severity": "medium",
-                                "url": f"http://{ip}:{port}",
-                                "description": f"Old Nginx version detected. Potentially vulnerable to info leaks.",
-                                "evidence": {"port": port, "service": service},
-                                "confidence": 0.7
-                            })
+            # ── Run Nuclei (blocking) in executor ─────────────────────────────────
+            # max_rps is injected as -rate-limit N in nuclei_wrapper (Phase 2.4)
+            loop = asyncio.get_event_loop()
+            raw_findings: List[Dict] = await loop.run_in_executor(
+                None,
+                lambda: nuclei.scan_target(target_url, scan_type="full", max_rps=max_rps),
+            )
 
-                # Test forms for injection
-                for form in forms[:10]:
-                    tested_count += 1
-                    form_findings = await self._test_form(client, form)
-                    findings.extend(form_findings)
-            
-            # Save findings to database
-            async with self.db.begin():
-                for finding in findings:
+            # ── Persist each finding with full evidence ────────────────────────
+            for f in raw_findings:
+                async with self.db.begin():
                     vuln = Vulnerability(
                         scan_id=self.scan_id,
-                        type=finding.get("type", "Unknown"),
-                        severity=SeverityLevel(finding.get("severity", "low")),
+                        type=f.get("type", "Unknown"),
+                        severity=SeverityLevel(f.get("severity", "info") if f.get("severity", "info") in SeverityLevel._value2member_map_ else "info"),
                         status=VulnStatus.OPEN,
-                        url=finding.get("url", f"unknown://{self.scan_id}"),
-                        parameter=finding.get("parameter"),
-                        evidence=finding.get("evidence"),
-                        description=finding.get("description"),
-                        confidence_score=finding.get("confidence", 0.5)
+                        url=f.get("url") or target_url,
+                        cve_id=f.get("cve_id"),
+                        description=f.get("description"),
+                        evidence=f.get("evidence"),
+                        confidence_score=1.0,  # Nuclei = confirmed match, not heuristic
+                        # Phase 1.2 evidence fields
+                        raw_request=f.get("raw_request"),
+                        raw_response=f.get("raw_response"),
+                        evidence_hash=f.get("evidence_hash"),
+                        detected_by=f.get("detected_by", "nuclei"),
+                        template_id=f.get("template_id"),
                     )
                     self.db.add(vuln)
-            
+                findings.append(f)
+
+            # ── Optional: LLM enrichment of descriptions (summaries only) ─────
+            # The LLM never invents findings — it only rewrites descriptions
+            # in plain English for non-technical IT managers.
+            if self.llm and findings:
+                cap = min(10, len(findings))
+                for finding in findings[:cap]:
+                    try:
+                        summary = self.llm_reason(
+                            f"Summarise this security finding in 2 sentences for a non-technical IT manager.\n"
+                            f"Template: {finding.get('template_id')}\n"
+                            f"Severity: {finding.get('severity')}\n"
+                            f"URL: {finding.get('url')}\n"
+                            f"Description: {finding.get('description')}"
+                        )
+                        finding["llm_summary"] = summary
+                    except Exception as llm_err:
+                        logger.debug(f"LLM enrichment failed for finding: {llm_err}")
+
             self.state = AgentState.COMPLETED
-            
             result = {
                 "findings": findings,
-                "tested_count": tested_count,
-                "vulnerability_count": len(findings)
+                "tested_count": len(raw_findings),
+                "vulnerability_count": len(findings),
             }
-            
             await self.log_action(
                 action="attack_complete",
                 output_data=result,
-                reasoning={"summary": f"Found {len(findings)} potential issues in {tested_count} tests"}
+                reasoning={"summary": f"Nuclei found {len(findings)} issues on {target_url}"},
             )
-            
             return result
-            
-        except Exception as e:
+
+        except Exception as exc:
             self.state = AgentState.FAILED
-            await self.log_action(action="attack_failed", output_data={"error": str(e)})
-            return {"error": str(e), "findings": [], "tested_count": tested_count}
-    
-    def _analyze_endpoint(self, url: str) -> List[str]:
-        """Determine which attack types are relevant for this endpoint"""
-        attacks = []
-        url_lower = url.lower()
-        
-        # ID parameters suggest BOLA/IDOR
-        if any(x in url_lower for x in ["/id/", "/user/", "/account/", "/profile/", "?id="]):
-            attacks.append("bola")
-        
-        # Search/query parameters suggest XSS/SQLi
-        if any(x in url_lower for x in ["search", "query", "q=", "keyword"]):
-            attacks.extend(["xss", "sqli"])
-        
-        # API endpoints
-        if "/api/" in url_lower:
-            attacks.extend(["sqli", "bola"])
-        
-        # Default to XSS for any endpoint
-        if not attacks:
-            attacks.append("xss")
-        
-        return attacks
-    
-    def _analyze_response(self, url: str, attack_type: str, payload: str,
-                          status_code: int, body: str) -> Optional[Dict]:
-        """Analyze response to determine if vulnerability exists"""
-        body_lower = body.lower()
-        
-        # SQL injection indicators
-        if attack_type == "sqli":
-            sql_errors = ["sql", "mysql", "syntax error", "ora-", "postgresql", "sqlite"]
-            if any(err in body_lower for err in sql_errors):
-                return {
-                    "type": "SQL Injection",
-                    "severity": "critical",
-                    "url": url,
-                    "parameter": "test",
-                    "description": f"SQL error detected with payload: {payload}",
-                    "evidence": {"status_code": status_code, "payload": payload},
-                    "confidence": 0.8
-                }
-        
-        # XSS indicators (reflected)
-        if attack_type == "xss":
-            if payload in body:  # Payload reflected unencoded
-                return {
-                    "type": "Cross-Site Scripting (XSS)",
-                    "severity": "high",
-                    "url": url,
-                    "parameter": "test",
-                    "description": f"Reflected XSS - payload appears in response",
-                    "evidence": {"status_code": status_code, "payload": payload},
-                    "confidence": 0.7
-                }
-        
-        # BOLA indicators
-        if attack_type == "bola":
-            if status_code == 200 and len(body) > 100:
-                # Potential unauthorized access - needs validation
-                return {
-                    "type": "Broken Object Level Authorization (BOLA)",
-                    "severity": "high",
-                    "url": url,
-                    "description": "Possible unauthorized data access - requires validation",
-                    "evidence": {"status_code": status_code, "response_length": len(body)},
-                    "confidence": 0.4  # Low confidence, needs AI validation
-                }
-        
-        return None
-    
-    async def _test_form(self, client, form: Dict) -> List[Dict]:
-        """Test a form with injection payloads"""
-        findings = []
-        action = form.get("action", "")
-        method = form.get("method", "GET").upper()
-        inputs = form.get("inputs", [])
-        
-        if not action or not inputs:
-            return findings
-        
-        # Build test data
-        test_data = {}
-        for inp in inputs:
-            name = inp.get("name")
-            if name:
-                # Use XSS payload for text inputs
-                if inp.get("type") in ["text", "search", "email", None]:
-                    test_data[name] = "<script>alert(1)</script>"
-                else:
-                    test_data[name] = "test"
-        
-        try:
-            if method == "POST":
-                response = await client.post(action, data=test_data)
-            else:
-                response = await client.get(action, params=test_data)
-            
-            # Check for reflected XSS
-            if "<script>alert(1)</script>" in response.text:
-                findings.append({
-                    "type": "Cross-Site Scripting (XSS)",
-                    "severity": "high",
-                    "url": action,
-                    "parameter": list(test_data.keys())[0] if test_data else "form",
-                    "description": "Form input reflected without encoding",
-                    "confidence": 0.75
-                })
-        except Exception as e:
-            logger.debug(f"Form test failed: {e}")
-        
-        return findings
+            await self.log_action(action="attack_failed", output_data={"error": str(exc)})
+            return {"error": str(exc), "findings": [], "tested_count": 0}
+
+
+
 
 
 # ============================================================================
@@ -638,116 +488,141 @@ class AttackAgent(BaseAgent):
 
 class ValidationAgent(BaseAgent):
     """
-    Uses LLM to filter false positives and validate findings.
-    Reduces noise by applying contextual reasoning.
+    Deterministically validates findings by re-probing the target.
+
+    Phase 1.3 hardening: the previous implementation sent each finding
+    to the LLM and parsed "REAL" / "FALSE_POSITIVE" from the response.
+    One bad prompt, one model change, and real vulnerabilities disappeared.
+
+    This version uses validation_probe.reprobe() — it re-sends the stored
+    raw_request, diffs the response with difflib, and decides deterministically.
+    The LLM may add an optional written justification when
+    settings.LLM_VALIDATION_ENABLED is True, but it NEVER overrides the reprobe.
     """
-    
-    def __init__(self, scan_id: str, db_session=None):
-        super().__init__("validation_agent", scan_id, db_session)
-    
+
+    def __init__(self, scan_id: str, db_session=None, max_rps: int = 10):
+        super().__init__("validation_agent", scan_id, db_session, max_rps=max_rps)
+
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Deterministic validation of findings.
-        Filters findings based on tool confidence scores and rules.
+        Reprobe every finding; mark non-reproducible ones as FALSE_POSITIVE.
+
+        Args:
+            context: {findings: list[dict]}
+        Returns:
+            {validated: list, false_positives: list, validated_count: int, filtered_count: int}
         """
         self.state = AgentState.RUNNING
         findings = context.get("findings", [])
-        
+        scope_guard = context.get("scope_guard")  # ScopeGuard | None
+
         await self.log_action(
             action="start_validation",
             input_data={"finding_count": len(findings)},
-            reasoning={"goal": "Filter findings based on deterministic rules and confidence"}
+            reasoning={
+                "goal": "Deterministic reprobe of every finding — "
+                        "LLM provides optional commentary but never the verdict"
+            },
         )
-        
+
         validated = []
         false_positives = []
-        import os
-        gemini_enabled = os.environ.get("GEMINI_VALIDATION_ENABLED", "True").lower() == "true"
-        
-        for finding in findings:
-            # Deterministic filtering logic
-            # Any finding with confidence > 0.6 or from a high-trust tool is initially valid
-            is_valid = finding.get("confidence", 0) >= 0.6
-            
-            # Second-pass AI Gate
-            if is_valid and gemini_enabled:
-                try:
-                    llm_result = await self._validate_with_llm(finding)
-                    if llm_result.get("is_valid") is not None:
-                        is_valid = llm_result["is_valid"]
-                        finding["confidence"] = llm_result.get("new_confidence", finding.get("confidence", 0.6))
-                except Exception as e:
-                    logger.debug(f"LLM Validation failed for finding {finding.get('url')}: {e}")
-            
-            if is_valid:
-                validated.append(finding)
-            else:
-                false_positives.append(finding)
-        
-        # Update database with validation results
-        async with self.db.begin():
-            for fp in false_positives:
-                _v_res = await self.db.execute(select(Vulnerability).filter(
-                    Vulnerability.scan_id == self.scan_id,
-                    Vulnerability.url == fp["url"],
-                    Vulnerability.type == fp["type"]
-                ))
-                vuln = _v_res.scalars().first()
+
+        from app.services.validation_probe import reprobe
+        import httpx
+
+        # Load the ORM rows for this scan so we can read stored evidence fields
+        _v_res = await self.db.execute(
+            select(Vulnerability).filter(Vulnerability.scan_id == self.scan_id)
+        )
+        # Key by (url, type) for fast lookup
+        vuln_map: Dict[tuple, Vulnerability] = {
+            (v.url, v.type): v for v in _v_res.scalars().all()
+        }
+
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+            for finding in findings:
+                key = (finding.get("url"), finding.get("type"))
+                vuln = vuln_map.get(key)
+
+                # ── Scope check before every reprobe (Phase 2.4) ───────────────
+                reprobe_url = finding.get("url", "")
+                if scope_guard and reprobe_url:
+                    from app.services.scope_guard import ScopeViolation
+                    try:
+                        scope_guard.assert_in_scope(reprobe_url)
+                    except ScopeViolation as sv:
+                        await self.log_action(
+                            action="scope_violation",
+                            input_data={"url": reprobe_url},
+                            reasoning={"reason": str(sv)},
+                        )
+                        false_positives.append(finding)  # treat out-of-scope as unconfirmed
+                        continue
+
+                # ── Rate limiting before reprobe ───────────────────────────────
+                if self.rate_limiter:
+                    await self.rate_limiter.acquire()
+
+                result = await reprobe(
+                    raw_request=finding.get("raw_request") or (vuln.raw_request if vuln else None),
+                    raw_response=finding.get("raw_response") or (vuln.raw_response if vuln else None),
+                    url=finding.get("url", ""),
+                    detected_by=finding.get("detected_by") or (vuln.detected_by if vuln else None),
+                    template_id=finding.get("template_id") or (vuln.template_id if vuln else None),
+                    http_client=client,
+                )
+
+                # ── Optional LLM justification (commentary only) ──────────────
+                llm_notes = ""
+                if settings.LLM_VALIDATION_ENABLED and self.llm:
+                    try:
+                        llm_notes = self.llm_reason(
+                            f"In one sentence, justify why this finding is "
+                            f"{'confirmed' if result.confirmed else 'a false positive'}:\n"
+                            f"Type: {finding.get('type')}\n"
+                            f"URL: {finding.get('url')}\n"
+                            f"Reprobe diff ratio: {result.diff_ratio:.2f}\n"
+                            f"Reason: {result.reason}"
+                        )
+                    except Exception:
+                        pass
+
+                # ── Persist verdict ──────────────────────────────────────────
                 if vuln:
-                    vuln.status = VulnStatus.FALSE_POSITIVE
-        
+                    async with self.db.begin():
+                        vuln.status = VulnStatus.OPEN if result.confirmed else VulnStatus.FALSE_POSITIVE
+                        # Append validation audit trail to description
+                        suffix = f"\n[Validation: {result.reason}, diff={result.diff_ratio:.2f}]"
+                        if llm_notes:
+                            suffix += f"\n[LLM notes: {llm_notes}]"
+                        vuln.description = (vuln.description or "") + suffix
+
+                if result.confirmed:
+                    validated.append(finding)
+                else:
+                    false_positives.append(finding)
+
         self.state = AgentState.COMPLETED
-        
-        result = {
+
+        result_summary = {
             "validated": validated,
             "false_positives": false_positives,
             "validated_count": len(validated),
-            "filtered_count": len(false_positives)
+            "filtered_count": len(false_positives),
         }
-        
+
         await self.log_action(
             action="validation_complete",
-            output_data=result,
-            reasoning={"analysis": f"Validated {len(validated)}, filtered {len(false_positives)} findings"}
+            output_data=result_summary,
+            reasoning={
+                "analysis": f"Reprobe: {len(validated)} confirmed, {len(false_positives)} rejected"
+            },
         )
-        
-        return result
-    
-    async def _validate_with_llm(self, finding: Dict) -> Dict:
-        """Use LLM to validate a finding"""
-        prompt = f"""You are a security expert. Analyze this potential vulnerability finding:
 
-Type: {finding.get('type')}
-URL: {finding.get('url')}
-Evidence: {json.dumps(finding.get('evidence', {}))}
-Description: {finding.get('description')}
-Initial Confidence: {finding.get('confidence', 0.5)}
+        return result_summary
 
-Questions:
-1. Is this likely a REAL vulnerability or a FALSE POSITIVE?
-2. What is your confidence level (0.0 to 1.0)?
-3. Brief reasoning (1-2 sentences).
 
-Respond in this exact format:
-VERDICT: [REAL/FALSE_POSITIVE]
-CONFIDENCE: [0.0-1.0]
-REASONING: [your brief explanation]"""
-        
-        response = self.llm_reason(prompt)
-        
-        # Parse LLM response
-        is_valid = "REAL" in response.upper() and "FALSE_POSITIVE" not in response.upper()
-        
-        # Extract confidence if mentioned
-        import re
-        confidence_match = re.search(r'CONFIDENCE:\s*([\d.]+)', response)
-        new_confidence = float(confidence_match.group(1)) if confidence_match else 0.5
-        
-        return {
-            "is_valid": is_valid,
-            "new_confidence": new_confidence,
-            "llm_response": response
-        }
 
 
 # ============================================================================
@@ -1077,36 +952,94 @@ class AgentOrchestrator:
     async def run_full_scan(self, target_url: str, auth_credentials: Optional[Dict] = None) -> Optional[Dict]:
         """
         Execute complete scan workflow through all agents.
-        
-        1. RECON -> 2. ATTACK -> 3. VALIDATION -> 4. REPORTING
+
+        Phase 2.3 hardening: each stage is wrapped in a checkpoint guard.
+        If a Celery retry is triggered after a phase completed, that phase
+        is skipped and the pipeline resumes from where it left off.
+
+        Order: 1. RECON -> 2. ATTACK -> 3. VALIDATION -> 4. REPORTING
         """
-        results = {
+        # ── Ordered checkpoint ladder ─────────────────────────────────────────
+        CHECKPOINT_ORDER = [
+            None,           # not started
+            "recon_done",
+            "attack_done",
+            "validated",
+            "risk_scored",
+            "reported",
+        ]
+
+        def _past(cp: str, current: Optional[str]) -> bool:
+            """Return True if *current* checkpoint is at or after *cp*."""
+            try:
+                return CHECKPOINT_ORDER.index(current) >= CHECKPOINT_ORDER.index(cp)
+            except ValueError:
+                return False  # unknown value → treat as not reached
+
+        async def _set_checkpoint(val: str) -> None:
+            """Persist scan.checkpoint and commit immediately."""
+            _row = (await self.db.execute(
+                select(Scan).filter(Scan.id == self.scan_id)
+            )).scalars().first()
+            if _row:
+                _row.checkpoint = val
+                await self.db.commit()
+            logger.info("[%s] Checkpoint: %s", self.scan_id, val)
+
+        results: Dict = {
             "scan_id": self.scan_id,
             "target_url": target_url,
             "stages": {}
         }
-        # Local helper for linter-safe assignments
         stages_dict = results["stages"]
         if not isinstance(stages_dict, dict):
-             stages_dict = {}
-             results["stages"] = stages_dict
-        
-        # Update scan to running
-        _s_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
+            stages_dict = {}
+            results["stages"] = stages_dict
+
+        # ── Reload scan + target from DB ─────────────────────────────────────
+        # Ensures checkpoint is current on Celery retry AND reads per-target
+        # safety settings (max_rps, scope_allowlist) added in Phase 2.4.
+        _s_res = await self.db.execute(
+            select(Scan).filter(Scan.id == self.scan_id)
+        )
         scan = _s_res.scalars().first()
+        current_cp = scan.checkpoint if scan else None
+
+        # ── Read per-target safety settings (Phase 2.4) ───────────────────────
+        max_rps: int = 10               # default — overridden below if Target exists
+        scope_allowlist: Optional[List] = None  # default — derived from target_url by ScopeGuard
+
+        if scan and scan.target_id:
+            from app.models.scan import Target
+            _t_res = await self.db.execute(
+                select(Target).filter(Target.id == scan.target_id)
+            )
+            _target = _t_res.scalars().first()
+            if _target:
+                max_rps = _target.max_rps or 10
+                scope_allowlist = _target.scope_allowlist or None
+
+        # Build one ScopeGuard for the entire scan — all agents share it.
+        from app.services.scope_guard import ScopeGuard
+        scope_guard = ScopeGuard(scope_allowlist=scope_allowlist, base_url=target_url)
+        logger.info(
+            "[%s] ScopeGuard allowlist=%s  max_rps=%d",
+            self.scan_id, scope_guard.allowlist, max_rps,
+        )
+
         if scan:
             from app.models.scan import ScanStatus
             scan.status = ScanStatus.RUNNING
-            scan.started_at = datetime.utcnow()
+            scan.started_at = scan.started_at or datetime.utcnow()
             scan.start_time = scan.started_at
             await self.db.commit()
             await manager.broadcast(f"[SYSTEM] Starting AI Scan for {target_url}")
-                
-        # Playwright context setup
+
+        # ── Playwright context setup ──────────────────────────────────────────
         playwright = None
         browser = None
         browser_context = None
-        
+
         try:
             from playwright.async_api import async_playwright
             playwright = await async_playwright().start()
@@ -1114,103 +1047,141 @@ class AgentOrchestrator:
             browser_context = await browser.new_context()
         except Exception as e:
             logger.debug(f"Failed to initialize Playwright: {e}")
-        
+
         try:
-            # Stage 1: Reconnaissance
-            recon_agent = ReconAgent(self.scan_id, self.db, browser_context=browser_context)
-            recon_result = await recon_agent.execute({
-                "target_url": target_url,
-                "auth_credentials": auth_credentials
-            })
-            if isinstance(stages_dict, dict):
-                stages_dict["recon"] = recon_result
-            
-            # DETERMINISTIC CHAINING: Trigger specific scan types based on services found
+            # ── Stage 1: Reconnaissance ───────────────────────────────────────
+            if not _past("recon_done", current_cp):
+                recon_agent = ReconAgent(
+                    self.scan_id, self.db,
+                    browser_context=browser_context,
+                    max_rps=max_rps,
+                )
+                recon_result = await recon_agent.execute({
+                    "target_url": target_url,
+                    "auth_credentials": auth_credentials,
+                    "scope_guard": scope_guard,   # agent calls guard.assert_in_scope(url)
+                })
+                if isinstance(stages_dict, dict):
+                    stages_dict["recon"] = recon_result
+                await _set_checkpoint("recon_done")
+            else:
+                logger.info("[%s] Checkpoint: skipping recon (already done)", self.scan_id)
+                recon_result = {"assets": [], "endpoints": [], "tech_stack": {}, "forms": []}
+
+            # DETERMINISTIC CHAINING: trigger specific scan modes based on Nmap results
             assets = recon_result.get("assets", [])
             has_web = False
             has_smb = False
             for asset in assets:
-                if not isinstance(asset, dict): continue
+                if not isinstance(asset, dict):
+                    continue
                 for service in asset.get("ports", []):
-                    if not isinstance(service, dict): continue
+                    if not isinstance(service, dict):
+                        continue
                     if service.get("port") in [80, 443, 8080, 3000]:
                         has_web = True
                     if service.get("port") == 445:
                         has_smb = True
-            
+
             logger.info(f"[{self.scan_id}] Deterministic chaining: web={has_web}, smb={has_smb}")
 
-            # Stage 2: Attack
-            attack_agent = AttackAgent(self.scan_id, self.db)
-            attack_result = await attack_agent.execute({
-                "endpoints": recon_result.get("endpoints", []),
-                "forms": recon_result.get("forms", []),
-                "assets": recon_result.get("assets", []),
-                "chained_modes": {"web": has_web, "smb": has_smb}
-            })
-            if isinstance(stages_dict, dict):
-                stages_dict["attack"] = attack_result
-            
-            # Stage 3: Validation (Deterministic)
-            validation_agent = ValidationAgent(self.scan_id, self.db)
-            validation_result = await validation_agent.execute({
-                "findings": attack_result.get("findings", [])
-            })
-            if isinstance(stages_dict, dict):
-                stages_dict["validation"] = validation_result
-            
-            # Stage 4: Reporting
-            reporting_agent = ReportingAgent(self.scan_id, self.db)
-            report_result = await reporting_agent.execute({
-                "scan_summary": {
+            # ── Stage 2: Attack (Nuclei-backed) ───────────────────────────────
+            if not _past("attack_done", current_cp):
+                attack_agent = AttackAgent(self.scan_id, self.db, max_rps=max_rps)
+                attack_result = await attack_agent.execute({
                     "target_url": target_url,
-                    "endpoint_count": len(recon_result.get("endpoints", [])),
-                    "tech_stack": recon_result.get("tech_stack", {})
-                }
-            })
-            if isinstance(stages_dict, dict):
-                stages_dict["reporting"] = report_result
-            
-            # Update scan with score and metadata using UnifiedRiskEngine
-            risk_engine = UnifiedRiskEngine(self.db)
-            risk_score = await risk_engine.update_scan_risk(self.scan_id)
-            await risk_engine.generate_action_items(self.scan_id)
-            
-            # INTEGRATION: Limited AI Advice for SME response
-            try:
-                from app.services.intelligence_agent import IntelligenceAgent
-                ai_agent = IntelligenceAgent(self.db)
-                # Get advice for the top 3 assets found
-                for asset in recon_result.get("assets", [])[:3]:
-                    await ai_agent.analyze_asset(self.scan_id, asset)
-            except Exception as ai_err:
-                logger.error(f"Failed to generate AI advisory: {ai_err}")
+                    "assets": recon_result.get("assets", []),
+                    "chained_modes": {"web": has_web, "smb": has_smb},
+                    "scope_guard": scope_guard,   # passed to nuclei and HTTP probes
+                    "max_rps": max_rps,           # threaded into nuclei.scan_target()
+                })
+                if isinstance(stages_dict, dict):
+                    stages_dict["attack"] = attack_result
+                await _set_checkpoint("attack_done")
+            else:
+                logger.info("[%s] Checkpoint: skipping attack (already done)", self.scan_id)
+                attack_result = {"findings": []}
 
-            _s_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
-            scan = _s_res.scalars().first()
+            # ── Stage 3: Validation (deterministic reprobe) ───────────────────
+            if not _past("validated", current_cp):
+                validation_agent = ValidationAgent(self.scan_id, self.db, max_rps=max_rps)
+                validation_result = await validation_agent.execute({
+                    "findings": attack_result.get("findings", []),
+                    "scope_guard": scope_guard,   # guards every reprobe request
+                })
+                if isinstance(stages_dict, dict):
+                    stages_dict["validation"] = validation_result
+                await _set_checkpoint("validated")
+            else:
+                logger.info("[%s] Checkpoint: skipping validation (already done)", self.scan_id)
+                validation_result = {"validated": [], "false_positives": []}
+
+            # ── Stage 4: Risk scoring ─────────────────────────────────────────
+            risk_score = 0.0
+            if not _past("risk_scored", current_cp):
+                risk_engine = UnifiedRiskEngine(self.db)
+                risk_score = await risk_engine.update_scan_risk(self.scan_id)
+                await risk_engine.generate_action_items(self.scan_id)
+                await _set_checkpoint("risk_scored")
+            else:
+                logger.info("[%s] Checkpoint: skipping risk scoring (already done)", self.scan_id)
+                # Read existing risk score from DB
+                _s_r = (await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))).scalars().first()
+                risk_score = _s_r.risk_score if _s_r else 0.0
+
+            # ── Stage 5: Reporting ────────────────────────────────────────────
+            if not _past("reported", current_cp):
+                reporting_agent = ReportingAgent(self.scan_id, self.db)
+                report_result = await reporting_agent.execute({
+                    "scan_summary": {
+                        "target_url": target_url,
+                        "endpoint_count": len(recon_result.get("endpoints", [])),
+                        "tech_stack": recon_result.get("tech_stack", {})
+                    }
+                })
+                if isinstance(stages_dict, dict):
+                    stages_dict["reporting"] = report_result
+
+                # Optional AI asset advisory (non-blocking)
+                try:
+                    from app.services.intelligence_agent import IntelligenceAgent
+                    ai_agent = IntelligenceAgent(self.db)
+                    for asset in recon_result.get("assets", [])[:3]:
+                        await ai_agent.analyze_asset(self.scan_id, asset)
+                except Exception as ai_err:
+                    logger.error(f"Failed to generate AI advisory: {ai_err}")
+
+                await _set_checkpoint("reported")
+            else:
+                logger.info("[%s] Checkpoint: skipping reporting (already done)", self.scan_id)
+
+            # ── Finalise: mark COMPLETED ───────────────────────────────────────
+            _s_res2 = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
+            scan = _s_res2.scalars().first()
             if scan:
                 scan.risk_score = risk_score
                 scan.status = ScanStatus.COMPLETED
                 scan.completed_at = datetime.utcnow()
                 scan.end_time = scan.completed_at
                 await self.db.commit()
-            
+
             await manager.broadcast("[SYSTEM] Scan cycle complete.")
             results["status"] = "completed"
-            
+
         except Exception as e:
             logger.error(f"Orchestrator failed: {e}")
             results["status"] = "failed"
             results["error"] = str(e)
-            
+
             _s_res = await self.db.execute(select(Scan).filter(Scan.id == self.scan_id))
             scan = _s_res.scalars().first()
             if scan:
                 from app.models.scan import ScanStatus
                 scan.status = ScanStatus.FAILED
+                scan.failure_reason = str(e)[:120]
                 await self.db.commit()
             await manager.broadcast(f"[ERROR] Orchestrator failed: {e}")
-        
+
         finally:
             if browser_context:
                 await browser_context.close()
@@ -1219,18 +1190,29 @@ class AgentOrchestrator:
             if playwright:
                 await playwright.stop()
             await self.db.close()
-        
+
         return results
+
+
 
     async def run_siem_pipeline(self) -> Dict:
         """
         Execute just the SIEM analysis workflow (pull logs, analyze, trigger SOAR).
+        Gated behind settings.SIEM_ENABLED — returns a 'disabled' status when off.
         """
         results = {
             "scan_id": self.scan_id,
             "stages": {}
         }
-        
+
+        if not settings.SIEM_ENABLED:
+            results["status"] = "disabled"
+            results["detail"] = (
+                "SIEM integration disabled (SIEM_ENABLED=False). "
+                "Set SIEM_ENABLED=true in .env to activate."
+            )
+            return results
+
         try:
             # Run SIEM Agent
             siem_agent = SIEMAgent(self.scan_id, self.db)
@@ -1246,5 +1228,6 @@ class AgentOrchestrator:
             results["error"] = str(e)
         finally:
             await self.db.close()
-            
+
         return results
+

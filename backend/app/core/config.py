@@ -48,6 +48,18 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # ── Feature flags ────────────────────────────────────────────────────────
+    # All integrations are OFF by default. Set to true in .env only when the
+    # backing service is reachable and tested. This prevents the UI from
+    # silently showing fake / empty data when a service is unavailable.
+    SIEM_ENABLED: bool = False
+    SOAR_ENABLED: bool = False
+    OPENVAS_ENABLED: bool = False
+    LLM_VALIDATION_ENABLED: bool = False  # LLM verdict never overrides reprobe
+
+    # Version string exposed by GET /api/v1/config/public
+    APP_VERSION: str = "0.2.0-hardening"
+
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
 
 settings = Settings()
