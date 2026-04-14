@@ -16,3 +16,4 @@ google-generativeai
 reportlab
 requests
 python-gvm
+aiolimiter>=1.1.0
