@@ -64,14 +64,29 @@ async def redis_event_listener() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan: start background tasks, then clean up on shutdown."""
+    """Application lifespan: reap orphans, start background tasks, clean up on shutdown."""
     global _redis_listener_task
+
+    # ── 1. Reap orphaned scans before accepting new work ─────────────────────
+    # Must run before the Redis listener so phantom RUNNING scans are cleared
+    # before any new WebSocket events flow in.
+    try:
+        from app.core.database import async_session_maker
+        from app.services.scan_reaper import reap_orphan_scans
+        async with async_session_maker() as reaper_db:
+            await reap_orphan_scans(reaper_db)
+    except Exception as exc:
+        # Non-fatal: log and continue — don't crash the API on a bad DB startup
+        logger.error("Orphan reaper failed on startup (non-fatal): %s", exc)
+
+    # ── 2. Start Redis → WebSocket event bridge ───────────────────────────────
     _redis_listener_task = asyncio.create_task(redis_event_listener())
     logger.info("Found 404 API started.")
     yield
     if _redis_listener_task and not _redis_listener_task.done():
         _redis_listener_task.cancel()
     logger.info("Found 404 API shutting down.")
+
 
 
 # ── FastAPI application ──────────────────────────────────────────────────────
