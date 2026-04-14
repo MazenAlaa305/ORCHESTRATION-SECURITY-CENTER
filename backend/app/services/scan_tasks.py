@@ -19,6 +19,7 @@ from app.core.database import SessionLocal
 from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService
 from app.services.nmap_wrapper import NmapWrapper
 from app.services.event_publisher import publisher
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -72,19 +73,91 @@ def _sanitise_target(raw: str) -> str:
     return raw
 
 
+# ── Redis concurrency lock (Phase 2.4) ───────────────────────────────────────────────
+
+def _acquire_scan_lock(target_id: str) -> bool:
+    """
+    Acquire a Redis SETNX lock for *target_id*.
+
+    Returns True if the lock was acquired (scan may proceed).
+    Returns False if another scan is already running for this target.
+    TTL is 90 minutes — longer than any expected scan duration.
+    """
+    try:
+        import redis as _redis
+        r = _redis.from_url(settings.REDIS_URL, socket_connect_timeout=3)
+        acquired = r.set(f"scan_lock:{target_id}", "1", nx=True, ex=5400)
+        r.close()
+        return bool(acquired)
+    except Exception as exc:
+        # If Redis is unreachable, allow the scan to proceed rather than
+        # silently blocking all scans.  Log a warning so ops can investigate.
+        logger.warning("scan_lock: Redis unreachable (%s) — skipping lock check.", exc)
+        return True
+
+
+def _release_scan_lock(target_id: str) -> None:
+    """Release the Redis concurrency lock for *target_id*."""
+    try:
+        import redis as _redis
+        r = _redis.from_url(settings.REDIS_URL, socket_connect_timeout=3)
+        r.delete(f"scan_lock:{target_id}")
+        r.close()
+    except Exception as exc:
+        logger.warning("scan_lock: could not release lock for %s: %s", target_id, exc)
+
+
+# ── AI orchestrator pipeline (called from run_scan_task when mode='ai') ───────
+
+async def _run_ai_pipeline(scan_id: str) -> None:
+    """
+    Run the full AgentOrchestrator pipeline for a single scan.
+
+    This is an *async* function executed inside a fresh event loop by
+    _run_async() so it is safe to call from a synchronous Celery worker.
+    Uses _make_async_session() to avoid the module-level engine pool being
+    attached to the main process's event loop.
+    """
+    from app.services.agent_orchestrator import AgentOrchestrator
+
+    engine, maker = _make_async_session()
+    try:
+        async with maker() as db:
+            scan_res = await db.execute(select(Scan).filter(Scan.id == scan_id))
+            scan = scan_res.scalars().first()
+            if not scan:
+                logger.error("[AI pipeline] Scan %s not found — aborting.", scan_id)
+                return
+            target_url = (scan.target.base_url if scan.target else None) or scan.target_url
+            auth_credentials = scan.target.auth_credentials if scan.target else None
+            if not target_url:
+                logger.error("[AI pipeline] Scan %s has no target URL — aborting.", scan_id)
+                return
+            orchestrator = AgentOrchestrator(scan_id, db)
+            await orchestrator.run_full_scan(target_url, auth_credentials)
+    finally:
+        await engine.dispose()
+
+
 # ── Main scan task ─────────────────────────────────────────────────────────────
 
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=30)
-def run_scan_task(self, scan_id: int):
+def run_scan_task(self, scan_id: str, mode: str = "nmap"):
     """
-    Full scan pipeline:
-      1. Nmap  — port/service enumeration
-      2. IntelligenceAgent — Gemini AI analysis of findings
-      3. Nuclei — template-based vulnerability detection
-      4. UnifiedRiskEngine — risk score + action items
-      5. AssetMonitor — new device / change detection
-      6. EventPublisher — push RISK_UPDATE to WebSocket clients
+    Unified scan task — dispatches to the correct pipeline based on `mode`.
+
+    mode='nmap'  (default): Nmap → Nuclei → Risk Engine → Asset Monitor
+    mode='ai':              Full AgentOrchestrator pipeline (Phase 1 hardening)
+
+    Both modes survive a backend restart since they run inside the Celery worker.
+    Previously, mode='ai' ran inside FastAPI BackgroundTasks and was lost on restart.
     """
+    # ── AI mode: delegate entirely to the async orchestrator ─────────────────
+    if mode == "ai":
+        logger.info("[Scan %s] Dispatching to AI orchestrator pipeline.", scan_id)
+        return _run_async(_run_ai_pipeline(scan_id))
+
+    # ── Nmap mode: existing pipeline below (unchanged) ────────────────────────
     db = SessionLocal()
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
 
@@ -93,7 +166,20 @@ def run_scan_task(self, scan_id: int):
         db.close()
         return
 
+    # ── Concurrency lock: at most one scan per target at a time (Phase 2.4) ──
+    if scan.target_id and not _acquire_scan_lock(str(scan.target_id)):
+        scan.status = ScanStatus.FAILED
+        scan.failure_reason = "concurrency_limit"
+        db.commit()
+        db.close()
+        logger.warning(
+            "[Scan %s] Rejected — target %s already has a running scan.",
+            scan_id, scan.target_id,
+        )
+        return
+
     vuln_count = 0
+    acquired_lock = bool(scan.target_id)  # track whether we need to release
 
     try:
         # ── Status: RUNNING ──────────────────────────────────────────────────
@@ -262,6 +348,7 @@ def run_scan_task(self, scan_id: int):
     except Exception as exc:
         logger.exception("[Scan %s] Fatal error: %s", scan_id, exc)
         scan.status = ScanStatus.FAILED
+        scan.failure_reason = str(exc)[:120]
         scan.risk_score = 0
         try:
             self.retry(exc=exc)
@@ -269,6 +356,8 @@ def run_scan_task(self, scan_id: int):
             pass  # max_retries exceeded — final failure logged above
     finally:
         db.commit()
+        if acquired_lock and scan and scan.target_id:
+            _release_scan_lock(str(scan.target_id))
         db.close()
 
 

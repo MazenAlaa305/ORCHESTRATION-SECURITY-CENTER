@@ -2,7 +2,7 @@
 PentesterFlow API Endpoints - Scans
 Extended scan endpoints with AI agent integration
 """
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional
 import asyncio
@@ -70,12 +70,17 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
     return scan
 
 
-@router.post("/ai", response_model=ScanResponse)
-async def create_ai_scan(scan_in: ScanCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_async_db)):
+@router.post("/ai", response_model=ScanResponse, status_code=202)
+async def create_ai_scan(scan_in: ScanCreate, db: AsyncSession = Depends(get_async_db)):
     """
-    Create a new AI-powered scan using the agent orchestrator.
-    This runs the full PentesterFlow workflow:
-    1. Recon Agent → 2. Attack Agent → 3. Validation Agent → 4. Reporting Agent
+    Create a new AI-powered scan and enqueue it through Celery.
+
+    Returns HTTP 202 Accepted — the scan is queued, not yet running.
+    The Celery worker runs the full AgentOrchestrator pipeline:
+    1. ReconAgent -> 2. AttackAgent (Nuclei) -> 3. ValidationAgent -> 4. ReportingAgent
+
+    Phase 2.1 hardening: previously used FastAPI BackgroundTasks, which died
+    on backend restart. Celery handles retries and survives restarts.
     """
     from app.services.agent_orchestrator import AgentOrchestrator
     
@@ -114,14 +119,10 @@ async def create_ai_scan(scan_in: ScanCreate, background_tasks: BackgroundTasks,
     )
     scan = _s_res.scalars().first()
     
-    # Run AI orchestrator in background
-    async def run_ai_scan(scan_id: str, url: str, creds: dict):
-        async with async_session_maker() as session:
-            orchestrator = AgentOrchestrator(scan_id, session)
-            await orchestrator.run_full_scan(url, creds)
-    
-    background_tasks.add_task(run_ai_scan, scan.id, target_url, auth_credentials)
-    
+    # Enqueue through Celery — survives backend restarts (Phase 2.1 hardening)
+    # mode='ai' dispatches to _run_ai_pipeline() inside scan_tasks.py
+    run_scan_task.delay(scan_id=scan.id, mode="ai")
+
     return scan
 
 
