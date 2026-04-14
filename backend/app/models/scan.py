@@ -61,9 +61,21 @@ class Target(Base):
     asset_value = Column(Enum("CRITICAL", "HIGH", "MEDIUM", "LOW", name="asset_value_enum"), default="MEDIUM")
     data_sensitivity = Column(Enum("PII", "FINANCIAL", "NONE", name="data_sensitivity_enum"), default="NONE")
 
+    # ── Scope & safety (Phase 2.4 hardening) ──────────────────────────────────
+    scope_allowlist = Column(JSON, nullable=True)
+    # List of hostnames or CIDR ranges the scanner may touch.
+    # Default (None): only the hostname extracted from base_url is allowed.
+    # Example: ["example.com", "192.168.1.0/24"]
+    max_rps = Column(Integer, default=10)
+    # Maximum outbound HTTP requests per second for all agents scanning this target.
+    max_concurrent_scans = Column(Integer, default=1)
+    # Maximum simultaneous Celery scan tasks for this target.
+    # Second scan is rejected with failure_reason="concurrency_limit".
+
     # Relationships
     scans = relationship("Scan", back_populates="target", cascade="all, delete-orphan")
     endpoints = relationship("Endpoint", back_populates="target", cascade="all, delete-orphan")
+
 
 
 # ============================================================================
@@ -97,6 +109,18 @@ class Scan(Base):
     risk_score = Column(Float, default=0.0)
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+
+    # ── Phase 2 reliability fields ─────────────────────────────────────────────
+    failure_reason = Column(String(128), nullable=True)
+    # Known values:
+    #   "orphaned_on_restart"  — set by scan_reaper on startup
+    #   "concurrency_limit"    — set by scan_tasks when Redis lock not acquired
+    #   "<exception message>"  — first 120 chars of unexpected exception
+
+    checkpoint = Column(String(32), nullable=True)
+    # Ordered values (None → set sequentially as each phase completes):
+    #   recon_done | attack_done | validated | risk_scored | reported
+    # Used by run_full_scan to skip phases already completed on a Celery retry.
 
     # Relationships
     target = relationship("Target", back_populates="scans")
@@ -170,7 +194,17 @@ class Vulnerability(Base):
     simplified_description = Column(Text, nullable=True) # AI-generated simple explanation
     remediation_steps = Column(Text, nullable=True) # Actionable steps
 
+    # ── Nuclei evidence fields (Phase 1.2 hardening) ──────────────────────────
+    # Every finding produced by Nuclei MUST have these populated.
+    # Legacy findings (pre-hardening) will have NULL values here.
+    raw_request = Column(Text, nullable=True)          # Full HTTP request sent by Nuclei
+    raw_response = Column(Text, nullable=True)         # Full HTTP response received
+    evidence_hash = Column(String(64), nullable=True)  # sha256(raw_request + raw_response)
+    detected_by = Column(String(32), nullable=True)    # "nuclei" | "recon" | "manual"
+    template_id = Column(String(128), nullable=True)   # Nuclei template ID or ZAP rule ID
+
     scan = relationship("Scan", back_populates="vulnerabilities")
+
 
 
 # ============================================================================
