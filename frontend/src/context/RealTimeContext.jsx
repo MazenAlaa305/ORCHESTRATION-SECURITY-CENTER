@@ -32,8 +32,8 @@ function reducer(state, action) {
                 kpi: {
                     ...state.kpi,
                     overall_score: action.payload.overall_score ?? state.kpi.overall_score,
-                    health_score:  action.payload.health_score  ?? state.kpi.health_score,
-                    last_scan_id:  action.payload.scan_id       ?? state.kpi.last_scan_id,
+                    health_score: action.payload.health_score ?? state.kpi.health_score,
+                    last_scan_id: action.payload.scan_id ?? state.kpi.last_scan_id,
                 },
             };
 
@@ -68,8 +68,8 @@ function reducer(state, action) {
 // ── Provider ──────────────────────────────────────────────────────────────────
 export const RealTimeProvider = ({ children }) => {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const socketRef    = useRef(null);
-    const attemptRef   = useRef(0);
+    const socketRef = useRef(null);
+    const attemptRef = useRef(0);
     const pingTimerRef = useRef(null);
     const retryTimerRef = useRef(null);
 
