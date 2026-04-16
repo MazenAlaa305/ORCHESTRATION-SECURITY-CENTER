@@ -88,7 +88,7 @@ export const RealTimeProvider = ({ children }) => {
         }
         stopPing();
 
-        const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/logs';
+        const wsUrl = import.meta.env.VITE_WS_URL || 'wss://localhost/ws/logs';
         const ws = new WebSocket(wsUrl);
         socketRef.current = ws;
 

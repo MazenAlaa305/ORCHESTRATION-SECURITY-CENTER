@@ -14,18 +14,22 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/login', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://localhost/api/v1';
+            const response = await fetch(`${apiUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email: username, password })
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                login(data.access_token, data.username, data.role);
+                login(data.access_token, username, data.role);
+                if (data.force_password_change) {
+                    alert('You must change your password on first login. Please update it in your profile settings.');
+                }
             } else {
-                setError(data.message || 'Login failed');
+                setError(data.detail || data.message || 'Login failed');
             }
         } catch (err) {
             setError('Network error. Is the backend running?');

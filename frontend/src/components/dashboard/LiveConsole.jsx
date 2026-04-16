@@ -52,7 +52,7 @@ const LiveConsole = () => {
     useEffect(() => {
         if (!isOpen) return;
 
-        const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('http', 'ws').replace('/api/v1', '');
+        const apiBase = (import.meta.env.VITE_API_URL || 'https://localhost/api/v1').replace('http', 'ws').replace('/api/v1', '');
         try {
             const ws = new WebSocket(`${apiBase}/ws/logs`);
             wsRef.current = ws;

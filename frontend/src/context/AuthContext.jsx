@@ -2,40 +2,41 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
+// Use sessionStorage (not localStorage) to limit XSS token-theft risk.
+// Tokens are cleared when the browser tab closes.
+const STORAGE = sessionStorage;
+
 export const AuthProvider = ({ children }) => {
-    // Initialize from localStorage
-    const [token, setToken] = useState(() => localStorage.getItem('token'));
+    const [token, setToken] = useState(() => STORAGE.getItem('token'));
     const [user, setUser] = useState(() => {
-        const savedUser = localStorage.getItem('user');
-        return savedUser ? JSON.parse(savedUser) : null;
+        const saved = STORAGE.getItem('user');
+        return saved ? JSON.parse(saved) : null;
     });
 
     useEffect(() => {
         if (token) {
-            localStorage.setItem('token', token);
-            if (user) {
-                localStorage.setItem('user', JSON.stringify(user));
-            }
+            STORAGE.setItem('token', token);
+            if (user) STORAGE.setItem('user', JSON.stringify(user));
         } else {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            STORAGE.removeItem('token');
+            STORAGE.removeItem('user');
             setUser(null);
         }
     }, [token, user]);
 
-    const login = (newToken, username, role) => {
+    const login = (newToken, email, role) => {
         setToken(newToken);
-        const userData = { username, role };
+        const userData = { email, role };
         setUser(userData);
-        localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        STORAGE.setItem('token', newToken);
+        STORAGE.setItem('user', JSON.stringify(userData));
     };
 
     const logout = () => {
         setToken(null);
         setUser(null);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        STORAGE.removeItem('token');
+        STORAGE.removeItem('user');
     };
 
     return (
