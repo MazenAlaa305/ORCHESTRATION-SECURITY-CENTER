@@ -191,6 +191,9 @@ class Vulnerability(Base):
     cve_id = Column(String, nullable=True)
     description = Column(Text, nullable=True)
     
+    # ── Phase 1.3: Validation notes (LLM justification, never overrides reprobe) ─
+    validation_notes = Column(Text, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -263,6 +266,13 @@ class Finding(Base):
     # Ownership
     owner_user_id = Column(String(36), nullable=True)
 
+    # ── Phase 5.3: Framework control tags ────────────────────────────────────
+    control_tags = Column(JSON, nullable=True)
+    # Example: {"owasp_top10": "A03:2021", "cwe": "CWE-89",
+    #           "iso27001_annex_a": "A.12.6.1", "nist_csf_function": "PR.IP",
+    #           "pci_dss_requirement": "6.3.1"}
+    # Empty dict {} when template category is unknown — never invented.
+
     # Relationships
     target = relationship("Target")
     observations = relationship("Vulnerability", back_populates="finding")
@@ -289,6 +299,13 @@ class AgentLog(Base):
     output_data = Column(JSON, nullable=True)
     
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+    # ── Phase 5.1: Tamper-evident hash chain ──────────────────────────────────
+    prev_hash = Column(String(64), nullable=True)
+    # SHA-256 of the previous log row's this_hash (or '0'*64 for the first row in a scan)
+    this_hash = Column(String(64), nullable=True)
+    # SHA-256 of (prev_hash + canonical JSON of {scan_id, agent_name, action, reasoning})
+    # Verified by GET /api/v1/scans/{id}/audit/verify
 
     scan = relationship("Scan", back_populates="agent_logs")
 
@@ -406,3 +423,25 @@ class ActionItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     scan = relationship("Scan", back_populates="actions")
+
+
+# ============================================================================
+# REPORTS (Phase 5.2 - Tamper Evidence)
+# ============================================================================
+
+class Report(Base):
+    """
+    Generated PDF reports with cryptographic signatures.
+    """
+    __tablename__ = "reports"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    scan_id = Column(String(36), ForeignKey("scans.id"), index=True)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+
+    # The canonical JSON string of findings included in the report
+    findings_hash = Column(String(64), nullable=False)
+    # HMAC-SHA256 signature of findings_hash using REPORT_SIGNING_KEY
+    signature = Column(String(64), nullable=False)
+
+    scan = relationship("Scan")

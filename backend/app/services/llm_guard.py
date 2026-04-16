@@ -38,7 +38,14 @@ _PATTERNS: list[tuple[re.Pattern, str]] = [
     # Email addresses
     (re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"), "[REDACTED-EMAIL]"),
     # Credit card numbers (major patterns, no spaces or with spaces/dashes)
-    (re.compile(r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\b"), "[REDACTED-CARD]"),
+    (re.compile(
+        r"\b(?:"
+        r"4[0-9]{3}[\s\-]?[0-9]{4}[\s\-]?[0-9]{4}[\s\-]?[0-9]{4}(?:[0-9]{3})?|"  # Visa (13 or 16 digit)
+        r"5[1-5][0-9]{2}[\s\-]?[0-9]{4}[\s\-]?[0-9]{4}[\s\-]?[0-9]{4}|"           # Mastercard
+        r"3[47][0-9]{2}[\s\-]?[0-9]{6}[\s\-]?[0-9]{5}|"                            # Amex (15 digit)
+        r"6(?:011|5[0-9]{2})[\s\-]?[0-9]{4}[\s\-]?[0-9]{4}[\s\-]?[0-9]{4}"        # Discover
+        r")\b"
+    ), "[REDACTED-CARD]"),
     # US SSN
     (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "[REDACTED-SSN]"),
     # UK NI number

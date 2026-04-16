@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from enum import Enum
 
-import google.generativeai as genai
+from google import genai
 from app.core.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -58,27 +58,65 @@ class BaseAgent(ABC):
 
         # Initialize LLM if available
         if settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
             try:
-                self.llm = genai.GenerativeModel('gemini-2.0-flash')
+                _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                self.llm = _client
+                self._llm_model = "gemini-2.0-flash"
             except Exception:
-                self.llm = genai.GenerativeModel('gemini-pro')
+                self.llm = None
+                self._llm_model = None
     
-    async def log_action(self, action: str, reasoning: Optional[Dict] = None, 
-                   input_data: Optional[Dict] = None, output_data: Optional[Dict] = None):
-        """Log agent action to database for transparency"""
+    async def log_action(self, action: str, reasoning: Optional[Dict] = None,
+                         input_data: Optional[Dict] = None, output_data: Optional[Dict] = None):
+        """
+        Log agent action to database with SHA-256 hash chaining for tamper evidence.
+
+        Each row's this_hash = sha256(prev_hash + canonical_payload).
+        prev_hash is the this_hash of the most recent log for the same scan,
+        or '0' * 64 if this is the first log entry for the scan.
+        """
+        import hashlib, json as _json
+
+        # 1. Find the previous hash for this scan (most recent row by rowid order)
+        prev_row = await self.db.execute(
+            select(AgentLog.this_hash)
+            .where(AgentLog.scan_id == self.scan_id)
+            .order_by(AgentLog.id.desc())
+            .limit(1)
+        )
+        prev_result = prev_row.scalar()
+        prev_hash = prev_result if prev_result else "0" * 64
+
+        # 2. Build canonical payload (must be deterministic — sorted keys, no indent)
+        payload = _json.dumps(
+            {
+                "scan_id": self.scan_id,
+                "agent_name": self.name,
+                "action": action,
+                "reasoning": reasoning,
+            },
+            sort_keys=True,
+            ensure_ascii=True,
+        )
+
+        # 3. Compute this row's hash
+        this_hash = hashlib.sha256((prev_hash + payload).encode()).hexdigest()
+
+        # 4. Insert (trigger blocks UPDATE/DELETE, so only INSERT is permitted)
         log_entry = AgentLog(
             scan_id=self.scan_id,
             agent_name=self.name,
             action=action,
             reasoning=reasoning,
             input_data=input_data,
-            output_data=output_data
+            output_data=output_data,
+            prev_hash=prev_hash,
+            this_hash=this_hash,
         )
         self.db.add(log_entry)
         await self.db.commit()
         await manager.broadcast(f"[{self.name.upper()}] {action}")
-        logger.info(f"[{self.name}] {action}")
+        logger.info("[%s] %s | hash=%s", self.name, action, this_hash[:12])
     
     def llm_reason(self, prompt: str, internal_hostnames: list[str] | None = None) -> str:
         """
@@ -116,7 +154,10 @@ class BaseAgent(ABC):
             return ""
 
         try:
-            response = llm.generate_content(safe_prompt)
+            response = llm.models.generate_content(
+                model=getattr(self, '_llm_model', 'gemini-2.0-flash'),
+                contents=safe_prompt,
+            )
             return str(response.text)
         except Exception as e:
             logger.error(f"LLM error: {e}")
@@ -624,7 +665,7 @@ class ValidationAgent(BaseAgent):
                         # Append validation audit trail to description
                         suffix = f"\n[Validation: {result.reason}, diff={result.diff_ratio:.2f}]"
                         if llm_notes:
-                            suffix += f"\n[LLM notes: {llm_notes}]"
+                            vuln.validation_notes = llm_notes  # LLM text only; never overrides reprobe verdict
                         vuln.description = (vuln.description or "") + suffix
 
                 if result.confirmed:

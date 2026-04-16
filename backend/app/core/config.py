@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator
 from typing import List
-
+import os
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SME Cyber Exposure Dashboard"
     API_V1_STR: str = "/api/v1"
@@ -79,6 +79,9 @@ class Settings(BaseSettings):
 
     # Version string exposed by GET /api/v1/config/public
     APP_VERSION: str = "0.2.0-hardening"
+
+    # Phase 5.2: Auditability / Tamper Evidence
+    REPORT_SIGNING_KEY: str = os.getenv("REPORT_SIGNING_KEY", "change-this-in-production")
 
     @model_validator(mode="after")
     def _require_secrets(self) -> "Settings":

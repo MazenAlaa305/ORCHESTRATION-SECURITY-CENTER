@@ -13,7 +13,7 @@ aiosqlite
 greenlet
 asyncpg
 python-nmap
-google-generativeai
+google-genai>=0.8.0
 reportlab
 requests
 python-gvm
