@@ -293,6 +293,13 @@ class AgentLog(Base):
     
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+    # ── Phase 5.1: Tamper-evident hash chain ──────────────────────────────────
+    prev_hash = Column(String(64), nullable=True)
+    # SHA-256 of the previous log row's this_hash (or '0'*64 for the first row in a scan)
+    this_hash = Column(String(64), nullable=True)
+    # SHA-256 of (prev_hash + canonical JSON of {scan_id, agent_name, action, reasoning})
+    # Verified by GET /api/v1/scans/{id}/audit/verify
+
     scan = relationship("Scan", back_populates="agent_logs")
 
 

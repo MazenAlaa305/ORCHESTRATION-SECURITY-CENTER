@@ -66,21 +66,57 @@ class BaseAgent(ABC):
                 self.llm = None
                 self._llm_model = None
     
-    async def log_action(self, action: str, reasoning: Optional[Dict] = None, 
-                   input_data: Optional[Dict] = None, output_data: Optional[Dict] = None):
-        """Log agent action to database for transparency"""
+    async def log_action(self, action: str, reasoning: Optional[Dict] = None,
+                         input_data: Optional[Dict] = None, output_data: Optional[Dict] = None):
+        """
+        Log agent action to database with SHA-256 hash chaining for tamper evidence.
+
+        Each row's this_hash = sha256(prev_hash + canonical_payload).
+        prev_hash is the this_hash of the most recent log for the same scan,
+        or '0' * 64 if this is the first log entry for the scan.
+        """
+        import hashlib, json as _json
+
+        # 1. Find the previous hash for this scan (most recent row by rowid order)
+        prev_row = await self.db.execute(
+            select(AgentLog.this_hash)
+            .where(AgentLog.scan_id == self.scan_id)
+            .order_by(AgentLog.id.desc())
+            .limit(1)
+        )
+        prev_result = prev_row.scalar()
+        prev_hash = prev_result if prev_result else "0" * 64
+
+        # 2. Build canonical payload (must be deterministic — sorted keys, no indent)
+        payload = _json.dumps(
+            {
+                "scan_id": self.scan_id,
+                "agent_name": self.name,
+                "action": action,
+                "reasoning": reasoning,
+            },
+            sort_keys=True,
+            ensure_ascii=True,
+        )
+
+        # 3. Compute this row's hash
+        this_hash = hashlib.sha256((prev_hash + payload).encode()).hexdigest()
+
+        # 4. Insert (trigger blocks UPDATE/DELETE, so only INSERT is permitted)
         log_entry = AgentLog(
             scan_id=self.scan_id,
             agent_name=self.name,
             action=action,
             reasoning=reasoning,
             input_data=input_data,
-            output_data=output_data
+            output_data=output_data,
+            prev_hash=prev_hash,
+            this_hash=this_hash,
         )
         self.db.add(log_entry)
         await self.db.commit()
         await manager.broadcast(f"[{self.name.upper()}] {action}")
-        logger.info(f"[{self.name}] {action}")
+        logger.info("[%s] %s | hash=%s", self.name, action, this_hash[:12])
     
     def llm_reason(self, prompt: str, internal_hostnames: list[str] | None = None) -> str:
         """

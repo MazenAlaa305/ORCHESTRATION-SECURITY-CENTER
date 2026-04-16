@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from .v1.endpoints import scans, reports, network, targets, vulnerabilities, dashboard, openvas, siem, config
+from .v1.endpoints import scans, reports, network, targets, vulnerabilities, dashboard, openvas, siem, config, audit
 from .v1.endpoints import auth
 from .deps import get_current_user
 
@@ -25,6 +25,7 @@ api_router.include_router(network.router, prefix="/network", tags=["network"], d
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"], dependencies=_auth)
 api_router.include_router(openvas.router, prefix="/openvas", tags=["openvas"], dependencies=_auth)
 api_router.include_router(siem.router, prefix="/siem", tags=["siem"], dependencies=_auth)
+api_router.include_router(audit.router, prefix="", tags=["audit"], dependencies=_auth)
 
 
 @api_router.get("/")
