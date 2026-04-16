@@ -16,6 +16,8 @@ from app.schemas.scan import (
     AgentLogResponse
 )
 from app.services.scan_tasks import run_scan_task
+from app.api.deps import require_role
+from app.models.user import UserRole
 
 router = APIRouter()
 
@@ -24,7 +26,8 @@ router = APIRouter()
 # SCAN ENDPOINTS
 # ============================================================================
 
-@router.post("/", response_model=ScanResponse)
+@router.post("/", response_model=ScanResponse,
+             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
     """
     Create a new scan and start it in the background.
@@ -70,7 +73,8 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
     return scan
 
 
-@router.post("/ai", response_model=ScanResponse, status_code=202)
+@router.post("/ai", response_model=ScanResponse, status_code=202,
+             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 async def create_ai_scan(scan_in: ScanCreate, db: AsyncSession = Depends(get_async_db)):
     """
     Create a new AI-powered scan and enqueue it through Celery.

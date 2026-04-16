@@ -7,6 +7,8 @@ from sqlalchemy import select
 from app.models.scan import Vulnerability, VulnStatus
 from app.schemas.scan import VulnerabilityResponse, VulnerabilityUpdate, ScanResponse
 from app.services.agent_orchestrator import AgentOrchestrator
+from app.api.deps import require_role
+from app.models.user import UserRole
 
 router = APIRouter()
 
@@ -45,7 +47,8 @@ def get_vulnerability(vuln_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Vulnerability not found")
     return vuln
 
-@router.patch("/{vuln_id}", response_model=VulnerabilityResponse)
+@router.patch("/{vuln_id}", response_model=VulnerabilityResponse,
+              dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 def update_vulnerability(vuln_id: str, vuln_in: VulnerabilityUpdate, db: Session = Depends(get_db)):
     """
     Update vulnerability details (e.g. status, false positive flag).
