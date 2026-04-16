@@ -191,6 +191,9 @@ class Vulnerability(Base):
     cve_id = Column(String, nullable=True)
     description = Column(Text, nullable=True)
     
+    # ── Phase 1.3: Validation notes (LLM justification, never overrides reprobe) ─
+    validation_notes = Column(Text, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

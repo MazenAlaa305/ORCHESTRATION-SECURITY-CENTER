@@ -624,7 +624,7 @@ class ValidationAgent(BaseAgent):
                         # Append validation audit trail to description
                         suffix = f"\n[Validation: {result.reason}, diff={result.diff_ratio:.2f}]"
                         if llm_notes:
-                            suffix += f"\n[LLM notes: {llm_notes}]"
+                            vuln.validation_notes = llm_notes  # LLM text only; never overrides reprobe verdict
                         vuln.description = (vuln.description or "") + suffix
 
                 if result.confirmed:
