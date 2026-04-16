@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from enum import Enum
 
-import google.generativeai as genai
+from google import genai
 from app.core.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -58,11 +58,13 @@ class BaseAgent(ABC):
 
         # Initialize LLM if available
         if settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
             try:
-                self.llm = genai.GenerativeModel('gemini-2.0-flash')
+                _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                self.llm = _client
+                self._llm_model = "gemini-2.0-flash"
             except Exception:
-                self.llm = genai.GenerativeModel('gemini-pro')
+                self.llm = None
+                self._llm_model = None
     
     async def log_action(self, action: str, reasoning: Optional[Dict] = None, 
                    input_data: Optional[Dict] = None, output_data: Optional[Dict] = None):
@@ -116,7 +118,10 @@ class BaseAgent(ABC):
             return ""
 
         try:
-            response = llm.generate_content(safe_prompt)
+            response = llm.models.generate_content(
+                model=getattr(self, '_llm_model', 'gemini-2.0-flash'),
+                contents=safe_prompt,
+            )
             return str(response.text)
         except Exception as e:
             logger.error(f"LLM error: {e}")
