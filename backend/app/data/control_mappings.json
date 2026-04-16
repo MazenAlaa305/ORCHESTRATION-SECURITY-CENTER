@@ -1,0 +1,96 @@
+{
+  "_comment": "Static mapping of Nuclei template categories and CWE IDs to control frameworks. Never invent — only add entries with official framework references.",
+  "nuclei_category": {
+    "sqli": {
+      "owasp_top10": "A03:2021",
+      "cwe": "CWE-89",
+      "iso27001_annex_a": "A.12.6.1",
+      "nist_csf_function": "PR.IP",
+      "pci_dss_requirement": "6.3.1"
+    },
+    "xss": {
+      "owasp_top10": "A03:2021",
+      "cwe": "CWE-79",
+      "iso27001_annex_a": "A.12.6.1",
+      "nist_csf_function": "PR.IP",
+      "pci_dss_requirement": "6.3.2"
+    },
+    "ssrf": {
+      "owasp_top10": "A10:2021",
+      "cwe": "CWE-918",
+      "iso27001_annex_a": "A.13.1.3",
+      "nist_csf_function": "PR.AC",
+      "pci_dss_requirement": "1.3.2"
+    },
+    "rce": {
+      "owasp_top10": "A03:2021",
+      "cwe": "CWE-78",
+      "iso27001_annex_a": "A.12.6.1",
+      "nist_csf_function": "PR.IP",
+      "pci_dss_requirement": "6.3.1"
+    },
+    "lfi": {
+      "owasp_top10": "A01:2021",
+      "cwe": "CWE-22",
+      "iso27001_annex_a": "A.9.4.1",
+      "nist_csf_function": "PR.AC",
+      "pci_dss_requirement": "6.3.1"
+    },
+    "xxe": {
+      "owasp_top10": "A05:2021",
+      "cwe": "CWE-611",
+      "iso27001_annex_a": "A.12.6.1",
+      "nist_csf_function": "PR.IP",
+      "pci_dss_requirement": "6.3.1"
+    },
+    "misconfiguration": {
+      "owasp_top10": "A05:2021",
+      "cwe": "CWE-16",
+      "iso27001_annex_a": "A.12.1.1",
+      "nist_csf_function": "PR.IP",
+      "pci_dss_requirement": "2.2"
+    },
+    "exposure": {
+      "owasp_top10": "A01:2021",
+      "cwe": "CWE-200",
+      "iso27001_annex_a": "A.9.4.1",
+      "nist_csf_function": "PR.AC",
+      "pci_dss_requirement": "6.2.4"
+    },
+    "cves": {
+      "owasp_top10": "A06:2021",
+      "cwe": "CWE-1035",
+      "iso27001_annex_a": "A.12.6.1",
+      "nist_csf_function": "ID.RA",
+      "pci_dss_requirement": "6.3.3"
+    },
+    "authentication": {
+      "owasp_top10": "A07:2021",
+      "cwe": "CWE-287",
+      "iso27001_annex_a": "A.9.4.2",
+      "nist_csf_function": "PR.AC",
+      "pci_dss_requirement": "8.3"
+    },
+    "injection": {
+      "owasp_top10": "A03:2021",
+      "cwe": "CWE-74",
+      "iso27001_annex_a": "A.12.6.1",
+      "nist_csf_function": "PR.IP",
+      "pci_dss_requirement": "6.3.1"
+    },
+    "redirect": {
+      "owasp_top10": "A01:2021",
+      "cwe": "CWE-601",
+      "iso27001_annex_a": "A.14.1.2",
+      "nist_csf_function": "PR.IP",
+      "pci_dss_requirement": "6.3.1"
+    },
+    "default-logins": {
+      "owasp_top10": "A07:2021",
+      "cwe": "CWE-521",
+      "iso27001_annex_a": "A.9.4.3",
+      "nist_csf_function": "PR.AC",
+      "pci_dss_requirement": "8.3.6"
+    }
+  }
+}

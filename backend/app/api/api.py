@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from .v1.endpoints import scans, reports, network, targets, vulnerabilities, dashboard, openvas, siem, config, audit
+from .v1.endpoints import scans, reports, network, targets, vulnerabilities, dashboard, openvas, siem, config, audit, findings
 from .v1.endpoints import auth
 from .deps import get_current_user
 
@@ -18,6 +18,7 @@ _auth = [Depends(get_current_user)]
 api_router.include_router(targets.router, prefix="/targets", tags=["targets"], dependencies=_auth)
 api_router.include_router(scans.router, prefix="/scans", tags=["scans"], dependencies=_auth)
 api_router.include_router(vulnerabilities.router, prefix="/vulnerabilities", tags=["vulnerabilities"], dependencies=_auth)
+api_router.include_router(findings.router, prefix="/findings", tags=["findings"], dependencies=_auth)
 
 # Legacy endpoints
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"], dependencies=_auth)

@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.models.scan import Finding, FindingStatus, SeverityLevel, Vulnerability
 from app.services.sla import due_date_for  # imported lazily to avoid circular deps
+from app.services.framework_tagger import tag_finding
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,11 @@ def deduplicate_scan(scan_id: str, target_id: str | None, db: Session) -> int:
                 first_seen=datetime.utcnow(),
                 last_seen=datetime.utcnow(),
                 due_date=due_date_for(severity),
+            )
+            # Phase 5.3: Tag with control framework mappings
+            finding.control_tags = tag_finding(
+                template_id=vuln.template_id,
+                vuln_type=vuln.type,
             )
             db.add(finding)
             db.flush()  # get finding.id before linking

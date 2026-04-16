@@ -266,6 +266,13 @@ class Finding(Base):
     # Ownership
     owner_user_id = Column(String(36), nullable=True)
 
+    # ── Phase 5.3: Framework control tags ────────────────────────────────────
+    control_tags = Column(JSON, nullable=True)
+    # Example: {"owasp_top10": "A03:2021", "cwe": "CWE-89",
+    #           "iso27001_annex_a": "A.12.6.1", "nist_csf_function": "PR.IP",
+    #           "pci_dss_requirement": "6.3.1"}
+    # Empty dict {} when template category is unknown — never invented.
+
     # Relationships
     target = relationship("Target")
     observations = relationship("Vulnerability", back_populates="finding")
