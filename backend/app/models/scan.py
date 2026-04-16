@@ -416,3 +416,25 @@ class ActionItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     scan = relationship("Scan", back_populates="actions")
+
+
+# ============================================================================
+# REPORTS (Phase 5.2 - Tamper Evidence)
+# ============================================================================
+
+class Report(Base):
+    """
+    Generated PDF reports with cryptographic signatures.
+    """
+    __tablename__ = "reports"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    scan_id = Column(String(36), ForeignKey("scans.id"), index=True)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+
+    # The canonical JSON string of findings included in the report
+    findings_hash = Column(String(64), nullable=False)
+    # HMAC-SHA256 signature of findings_hash using REPORT_SIGNING_KEY
+    signature = Column(String(64), nullable=False)
+
+    scan = relationship("Scan")
