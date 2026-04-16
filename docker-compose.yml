@@ -168,8 +168,6 @@ services:
       - "9200:9200"
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"     # exposed to host so backend can reach via localhost:9200
     networks:
       lab_network:
         aliases:
