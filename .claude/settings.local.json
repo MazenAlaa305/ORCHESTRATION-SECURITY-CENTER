@@ -34,7 +34,24 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Status:', d['status'], '| Vulns:', d['vulnerabilities_count'], '| Assets:', d['assets_count'], '| Risk:', d['risk_score']\\)\")",
       "Bash(curl -s http://localhost:8000/api/v1/scans/2be78b3d-ab50-4fd2-9cd2-8185a927b407)",
       "Bash(curl -s http://localhost:8000/api/v1/scans/8c6a50dc-b4d6-4642-8494-58c5906e3fb6)",
-      "Bash(docker cp:*)"
+      "Bash(docker cp:*)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -s http://localhost:9200/_cluster/health)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Status:', d.get\\('status'\\), 'Nodes:', d.get\\('number_of_nodes'\\)\\)\")",
+      "Bash(curl -s \"http://localhost:8000/api/v1/scans/\" -X POST -H \"Content-Type: application/json\" -d '{\"target_url\":\"http://localhost:3000\",\"scan_type\":\"quick\"}')",
+      "Bash(curl -s http://localhost:5601/api/status)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Kibana status:', d.get\\('status',{}\\).get\\('overall',{}\\).get\\('level','unknown'\\)\\)\")",
+      "Bash(curl -s http://localhost:5678/healthz)",
+      "Bash(curl -s http://localhost:9392/)",
+      "Bash(curl -s http://localhost:9390/)",
+      "Bash(curl -s http://localhost:8000/api/v1/network/assets)",
+      "Bash(curl -s http://localhost:8000/api/v1/vulnerabilities/)",
+      "Bash(curl -s http://localhost:8000/api/v1/dashboard/)",
+      "Bash(curl -s http://localhost:8000/api/v1/reports/)",
+      "Bash(curl -s http://localhost:8000/api/v1/lab/status)",
+      "Bash(curl -s http://localhost:8000/api/v1/openvas/status)",
+      "Bash(docker stats:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

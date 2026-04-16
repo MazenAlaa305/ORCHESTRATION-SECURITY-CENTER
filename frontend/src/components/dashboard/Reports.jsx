@@ -44,7 +44,7 @@ const Reports = ({ refresh }) => {
 
     const downloadPDF = async (scanId) => {
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+            const API_URL = import.meta.env.VITE_API_URL || 'https://localhost/api/v1';
             const url = `${API_URL}/reports/${scanId}/pdf`;
 
             // Open PDF in new window/download

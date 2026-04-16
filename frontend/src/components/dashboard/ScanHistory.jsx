@@ -41,7 +41,7 @@ const ScanHistory = ({ refresh }) => {
     const handleDownloadReport = async (scanId) => {
         try {
             // Updated to point to correct endpoint if needed, assuming /api/v1/reports/{id}/pdf exists
-            window.open(`http://localhost:8000/api/v1/reports/${scanId}/pdf`, '_blank');
+            window.open(`https://localhost/api/v1/reports/${scanId}/pdf`, '_blank');
         } catch (error) {
             console.error("Failed to download report", error);
             alert("Failed to download report. Please check backend logs.");

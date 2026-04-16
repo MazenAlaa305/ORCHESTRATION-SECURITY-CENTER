@@ -5,8 +5,11 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from ....core.database import get_db
-from ....models.scan import Scan, Vulnerability, NetworkAsset, ActionItem, SeverityLevel
+from ....models.scan import Scan, Vulnerability, NetworkAsset, ActionItem, SeverityLevel, Finding, FindingStatus
 from ....services.unified_risk_engine import UnifiedRiskEngine
+from datetime import date
+from app.api.deps import require_role
+from app.models.user import UserRole
 
 router = APIRouter()
 
@@ -26,6 +29,24 @@ class KPISnapshot(BaseModel):
     counts: Dict[str, int]
     total_assets: int
     last_scan_id: Optional[str]
+    overdue_findings: int = 0   # Phase 4.3 — SLA breach count
+
+
+class RiskBreakdownItem(BaseModel):
+    vuln_id: Optional[str]
+    cvss_vector: Optional[str]
+    cvss_env_score: float
+    confidence: float
+    contribution: float
+    severity: str
+    reason: str
+    url: str
+
+
+class RiskBreakdown(BaseModel):
+    scan_id: str
+    score: float
+    breakdown: List[RiskBreakdownItem]
 
 
 class ActionItemResponse(BaseModel):
@@ -41,6 +62,12 @@ class ActionItemResponse(BaseModel):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.get("/summary", response_model=KPISnapshot)
+def get_summary_alias(db: Session = Depends(get_db)):
+    """Alias for /kpi-snapshot — frontend compatibility."""
+    return get_kpi_snapshot(db)
+
 
 @router.get("/risk-overview", response_model=RiskOverview)
 def get_risk_overview(db: Session = Depends(get_db)):
@@ -100,13 +127,56 @@ def get_kpi_snapshot(db: Session = Depends(get_db)):
         thoughts = latest_scan.agent_thoughts or {}
         health_score = round(float(thoughts.get("health_score", 100.0 - overall_score)), 2)
 
+    # Phase 4.3 — count OPEN findings whose due_date has passed
+    try:
+        overdue = (
+            db.query(Finding)
+            .filter(Finding.status == FindingStatus.OPEN, Finding.due_date < date.today())
+            .count()
+        )
+    except Exception:
+        overdue = 0
+
     return {
         "overall_score": overall_score,
         "health_score": health_score,
         "counts": counts,
         "total_assets": assets_count,
         "last_scan_id": latest_scan.id if latest_scan else None,
+        "overdue_findings": overdue,
     }
+
+
+@router.get("/risk/{scan_id}", response_model=RiskBreakdown)
+def get_risk_breakdown(scan_id: str, db: Session = Depends(get_db)):
+    """
+    Phase 4.1 — Return the stored CVSS risk breakdown for a specific scan.
+    The breakdown is populated by UnifiedRiskEngine.update_scan_risk() at scan completion.
+    Each item explains exactly how much a vulnerability contributed to the final score.
+    """
+    scan = db.query(Scan).filter(Scan.id == scan_id).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+
+    stored = scan.risk_breakdown or {}
+    score = stored.get("score", scan.risk_score or 0.0)
+    raw_items = stored.get("breakdown", [])
+
+    items = [
+        RiskBreakdownItem(
+            vuln_id=item.get("vuln_id"),
+            cvss_vector=item.get("cvss_vector"),
+            cvss_env_score=item.get("cvss_env_score", 0.0),
+            confidence=item.get("confidence", 1.0),
+            contribution=item.get("contribution", 0.0),
+            severity=item.get("severity", "low"),
+            reason=item.get("reason", ""),
+            url=item.get("url", ""),
+        )
+        for item in raw_items
+    ]
+
+    return RiskBreakdown(scan_id=scan_id, score=score, breakdown=items)
 
 
 @router.get("/actions", response_model=List[ActionItemResponse])
@@ -121,7 +191,8 @@ def get_action_items(status: str = "OPEN", db: Session = Depends(get_db)):
     return actions
 
 
-@router.post("/refresh-risk")
+@router.post("/refresh-risk",
+             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 async def refresh_risk_scores(db: Session = Depends(get_db)):
     """
     Force-recalculate risk scores for the most recent scan.

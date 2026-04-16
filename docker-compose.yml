@@ -1,28 +1,48 @@
 services:
+  # ── TLS reverse proxy (Phase 3.4) ─────────────────────────────────────────
+  # Terminates HTTPS, proxies to backend:8000 and frontend:5173.
+  # Dev: self-signed cert at https://localhost
+  # Prod: set ACME_EMAIL and point a real domain at this host.
+  caddy:
+    image: caddy:2-alpine
+    container_name: sme_dashboard_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - default
+
   backend:
     build: ./backend
     container_name: sme_dashboard_backend
-    ports:
-      - "8000:8000"
-    # volumes:
-    #   - ./backend:/app
-    #   - gvm_socket:/run/gvmd
+    # Port 8000 is no longer exposed directly — traffic flows through Caddy.
+    # Uncomment for local debugging only:
+    # ports:
+    #   - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - OPENVAS_HOST=openvas
       - OPENVAS_PORT=9390
-      - OPENVAS_CONNECTION_TYPE=tls # immauss/openvas uses TLS on 9390
-      # - OPENVAS_SOCKET=/run/gvmd/gvmd.sock
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - WAZUH_API_URL=https://wazuh:55000
+      - OPENVAS_CONNECTION_TYPE=tls
+      - ELASTICSEARCH_URL=http://localhost:9200
+      - WAZUH_API_URL=https://localhost:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
+    # Phase 3.4: backend is NOT on lab_network — it reaches lab containers
+    # only through published localhost ports, the same way a real customer
+    # target would be reached. This eliminates lateral-movement risk.
     networks:
       - default
-      - lab_network
     depends_on:
       - db
       - redis
@@ -30,15 +50,18 @@ services:
   frontend:
     build: ./frontend
     container_name: sme_dashboard_frontend
-    ports:
-      - "5173:5173"
+    # Port 5173 is NOT exposed directly — all traffic routes through Caddy (HTTPS).
+    # To access the frontend, go to https://localhost (accept the self-signed cert in dev).
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000/api/v1
+      # Point at the Caddy proxy so the browser receives requests via TLS.
+      - VITE_API_URL=https://localhost/api/v1
     depends_on:
       - backend
+    networks:
+      - default
 
   db:
     image: postgres:15-alpine
@@ -87,8 +110,8 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - WAZUH_API_URL=https://wazuh:55000
+      - ELASTICSEARCH_URL=http://localhost:9200
+      - WAZUH_API_URL=https://localhost:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
@@ -107,8 +130,8 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - WAZUH_API_URL=https://wazuh:55000
+      - ELASTICSEARCH_URL=http://localhost:9200
+      - WAZUH_API_URL=https://localhost:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
@@ -136,6 +159,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     container_name: sme_dashboard_elastic
+    hostname: elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -144,9 +168,12 @@ services:
       - "9200:9200"
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"     # exposed to host so backend can reach via localhost:9200
     networks:
-      - default
-      - lab_network
+      lab_network:
+        aliases:
+          - wazuh.indexer
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.1
@@ -158,7 +185,6 @@ services:
     depends_on:
       - elasticsearch
     networks:
-      - default
       - lab_network
 
   wazuh:
@@ -171,7 +197,6 @@ services:
     environment:
       - WAZUH_API_START="true"
     networks:
-      - default
       - lab_network
 
   n8n:
@@ -203,3 +228,5 @@ volumes:
   gvm_data:
   elastic_data:
   n8n_data:
+  caddy_data:
+  caddy_config:

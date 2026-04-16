@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:8000/api/v1/assets/)",
+      "Bash(curl -s http://localhost:8000/api/v1/risk/summary)",
+      "Bash(curl -s http://localhost:8000/api/v1/alerts/)",
+      "Bash(curl -s http://localhost:8000/api/v1/dashboard/summary)",
+      "Bash(curl -s http://localhost:8000/api/v1/siem/status)",
+      "Bash(curl -s http://localhost:8000/openapi.json)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in d.get\\('paths',{}\\).keys\\(\\)]\")",
+      "Bash(curl -s \"http://localhost:8000/api/v1/scans/trigger\" -X POST -H \"Content-Type: application/json\" -d '{\"target_url\":\"http://localhost:3000\",\"scan_type\":\"quick\"}')"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'https://localhost/api/v1';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -8,6 +8,32 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+// ── Auth interceptor (Phase 3.1) ──────────────────────────────────────────────
+// Attach the JWT from sessionStorage to every request.
+// On 401 responses, clear the stale token and redirect to /login.
+api.interceptors.request.use((config) => {
+    const token = sessionStorage.getItem('token');
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+});
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            // Redirect to login page if not already there
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 // ============================================================================
 // LEGACY SERVICES (backward compatibility)
