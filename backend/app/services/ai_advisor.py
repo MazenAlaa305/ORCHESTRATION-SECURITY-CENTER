@@ -1,69 +1,79 @@
-import google.generativeai as genai
+try:
+    from google import genai as _genai
+    _HAS_GENAI = True
+except ImportError:
+    _HAS_GENAI = False
+
 from app.core.config import settings
 from app.models.scan import Scan
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 class AIAdvisor:
     def __init__(self):
-        if settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            try:
-                self.model = genai.GenerativeModel('gemini-2.0-flash')
-            except Exception:
-                self.model = genai.GenerativeModel('gemini-pro')
-        else:
-            logger.warning("GEMINI_API_KEY not set. Using AI Advisor Demo Mode.")
-            self.model = None
+        self.model = None
+        if not _HAS_GENAI:
+            logger.warning("google-genai SDK not available. Running in demo mode.")
+            return
+        if not settings.GEMINI_API_KEY:
+            logger.warning("GEMINI_API_KEY not set. Running in demo mode.")
+            return
+        try:
+            client = _genai.Client(api_key=settings.GEMINI_API_KEY)
+            self._client = client
+            self.model = "gemini-2.0-flash"
+        except Exception as exc:
+            logger.error("Failed to initialise Gemini client: %s", exc)
 
     async def generate_report(self, scan: Scan):
         if not self.model:
-            # Demo Mode Response
-            return f"""# Executive Security Summary (DEMO MODE)
-
-**Assessment Date:** {scan.completed_at or 'Today'}
-**Target:** {scan.target}
-
-## 1. Executive Summary
-The security assessment of **{scan.target}** identified **{len(scan.vulnerabilities)}** potential issues. The overall security posture is **Moderate**. Immediate attention is recommended for exposed services that may not require public access.
-
-## 2. Risk Analysis
-The calculated Risk Score is **{scan.risk_score} / 100**.
-- **Critical/High Risks**: {len([v for v in scan.vulnerabilities if v.severity in ['HIGH', 'CRITICAL']])} found.
-- **Open Ports**: {len(scan.vulnerabilities)} services detected.
-
-## 3. Recommended Actions
-1.  **Review Firewall Rules**: Restrict access to strictly necessary ports only.
-3.  **Patch Management**: Ensure all detected services ({', '.join(list(set([v.service for v in scan.vulnerabilities]))[:3])}) are updated to the latest stable versions.
-3.  **Network Segmentation**: Isolate critical assets from the public-facing interface.
-
-*Note: This is a generated sample report because no valid GEMINI_API_KEY was provided.*"""
-
-        # Construct prompt
-        vuln_summary = "\n".join([
-            f"- {v.service} (Port {v.port}): {v.severity} - {v.description}"
-            for v in scan.vulnerabilities
-        ])
-        
-        prompt = f"""
-        You are a Cyber Security Expert communicating to a non-technical CEO.
-        Analyze the following scan results for target: {scan.target}
-        
-        Vulnerabilities found:
-        {vuln_summary}
-
-        Please provide:
-        1. An Executive Summary (1-2 sentences, simple language).
-        2. A 'risk score' explanation (why is it High/Medium/Low?).
-        3. 3 Actionable Steps to fix the most critical issues.
-        
-        Tone: Professional, calm, but urgent if high risks exist. Avoid jargon where possible.
-        """
-
+            return self._demo_report(scan)
         try:
-            response = self.model.generate_content(prompt)
+            vuln_summary = "\n".join([
+                f"- {getattr(v, 'service', 'unknown')} (Port {getattr(v, 'port', '?')}): "
+                f"{v.severity} - {v.description or 'No description'}"
+                for v in (scan.vulnerabilities or [])
+            ])
+            prompt = (
+                f"You are a cyber security expert writing for a non-technical CEO.\n"
+                f"Target: {getattr(scan, 'target_url', 'unknown')}\n"
+                f"Vulnerabilities:\n{vuln_summary or 'None found'}\n\n"
+                f"Provide: 1) Executive summary (2 sentences). "
+                f"2) Risk score explanation. 3) Top 3 actionable fixes. "
+                f"Be professional, concise, avoid jargon."
+            )
+            response = self._client.models.generate_content(
+                model=self.model, contents=prompt
+            )
             return response.text
-        except Exception as e:
-            logger.error(f"Gemini API failed: {e}")
-            return "Error generating AI report."
+        except Exception as exc:
+            exc_str = str(exc).lower()
+            if "429" in exc_str or "quota" in exc_str or "rate" in exc_str or "resource_exhausted" in exc_str:
+                logger.warning("Gemini rate limit hit — using heuristic report: %s", exc)
+                return self._demo_report(scan, rate_limited=True)
+            logger.error("Gemini API error: %s", exc)
+            return self._demo_report(scan)
+
+    def _demo_report(self, scan: Scan, rate_limited: bool = False) -> str:
+        vulns = scan.vulnerabilities or []
+        high = [v for v in vulns if getattr(v, 'severity', '') in ('HIGH', 'CRITICAL')]
+        footer = (
+            "*AI analysis rate-limited — Gemini quota reached. Showing heuristic summary. Retry in ~1 minute.*"
+            if rate_limited else
+            "*Demo mode — set GEMINI_API_KEY for real AI analysis.*"
+        )
+        return (
+            f"# Executive Security Summary\n\n"
+            f"**Target:** {getattr(scan, 'target_url', 'unknown')}\n"
+            f"**Risk Score:** {scan.risk_score:.1f}/100\n\n"
+            f"## Summary\n"
+            f"The assessment found **{len(vulns)}** issues, "
+            f"of which **{len(high)}** are high/critical severity.\n\n"
+            f"## Top Actions\n"
+            f"1. Review firewall rules and restrict unnecessary ports.\n"
+            f"2. Patch all services to their latest stable versions.\n"
+            f"3. Enable network segmentation for critical assets.\n\n"
+            f"{footer}"
+        )

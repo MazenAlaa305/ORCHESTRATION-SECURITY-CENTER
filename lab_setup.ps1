@@ -78,14 +78,10 @@ function Show-Status {
     $containers = @(
         @{ Name="lab_webserver";    Zone="DMZ";  Role="OWASP Juice Shop";      URL="http://localhost:3000" },
         @{ Name="lab_api_gateway";  Zone="DMZ";  Role="API Gateway (Nginx)";   URL="http://localhost:8081" },
-        @{ Name="lab_dns_server";   Zone="DMZ";  Role="DNS Server (CoreDNS)";  URL="dns://localhost:5353" },
         @{ Name="lab_fileserver";   Zone="Corp"; Role="Samba File Server";     URL="smb://10.10.20.10" },
-        @{ Name="lab_mailserver";   Zone="Corp"; Role="GreenMail Server";      URL="smtp://10.10.20.20:3025" },
-        @{ Name="lab_workstation";  Zone="Corp"; Role="HR Workstation";        URL="http://10.10.20.40" },
         @{ Name="lab_database";     Zone="Data"; Role="Postgres Database";     URL="postgresql://10.10.30.10" },
         @{ Name="lab_redis_cache";  Zone="Data"; Role="Redis Cache";           URL="redis://10.10.30.20" },
-        @{ Name="lab_traffic_gen";  Zone="Mgmt"; Role="Traffic Generator";     URL="Internal" },
-        @{ Name="lab_log_shipper";  Zone="Mgmt"; Role="SIEM Log Shipper";      URL="Internal" }
+        @{ Name="lab_traffic_gen";  Zone="Mgmt"; Role="Traffic Generator";     URL="Internal" }
     )
 
     foreach ($c in $containers) {

@@ -4,6 +4,17 @@
 
 ---
 
+## RAM Requirements
+
+| Mode | RAM Needed | What's Running |
+|------|-----------|----------------|
+| **Lite (default)** | **16 GB** | 6 main services + 6 lab containers ≈ 3–4 GB containers |
+| Full | 32 GB | + OpenVAS, Elasticsearch, Kibana, Wazuh, n8n, celery_beat |
+
+> Windows 11 + Docker Desktop consume ~4.5 GB on their own. Lite mode leaves ~8 GB headroom on a 16 GB machine.
+
+---
+
 ## Prerequisites
 
 Before anything else, verify these are installed and running:
@@ -13,17 +24,28 @@ Before anything else, verify these are installed and running:
 | Docker Desktop | Latest | `docker --version` |
 | Docker Compose v2 | v2.x | `docker compose version` |
 | PowerShell | v5.1+ | `$PSVersionTable.PSVersion` |
-| Python | 3.9+ | `python --version` |
 
 > **CRITICAL:** Docker Desktop must be running before any step below. All services run inside containers.
 
 ---
 
-## Part 1 — Running the Main Dashboard
+## Quickstart (Recommended — Lite Mode)
+
+One script does everything: creates the network, starts both stacks, and seeds lab targets.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-lite.ps1
+```
+
+When it finishes, open **https://localhost** (accept the self-signed cert).
+
+---
+
+## Part 1 — Running the Main Dashboard (Manual Steps)
 
 ### Step 1: Create the Lab Network Bridge
 
-This shared network is required by both the main stack and the lab containers. Only run this once.
+This shared network is required by both stacks. Only run this once.
 
 ```powershell
 docker network create the-dashboard-project-_lab_network
@@ -31,15 +53,15 @@ docker network create the-dashboard-project-_lab_network
 
 If you see "network already exists" — that's fine, continue.
 
-### Step 2: Start the Main Stack
+### Step 2: Start the Lean Main Stack (6 services)
 
 ```powershell
 docker compose up -d
 ```
 
-This starts: FastAPI backend, React frontend, PostgreSQL, Redis, Celery worker, OpenVAS, Elasticsearch, Kibana, Wazuh, and n8n.
+Starts: Caddy (TLS proxy), FastAPI backend, React frontend, PostgreSQL, Redis, Celery worker.
 
-Wait 30–60 seconds for services to fully initialize. You can watch progress:
+Wait 30–60 seconds, then verify:
 
 ```powershell
 docker compose logs -f backend
@@ -49,15 +71,11 @@ Wait until you see: `Application startup complete`
 
 ### Step 3: Verify the Dashboard is Running
 
-Open your browser and go to:
-
 | URL | What you'll see |
 |-----|----------------|
-| http://localhost:5173 | Main dashboard UI |
+| https://localhost | Main dashboard (accept self-signed cert) |
 | http://localhost:8000/docs | Swagger API docs |
 | http://localhost:8000/health | JSON health status |
-
-If the dashboard loads and shows connection status — the main stack is healthy.
 
 ---
 
@@ -65,23 +83,25 @@ If the dashboard loads and shows connection status — the main stack is healthy
 
 The lab is a separate set of vulnerable containers that the dashboard will scan.
 
-### Step 4: Start the Lab Containers
+### Step 4: Start the Lab Containers (6 containers)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\lab_setup.ps1 start
+docker compose -f docker-compose.lab.yml up -d --build
 ```
 
-This brings up 4 vulnerable target containers (Juice Shop, API Gateway, Samba infra, Redis shadow asset) plus support services (DNS, traffic generator, log shipper).
+Starts: Juice Shop (web), API Gateway (nginx), Samba file server, PostgreSQL (lab DB), Redis cache, traffic generator.
 
 ### Step 5: Seed the Targets into the Dashboard
 
-Register the lab assets into the dashboard's PostgreSQL database so the scanning agents can discover them:
+```powershell
+Invoke-RestMethod -Method Post http://localhost:8000/api/v1/lab/seed
+```
+
+Or via the lab script:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\lab_setup.ps1 seed
 ```
-
-You should see confirmation that each target was registered via the API.
 
 ### Step 6: Verify Lab Status
 
@@ -89,9 +109,21 @@ You should see confirmation that each target was registered via the API.
 powershell -ExecutionPolicy Bypass -File .\lab_setup.ps1 status
 ```
 
-All 4 target containers should show as `Up` or `Healthy`.
+All 6 lab containers should show as `running`.
 
-You can also verify the Juice Shop target is reachable at: http://localhost:3000
+Juice Shop is reachable at: http://localhost:3000
+
+---
+
+## Lite Mode vs Full Mode
+
+By default `docker compose up` starts only the 6 lean services. To add OpenVAS, Elasticsearch, Kibana, Wazuh, n8n, and celery_beat:
+
+```powershell
+docker compose --profile full up -d
+```
+
+Full mode requires ~32 GB RAM. Optional features (SIEM, SOAR, scheduled scans, OpenVAS deep scans) are disabled by default and activate automatically when their services are running.
 
 ---
 
@@ -359,7 +391,7 @@ powershell -ExecutionPolicy Bypass -File .\lab_setup.ps1 start
 
 ### Nuclei scans timing out
 
-Increase Docker memory allocation in Docker Desktop Settings → Resources → Memory (minimum 4GB recommended for full stack).
+In Docker Desktop → Settings → Resources → Memory, set at least **6 GB** for lite mode, **16 GB** for full mode.
 
 ### No Gemini AI advisory appearing
 
@@ -385,16 +417,25 @@ The backend is restarting or overloaded. The frontend reconnects automatically w
 
 ## Service Access Reference
 
+### Lite Mode (always available)
+
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Dashboard | http://localhost:5173 | — |
+| Dashboard | https://localhost | — |
 | Backend API Docs | http://localhost:8000/docs | — |
-| Juice Shop (target) | http://localhost:3000 | — |
+| Juice Shop (scan target) | http://localhost:3000 | — |
+| API Gateway (scan target) | http://localhost:8081 | — |
+
+### Full Mode only (`--profile full`)
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
 | Kibana | http://localhost:5601 | — |
 | n8n SOAR | http://localhost:5678 | — |
 | OpenVAS | https://localhost:9392 | admin / admin |
 | Wazuh API | https://localhost:55000 | — |
+| Elasticsearch | http://localhost:9200 | — |
 
 ---
 
-*Last updated: April 10, 2026*
+*Last updated: April 17, 2026*

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Target, Plus, Trash2, ExternalLink, Shield, Globe, Search, CheckCircle, Loader2 } from 'lucide-react';
 import { targetService, pentesterService } from '../../services/api';
+import EnvironmentWizard from './EnvironmentWizard';
 
 const TargetsManager = ({ onScanStarted }) => {
-    const [activeTab, setActiveTab] = useState('list'); // list, add, discover
+    const [activeTab, setActiveTab] = useState('list'); // list, discover
+    const [showWizard, setShowWizard] = useState(false);
     const [targets, setTargets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [newTarget, setNewTarget] = useState({ name: '', base_url: '', auth_method: 'none', asset_value: 'MEDIUM' });
     const [scanning, setScanning] = useState(null);
 
     // Discovery
@@ -26,18 +27,6 @@ const TargetsManager = ({ onScanStarted }) => {
             console.error('Failed to fetch targets:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleAddTarget = async (e) => {
-        e.preventDefault();
-        try {
-            await targetService.create(newTarget);
-            setNewTarget({ name: '', base_url: '', auth_method: 'none', asset_value: 'MEDIUM' });
-            setActiveTab('list');
-            fetchTargets();
-        } catch (error) {
-            console.error('Failed to add target:', error);
         }
     };
 
@@ -103,8 +92,8 @@ const TargetsManager = ({ onScanStarted }) => {
                         Asset Discovery
                     </button>
                     <button
-                        onClick={() => setActiveTab(activeTab === 'add' ? 'list' : 'add')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${activeTab === 'add' ? 'bg-cyan-600 text-white' : 'bg-cyan-500 hover:bg-cyan-600 text-white'}`}
+                        onClick={() => setShowWizard(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors bg-cyan-500 hover:bg-cyan-600 text-white"
                     >
                         <Plus className="h-4 w-4" />
                         Add Target
@@ -168,84 +157,11 @@ const TargetsManager = ({ onScanStarted }) => {
                 </div>
             )}
 
-            {/* Add Target Form */}
-            {activeTab === 'add' && (
-                <form onSubmit={handleAddTarget} className="bg-cyber-light p-6 rounded-xl border border-gray-700 animate-fade-in">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-1">Name</label>
-                            <input
-                                type="text"
-                                value={newTarget.name}
-                                onChange={(e) => setNewTarget({ ...newTarget, name: e.target.value })}
-                                placeholder="My Web App"
-                                className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-1">URL</label>
-                            <input
-                                type="url"
-                                value={newTarget.base_url}
-                                onChange={(e) => setNewTarget({ ...newTarget, base_url: e.target.value })}
-                                placeholder="https://example.com"
-                                className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-1">Auth Method</label>
-                            <select
-                                value={newTarget.auth_method}
-                                onChange={(e) => setNewTarget({ ...newTarget, auth_method: e.target.value })}
-                                className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
-                            >
-                                <option value="none">None</option>
-                                <option value="basic">Basic Auth</option>
-                                <option value="jwt">JWT Token</option>
-                                <option value="cookie">Cookie Session</option>
-                            </select>
-                        </div>
-                    </div>
-                    {/* Asset Value / Business Context Field */}
-                    <div className="mt-4">
-                        <label className="block text-sm text-gray-400 mb-1">Business Criticality</label>
-                        <div className="flex gap-4">
-                            {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(level => (
-                                <label key={level} className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="criticality"
-                                        checked={newTarget.asset_value === level || (level === 'MEDIUM' && !newTarget.asset_value)}
-                                        onChange={() => setNewTarget({ ...newTarget, asset_value: level })}
-                                    />
-                                    <span className={`text-sm font-medium ${level === 'CRITICAL' ? 'text-red-400' :
-                                        level === 'HIGH' ? 'text-orange-400' :
-                                            level === 'MEDIUM' ? 'text-yellow-400' : 'text-blue-400'
-                                        }`}>{level}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 mt-4">
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('list')}
-                            className="px-4 py-2 text-gray-400 hover:text-white"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                        >
-                            Save Target
-                        </button>
-                    </div>
-                </form>
-            )}
+            <EnvironmentWizard
+                open={showWizard}
+                onClose={() => setShowWizard(false)}
+                onCreated={() => { fetchTargets(); setShowWizard(false); }}
+            />
 
             {/* Targets List */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

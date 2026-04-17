@@ -15,8 +15,9 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 from app.core.celery_app import celery_app
+from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService
+from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService, Target
 from app.services.nmap_wrapper import NmapWrapper
 from app.services.event_publisher import publisher
 from sqlalchemy import select
@@ -195,10 +196,35 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
             raise ValueError(f"No valid target URL for scan {scan_id}")
         clean_target = _sanitise_target(raw_target)
 
+        # ── Tool selection (Part C) ───────────────────────────────────────────
+        # The scan's `configuration["tools"]` overrides the default pipeline when
+        # scan_type is "custom". Otherwise, the feature flags from runtime config
+        # still gate phases (e.g. OPENVAS_ENABLED, LLM_VALIDATION_ENABLED).
+        from app.core.config import settings as _rt_settings
+        cfg = scan.configuration or {}
+        tools_requested = cfg.get("tools") if isinstance(cfg, dict) else None
+
+        def _tool_enabled(name: str, default: bool = True) -> bool:
+            if tools_requested is not None:
+                return name in tools_requested
+            return default
+
+        run_nmap   = _tool_enabled("nmap") and _rt_settings.NMAP_ENABLED
+        run_nuclei = _tool_enabled("nuclei") and _rt_settings.NUCLEI_ENABLED
+        run_ai     = _tool_enabled("ai_validation", default=False) and _rt_settings.LLM_VALIDATION_ENABLED
+        # Persist the resolved tool gates on the scan config so downstream
+        # consumers (AI pipeline, report renderer) can inspect what ran.
+        cfg["resolved_tools"] = {"nmap": run_nmap, "nuclei": run_nuclei, "ai_validation": run_ai}
+        scan.configuration = cfg
+
         # ── Phase 1: Nmap ────────────────────────────────────────────────────
-        logger.info("[Scan %s] Phase 1: Nmap → %s", scan_id, clean_target)
-        scanner = NmapWrapper()
-        results = scanner.scan_target(clean_target, scan.scan_type)
+        results: list = []
+        if run_nmap:
+            logger.info("[Scan %s] Phase 1: Nmap → %s", scan_id, clean_target)
+            scanner = NmapWrapper()
+            results = scanner.scan_target(clean_target, scan.scan_type)
+        else:
+            logger.info("[Scan %s] Phase 1: Nmap skipped (disabled)", scan_id)
 
         seen_hosts: set[str] = set()
         all_vulns: list[dict] = []
@@ -256,6 +282,9 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
                     "description": f"Service: {port_data['product']}",
                 })
 
+        # Commit nmap results so the async risk engine session can see them
+        db.commit()
+
         # ── Phase 2: AI Intelligence (Gemini) ─────────────────────────────
         logger.info("[Scan %s] Phase 2: AI Intelligence analysis", scan_id)
         try:
@@ -277,32 +306,38 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         # Use the full URL (raw_target) so Nuclei scans the correct port,
         # not just the sanitised hostname which strips non-standard ports.
         nuclei_target = raw_target if raw_target and "://" in raw_target else clean_target
-        logger.info("[Scan %s] Phase 3: Nuclei → %s", scan_id, nuclei_target)
-        try:
-            from app.services.nuclei_wrapper import NucleiWrapper
-            for finding in NucleiWrapper().scan_target(nuclei_target, scan_type=scan.scan_type):
-                db.add(Vulnerability(
-                    scan_id=scan.id,
-                    type=finding["type"],
-                    severity=finding["severity"],
-                    description=finding["description"],
-                    url=finding["url"],
-                    host=clean_target,
-                    service="http" if "http" in finding["url"] else "unknown",
-                    cve_id=finding.get("cve_id", ""),
-                    proof_of_concept=str(finding.get("evidence", "")),
-                    remediation="Refer to CVE mitigation guidance.",
-                    status="OPEN",
-                ))
-                vuln_count += 1
-                all_vulns.append({
-                    "host": clean_target,
-                    "severity": finding["severity"],
-                    "cve_id": finding.get("cve_id", ""),
-                    "description": finding["description"],
-                })
-        except Exception as exc:
-            logger.warning("[Scan %s] Nuclei scan skipped: %s", scan_id, exc)
+        if not run_nuclei:
+            logger.info("[Scan %s] Phase 3: Nuclei skipped (disabled)", scan_id)
+        else:
+            logger.info("[Scan %s] Phase 3: Nuclei → %s", scan_id, nuclei_target)
+            try:
+                from app.services.nuclei_wrapper import NucleiWrapper
+                for finding in NucleiWrapper().scan_target(nuclei_target, scan_type=scan.scan_type):
+                    db.add(Vulnerability(
+                        scan_id=scan.id,
+                        type=finding["type"],
+                        severity=finding["severity"],
+                        description=finding["description"],
+                        url=finding["url"],
+                        host=clean_target,
+                        service="http" if "http" in finding["url"] else "unknown",
+                        cve_id=finding.get("cve_id", ""),
+                        proof_of_concept=str(finding.get("evidence", "")),
+                        remediation="Refer to CVE mitigation guidance.",
+                        status="OPEN",
+                    ))
+                    vuln_count += 1
+                    all_vulns.append({
+                        "host": clean_target,
+                        "severity": finding["severity"],
+                        "cve_id": finding.get("cve_id", ""),
+                        "description": finding["description"],
+                    })
+            except Exception as exc:
+                logger.warning("[Scan %s] Nuclei scan skipped: %s", scan_id, exc)
+
+        # Commit nuclei findings before risk engine's async session reads them
+        db.commit()
 
         # ── Phase 4: Risk Engine ───────────────────────────────────────────
         logger.info("[Scan %s] Phase 4: Risk Engine", scan_id)
@@ -336,6 +371,10 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         # ── Finalise: COMPLETED ────────────────────────────────────────────
         scan.status = ScanStatus.COMPLETED
         scan.completed_at = datetime.utcnow()
+        if scan.target_id:
+            _tgt = db.query(Target).filter(Target.id == scan.target_id).first()
+            if _tgt:
+                _tgt.last_scanned_at = scan.completed_at
         db.commit()
         db.refresh(scan)
 

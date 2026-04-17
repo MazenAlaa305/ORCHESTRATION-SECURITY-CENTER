@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
+import { useAuth } from '../context/AuthContext';
 
 const NAV_SECTIONS = [
     {
@@ -80,6 +81,7 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
 
 const Sidebar = ({ activeTab, onTabChange }) => {
     const { state: realTime } = useRealTime();
+    const { user, logout } = useAuth();
     const [collapsed, setCollapsed] = useState(() => {
         try { return localStorage.getItem('sidebar-collapsed') === 'true'; } catch { return false; }
     });
@@ -168,23 +170,59 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 ))}
             </div>
 
-            {/* ── Connection status footer ──────────────────────────────── */}
+            {/* ── User + Logout footer ──────────────────────────────────── */}
             <div
-                className="px-3 py-3 flex-shrink-0 flex items-center gap-2"
+                className="px-3 py-3 flex-shrink-0 flex flex-col gap-2"
                 style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}
             >
-                <div
-                    className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${isConnected ? 'animate-pulse' : ''}`}
-                    style={{ background: isConnected ? '#00ff88' : '#ff0055' }}
-                />
-                {!collapsed && (
-                    <span
-                        className="text-[8px] font-bold uppercase tracking-widest"
-                        style={{ color: isConnected ? '#00ff88' : '#ff4444' }}
-                    >
-                        {isConnected ? 'Live' : 'Offline'}
-                    </span>
+                {/* User info row */}
+                {!collapsed && user && (
+                    <div className="flex items-center gap-2 px-1">
+                        <div
+                            className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] font-black"
+                            style={{ background: 'rgba(0,255,255,0.15)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.3)' }}
+                        >
+                            {(user.email || 'A')[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[8px] font-bold text-white truncate">{user.email}</p>
+                            <p className="text-[7px] text-gray-600 uppercase tracking-widest">{user.role}</p>
+                        </div>
+                    </div>
                 )}
+
+                {/* Logout button */}
+                <button
+                    onClick={logout}
+                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
+                    style={{ background: 'transparent', border: '1px solid transparent' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,0,85,0.08)'; e.currentTarget.style.border = '1px solid rgba(255,0,85,0.2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
+                    title="Logout"
+                >
+                    <LogOut className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(255,0,85,0.7)' }} />
+                    {!collapsed && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,0,85,0.7)' }}>
+                            Logout
+                        </span>
+                    )}
+                </button>
+
+                {/* Connection status */}
+                <div className="flex items-center gap-2 px-1">
+                    <div
+                        className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${isConnected ? 'animate-pulse' : ''}`}
+                        style={{ background: isConnected ? '#00ff88' : '#ff0055' }}
+                    />
+                    {!collapsed && (
+                        <span
+                            className="text-[8px] font-bold uppercase tracking-widest"
+                            style={{ color: isConnected ? '#00ff88' : '#ff4444' }}
+                        >
+                            {isConnected ? 'Live' : 'Offline'}
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Right edge separator */}

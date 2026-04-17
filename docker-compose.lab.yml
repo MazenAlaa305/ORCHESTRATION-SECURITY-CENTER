@@ -1,7 +1,8 @@
 # ============================================================
 # LIVING LAB - Found 404
-# SME Network Simulation Environment
-# 4 subnets, 11 containers, realistic enterprise topology
+# SME Network Simulation Environment (LITE MODE)
+# Default: 6 containers (~900MB RAM). For full 10-container topology
+# pass --profile full-lab to docker compose up.
 # ============================================================
 
 services:
@@ -31,7 +32,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 512M
+          memory: 384M
 
   lab_api_gateway:
     image: nginx:alpine
@@ -59,6 +60,7 @@ services:
           memory: 64M
 
   lab_dns_server:
+    profiles: ["full-lab"]
     image: coredns/coredns:latest
     container_name: lab_dns_server
     hostname: dns.sme-lab.local
@@ -128,9 +130,10 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 256M
+          memory: 128M
 
   lab_mailserver:
+    profiles: ["full-lab"]
     image: greenmail/standalone:2.0.1
     container_name: lab_mailserver
     hostname: mail.sme-lab.local
@@ -159,6 +162,7 @@ services:
           memory: 256M
 
   lab_workstation:
+    profiles: ["full-lab"]
     image: nginx:alpine
     container_name: lab_workstation
     hostname: ws01.sme-lab.local
@@ -214,7 +218,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 256M
+          memory: 128M
 
   lab_redis_cache:
     image: redis:6.0-alpine
@@ -238,7 +242,7 @@ services:
       resources:
         limits:
           cpus: '0.25'
-          memory: 128M
+          memory: 64M
 
   # ════════════════════════════════════════════════════════════
   # MANAGEMENT SUBNET (10.10.40.0/24) — Monitoring & utilities
@@ -282,9 +286,10 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 256M
+          memory: 128M
 
   lab_log_shipper:
+    profiles: ["full-lab"]
     build:
       context: ./lab/log-shipper
       dockerfile: Dockerfile

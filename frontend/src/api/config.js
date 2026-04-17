@@ -13,6 +13,10 @@ const SAFE_DEFAULTS = {
     soar_enabled: false,
     openvas_enabled: false,
     llm_validation_enabled: false,
+    nmap_enabled: true,
+    nuclei_enabled: true,
+    lab_enabled: true,
+    lab_traffic_intensity: 'medium',
     version: 'unknown',
 };
 
@@ -30,4 +34,22 @@ export async function fetchPublicConfig() {
         console.warn('[ConfigAPI] Could not fetch /config/public — using safe defaults.', err?.message);
         return SAFE_DEFAULTS;
     }
+}
+
+/** Admin: fetch all flags with override metadata. */
+export async function fetchAllConfig() {
+    const res = await api.get('/config/all');
+    return res.data;
+}
+
+/** Admin: update a single config flag. */
+export async function updateConfig(key, value) {
+    const res = await api.put(`/config/${key}`, { value });
+    return res.data;
+}
+
+/** Poll live integration health status. */
+export async function fetchIntegrationHealth() {
+    const res = await api.get('/config/health');
+    return res.data;
 }

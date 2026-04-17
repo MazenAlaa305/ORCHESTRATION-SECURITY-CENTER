@@ -47,12 +47,32 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
     if not target_url:
         raise HTTPException(status_code=400, detail="Either target_id or target_url required")
     
+    # Merge tool selection and automation flags into the configuration JSON
+    # so the Celery worker can read them alongside the raw scan_type.
+    configuration = dict(scan_in.configuration or {})
+    if scan_in.tools is not None:
+        configuration["tools"] = scan_in.tools
+    configuration.setdefault("auto_report", scan_in.auto_report)
+    configuration.setdefault("soar_trigger", scan_in.soar_trigger)
+    configuration.setdefault("siem_forward", scan_in.siem_forward)
+
+    # Apply scan_type presets when tools aren't explicitly chosen.
+    if scan_in.tools is None:
+        presets = {
+            "quick":    ["nmap"],
+            "standard": ["nmap", "nuclei"],
+            "full":     ["nmap", "nuclei", "ai_validation"],
+        }
+        preset = presets.get(scan_in.scan_type)
+        if preset is not None:
+            configuration["tools"] = preset
+
     # Create scan record
     scan = Scan(
         target_id=target_id,
         target_url=target_url,
         scan_type=scan_in.scan_type,
-        configuration=scan_in.configuration,
+        configuration=configuration,
         status=ScanStatus.QUEUED
     )
     db.add(scan)
@@ -65,12 +85,59 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
         selectinload(Scan.actions),
         selectinload(Scan.agent_logs)
     ).filter(Scan.id == scan.id).first()
-    
+
     # Trigger Celery Task (legacy Nmap scan)
     # For AI-powered scans, use /ai endpoint below
     run_scan_task.delay(scan_id=scan.id)
-    
+
     return scan
+
+
+# ── Scan scheduling (Part C) ─────────────────────────────────────────────────
+
+_SCHEDULES: dict[str, dict] = {}
+# Lightweight in-memory schedule store. Persistent scheduling is provided by
+# Celery beat; this endpoint set exposes a simple CRUD surface so the frontend
+# can manage recurring scans without editing beat_schedule at runtime.
+
+
+@router.post("/schedule",
+             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
+def create_schedule(scan_in: ScanCreate):
+    """Create a recurring scan schedule."""
+    import uuid
+    if not scan_in.schedule:
+        raise HTTPException(status_code=400, detail="`schedule` (cron expression) is required")
+    sid = str(uuid.uuid4())
+    _SCHEDULES[sid] = {
+        "id": sid,
+        "target_id": scan_in.target_id,
+        "target_url": scan_in.target_url,
+        "scan_type": scan_in.scan_type,
+        "tools": scan_in.tools,
+        "schedule": scan_in.schedule,
+        "auto_report": scan_in.auto_report,
+        "soar_trigger": scan_in.soar_trigger,
+        "siem_forward": scan_in.siem_forward,
+        "enabled": True,
+    }
+    return _SCHEDULES[sid]
+
+
+@router.get("/schedules")
+def list_schedules():
+    """List active scan schedules."""
+    return {"schedules": list(_SCHEDULES.values())}
+
+
+@router.delete("/schedules/{schedule_id}", status_code=204,
+               dependencies=[Depends(require_role(UserRole.ADMIN))])
+def delete_schedule(schedule_id: str):
+    """Cancel a scheduled scan."""
+    if schedule_id not in _SCHEDULES:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    _SCHEDULES.pop(schedule_id)
+    return None
 
 
 @router.post("/ai", response_model=ScanResponse, status_code=202,

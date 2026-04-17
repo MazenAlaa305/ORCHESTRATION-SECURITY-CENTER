@@ -36,6 +36,7 @@ const RiskChart            = lazy(() => import('../components/OpenVAS/RiskChart'
 const Scheduler            = lazy(() => import('../components/OpenVAS/Scheduler'));
 const VulnerabilitiesList  = lazy(() => import('../components/OpenVAS/VulnerabilitiesList'));
 const LabEnvironment       = lazy(() => import('../components/dashboard/LabEnvironment'));
+const SettingsPanel        = lazy(() => import('../components/dashboard/SettingsPanel'));
 
 // ── Loading fallback ──────────────────────────────────────────────────────────
 const PanelLoader = () => (
@@ -301,6 +302,15 @@ const Dashboard = () => {
             {activeTab === 'reports' && (
                 <Suspense fallback={<PanelLoader />}>
                     <Reports refresh={refreshKey} />
+                </Suspense>
+            )}
+
+            {/* ════════════════════════════════════════════════════════════════
+                TAB: SETTINGS / CONFIG
+            ════════════════════════════════════════════════════════════════ */}
+            {activeTab === 'settings' && (
+                <Suspense fallback={<PanelLoader />}>
+                    <SettingsPanel />
                 </Suspense>
             )}
         </Layout>

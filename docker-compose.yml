@@ -1,8 +1,5 @@
 services:
-  # ── TLS reverse proxy (Phase 3.4) ─────────────────────────────────────────
-  # Terminates HTTPS, proxies to backend:8000 and frontend:5173.
-  # Dev: self-signed cert at https://localhost
-  # Prod: set ACME_EMAIL and point a real domain at this host.
+  # ── TLS reverse proxy ──────────────────────────────────────────────────────
   caddy:
     image: caddy:2-alpine
     container_name: sme_dashboard_caddy
@@ -18,50 +15,66 @@ services:
       - frontend
     networks:
       - default
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
 
   backend:
     build: ./backend
     container_name: sme_dashboard_backend
-    # Port 8000 is no longer exposed directly — traffic flows through Caddy.
-    # Uncomment for local debugging only:
-    # ports:
-    #   - "8000:8000"
+    ports:
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       - OPENVAS_HOST=openvas
       - OPENVAS_PORT=9390
       - OPENVAS_CONNECTION_TYPE=tls
-      - ELASTICSEARCH_URL=http://localhost:9200
-      - WAZUH_API_URL=https://localhost:55000
+      - OPENVAS_ENABLED=false
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SIEM_ENABLED=false
+      - WAZUH_API_URL=https://wazuh:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
-    # Phase 3.4: backend is NOT on lab_network — it reaches lab containers
-    # only through published localhost ports, the same way a real customer
-    # target would be reached. This eliminates lateral-movement risk.
+      - SOAR_ENABLED=false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - default
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   frontend:
     build: ./frontend
     container_name: sme_dashboard_frontend
-    # Port 5173 is NOT exposed directly — all traffic routes through Caddy (HTTPS).
-    # To access the frontend, go to https://localhost (accept the self-signed cert in dev).
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      # Point at the Caddy proxy so the browser receives requests via TLS.
       - VITE_API_URL=https://localhost/api/v1
     depends_on:
       - backend
     networks:
       - default
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
 
   db:
     image: postgres:15-alpine
@@ -70,10 +83,10 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1G
+          memory: 512M
         reservations:
           cpus: '0.2'
-          memory: 256M
+          memory: 128M
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
@@ -82,6 +95,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d sme_cyber_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -89,32 +108,36 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 256M
+          cpus: '0.25'
+          memory: 128M
     ports:
       - "6379:6379"
 
   celery_worker:
     build: ./backend
     container_name: sme_dashboard_celery
-    command: celery -A app.core.celery_app worker --loglevel=info
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
     deploy:
       resources:
         limits:
           cpus: '1.5'
-          memory: 1G
+          memory: 1024M
         reservations:
           cpus: '0.5'
-          memory: 512M
+          memory: 256M
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - ELASTICSEARCH_URL=http://localhost:9200
-      - WAZUH_API_URL=https://localhost:55000
+      - JWT_SECRET=${JWT_SECRET}
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SIEM_ENABLED=false
+      - WAZUH_API_URL=https://wazuh:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
+      - SOAR_ENABLED=false
     networks:
       - default
       - lab_network
@@ -122,7 +145,10 @@ services:
       - backend
       - redis
 
+  # ── Heavy optional services (only start with: docker compose --profile full up) ──
+
   celery_beat:
+    profiles: ["full"]
     build: ./backend
     container_name: sme_dashboard_beat
     command: celery -A app.core.celery_app beat --loglevel=info
@@ -130,8 +156,8 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - ELASTICSEARCH_URL=http://localhost:9200
-      - WAZUH_API_URL=https://localhost:55000
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - WAZUH_API_URL=https://wazuh:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
@@ -140,6 +166,7 @@ services:
       - redis
 
   openvas:
+    profiles: ["full"]
     image: immauss/openvas
     container_name: sme_dashboard_openvas
     restart: unless-stopped
@@ -147,8 +174,8 @@ services:
       - PUBLIC_HOSTNAME=127.0.0.1
       - SKIPGSAD=true
     ports:
-      - "9392:9392" # Web UI
-      - "9390:9390" # GMP
+      - "9392:9392"
+      - "9390:9390"
     volumes:
       - gvm_data:/var/lib/openvas
     entrypoint: [ "/bin/sh", "-c", "chown -R gvm:gvm /var/lib/openvas && rm -f /var/lib/openvas/feed-update.lock && find /var/lib -name postmaster.pid -delete && /scripts/start.sh" ]
@@ -157,6 +184,7 @@ services:
       - lab_network
 
   elasticsearch:
+    profiles: ["full"]
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     container_name: sme_dashboard_elastic
     hostname: elasticsearch
@@ -174,6 +202,7 @@ services:
           - wazuh.indexer
 
   kibana:
+    profiles: ["full"]
     image: docker.elastic.co/kibana/kibana:8.11.1
     container_name: sme_dashboard_kibana
     environment:
@@ -186,6 +215,7 @@ services:
       - lab_network
 
   wazuh:
+    profiles: ["full"]
     image: wazuh/wazuh-manager:4.7.2
     container_name: sme_dashboard_wazuh
     ports:
@@ -198,6 +228,7 @@ services:
       - lab_network
 
   n8n:
+    profiles: ["full"]
     image: n8nio/n8n:latest
     container_name: sme_dashboard_n8n
     ports:

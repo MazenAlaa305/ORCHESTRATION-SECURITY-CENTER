@@ -94,6 +94,40 @@ async def lifespan(app: FastAPI):
         # Non-fatal: log and continue — don't crash the API on a bad DB startup
         logger.error("Orphan reaper failed on startup (non-fatal): %s", exc)
 
+    # ── 1b. Load runtime config overrides from DB ────────────────────────────
+    # Feature flags toggled from the Settings tab persist in the runtime_config
+    # table; apply them over the env-var defaults before requests come in.
+    try:
+        from app.core.database import SessionLocal
+        from app.core.config import load_runtime_overrides
+        with SessionLocal() as cfg_db:
+            load_runtime_overrides(cfg_db)
+    except Exception as exc:
+        logger.warning("Runtime config overrides not loaded: %s", exc)
+
+    # ── 1c. Seed default admin on first boot ─────────────────────────────────
+    try:
+        from app.core.database import async_session_maker
+        from app.models.user import User, UserRole
+        from app.core.security import hash_password
+        from sqlalchemy import select as _select
+        import uuid as _uuid
+        async with async_session_maker() as seed_db:
+            res = await seed_db.execute(_select(User).where(User.email == "admin@local"))
+            if res.scalar_one_or_none() is None:
+                admin = User(
+                    id=str(_uuid.uuid4()),
+                    email="admin@local",
+                    password_hash=hash_password("Admin@1234"),
+                    role=UserRole.ADMIN,
+                    force_password_change=True,
+                )
+                seed_db.add(admin)
+                await seed_db.commit()
+                logger.info("Seeded default admin: admin@local / Admin@1234")
+    except Exception as exc:
+        logger.warning("Admin seed skipped (non-fatal): %s", exc)
+
     # ── 2. Start Redis → WebSocket event bridge ───────────────────────────────
     _redis_listener_task = asyncio.create_task(redis_event_listener())
     logger.info("Found 404 API started.")

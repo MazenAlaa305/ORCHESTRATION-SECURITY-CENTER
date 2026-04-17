@@ -9,11 +9,9 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Nuclei vulnerability scanner
+# Install Nuclei vulnerability scanner (pinned version for reproducible builds)
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/') \
-    && NUCLEI_VER=$(wget -qO- "https://api.github.com/repos/projectdiscovery/nuclei/releases/latest" \
-    | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/') \
-    && wget -q "https://github.com/projectdiscovery/nuclei/releases/download/v${NUCLEI_VER}/nuclei_${NUCLEI_VER}_linux_${ARCH}.zip" \
+    && wget -q "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.8/nuclei_3.3.8_linux_${ARCH}.zip" \
     -O /tmp/nuclei.zip \
     && unzip -q /tmp/nuclei.zip -d /tmp \
     && mv /tmp/nuclei /usr/local/bin/nuclei \

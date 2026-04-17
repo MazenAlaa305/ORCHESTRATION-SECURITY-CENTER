@@ -21,21 +21,30 @@ const INITIAL_STATE = {
     soar_enabled: false,
     openvas_enabled: false,
     llm_validation_enabled: false,
+    nmap_enabled: true,
+    nuclei_enabled: true,
+    lab_enabled: true,
+    lab_traffic_intensity: 'medium',
     version: '',
     loaded: false,   // true once the fetch resolves (success or failure)
+    refreshConfig: () => {},
 };
 
 export const ConfigProvider = ({ children }) => {
     const [config, setConfig] = useState(INITIAL_STATE);
 
-    useEffect(() => {
+    const loadConfig = () => {
         fetchPublicConfig().then(data =>
-            setConfig({ ...data, loaded: true })
+            setConfig(prev => ({ ...prev, ...data, loaded: true }))
         );
+    };
+
+    useEffect(() => {
+        loadConfig();
     }, []);
 
     return (
-        <ConfigContext.Provider value={config}>
+        <ConfigContext.Provider value={{ ...config, refreshConfig: loadConfig }}>
             {children}
         </ConfigContext.Provider>
     );

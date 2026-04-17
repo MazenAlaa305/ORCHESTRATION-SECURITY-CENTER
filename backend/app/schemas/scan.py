@@ -43,6 +43,13 @@ class TargetCreate(BaseModel):
     base_url: str
     auth_method: Optional[str] = None
     auth_credentials: Optional[Dict[str, Any]] = None
+    asset_value: Optional[str] = "MEDIUM"            # CRITICAL/HIGH/MEDIUM/LOW
+    data_sensitivity: Optional[str] = "NONE"         # PII/FINANCIAL/NONE
+    environment_type: Optional[str] = "lab"          # lab/production/staging/development
+    compliance_tags: Optional[List[str]] = None      # ["pci-dss", "hipaa", "iso-27001"]
+    scope_allowlist: Optional[List[str]] = None
+    max_rps: Optional[int] = 10
+    notes: Optional[str] = None
 
 
 class TargetResponse(BaseModel):
@@ -51,6 +58,14 @@ class TargetResponse(BaseModel):
     base_url: str
     tech_stack: Optional[Dict[str, Any]] = None
     auth_method: Optional[str] = None
+    asset_value: Optional[str] = None
+    data_sensitivity: Optional[str] = None
+    environment_type: Optional[str] = None
+    compliance_tags: Optional[List[str]] = None
+    scope_allowlist: Optional[List[str]] = None
+    max_rps: Optional[int] = None
+    notes: Optional[str] = None
+    last_scanned_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -70,8 +85,13 @@ class TargetDetail(TargetResponse):
 class ScanCreate(BaseModel):
     target_id: Optional[str] = None
     target_url: Optional[str] = None  # Legacy support
-    scan_type: str = "full"
+    scan_type: str = "full"              # "quick", "standard", "full", "custom"
+    tools: Optional[List[str]] = None    # ["nmap", "nuclei", "openvas", "ai_validation"]
     configuration: Optional[Dict[str, Any]] = None
+    schedule: Optional[str] = None       # cron expression for recurring scans
+    auto_report: bool = False            # generate PDF when the scan completes
+    soar_trigger: bool = False           # fire SOAR webhook on critical findings
+    siem_forward: bool = False           # forward findings to Elasticsearch
 
 
 class ScanSummary(BaseModel):

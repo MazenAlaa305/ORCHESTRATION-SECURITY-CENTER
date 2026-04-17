@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { scanService } from '../../services/api';
 import { useRealTime } from '../../context/RealTimeContext';
-import { PlayCircle, Loader2, CheckCircle, Clock, Cpu, Network, BarChart2, Brain, StopCircle } from 'lucide-react';
+import { PlayCircle, Loader2, CheckCircle, Clock, Cpu, Network, BarChart2, Brain, StopCircle, Settings2 } from 'lucide-react';
+import ScanConfigModal from './ScanConfigModal';
 
 // ── Pipeline step definitions ─────────────────────────────────────────────────
 const STEPS = [
@@ -35,6 +36,7 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
     const [target,    setTarget]    = useState('localhost');
     const [error,     setError]     = useState('');
     const [stepIndex, setStepIndex] = useState(-1);  // -1 = idle
+    const [modalOpen, setModalOpen] = useState(false);
 
     const isRunning = loading || realTime.scanStatus === 'RUNNING' || parentIsScanning;
 
@@ -90,17 +92,28 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
             {/* Header */}
             <div className="flex items-center justify-between relative z-10">
                 <h3 className="text-gray-400 text-[10px] uppercase tracking-[0.25em] font-black">Quick Scan</h3>
-                {isRunning && (
-                    <span className="flex items-center gap-1 text-[9px] font-mono text-cyan-400 uppercase tracking-widest animate-pulse">
-                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-                        Running
-                    </span>
-                )}
-                {realTime.scanStatus === 'COMPLETED' && !isRunning && (
-                    <span className="text-[9px] font-mono text-green-400 uppercase tracking-widest">
-                        ✓ Complete
-                    </span>
-                )}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setModalOpen(true)}
+                        disabled={isRunning}
+                        className="text-[9px] font-mono text-cyan-300 hover:text-cyan-200 uppercase tracking-widest flex items-center gap-1 disabled:opacity-50"
+                        title="Configure tools, schedule, SOAR/SIEM, and auto-report"
+                    >
+                        <Settings2 className="h-3 w-3" />
+                        Advanced
+                    </button>
+                    {isRunning && (
+                        <span className="flex items-center gap-1 text-[9px] font-mono text-cyan-400 uppercase tracking-widest animate-pulse">
+                            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+                            Running
+                        </span>
+                    )}
+                    {realTime.scanStatus === 'COMPLETED' && !isRunning && (
+                        <span className="text-[9px] font-mono text-green-400 uppercase tracking-widest">
+                            ✓ Complete
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Target input + launch button */}
@@ -137,6 +150,12 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
             {error && (
                 <p className="text-[9px] text-red-400 font-mono -mt-2 relative z-10">{error}</p>
             )}
+
+            <ScanConfigModal
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                onStarted={() => { if (onScanStarted) onScanStarted(); }}
+            />
 
             {/* Pipeline step indicator */}
             <div className="relative z-10 flex items-center">

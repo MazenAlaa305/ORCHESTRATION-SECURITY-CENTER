@@ -13,6 +13,7 @@ sys.path.append(os.getcwd())
 # Import your models here
 from app.core.database import Base
 from app.models import scan  # Verify this imports all models (Scan, ScanAsset, etc)
+from app.models import config as _runtime_config_model  # noqa: F401 — register runtime_config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

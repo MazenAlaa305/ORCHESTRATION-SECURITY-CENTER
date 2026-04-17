@@ -61,6 +61,17 @@ class Target(Base):
     asset_value = Column(Enum("CRITICAL", "HIGH", "MEDIUM", "LOW", name="asset_value_enum"), default="MEDIUM")
     data_sensitivity = Column(Enum("PII", "FINANCIAL", "NONE", name="data_sensitivity_enum"), default="NONE")
 
+    # ── Phase 5: Manual environment metadata ─────────────────────────────────
+    environment_type = Column(String(32), default="lab")
+    # One of: lab | development | staging | production
+    # Gates scan aggressiveness, auto_report, SOAR/SIEM forwarding defaults.
+    compliance_tags = Column(JSON, nullable=True)
+    # List of framework tags: ["pci-dss", "hipaa", "iso-27001", "gdpr"]
+    notes = Column(Text, nullable=True)
+    # Operator-authored free text (owning team, contact, change window, etc.)
+    last_scanned_at = Column(DateTime, nullable=True)
+    # Timestamp of most recent completed scan; updated by scan_tasks.
+
     # ── Scope & safety (Phase 2.4 hardening) ──────────────────────────────────
     scope_allowlist = Column(JSON, nullable=True)
     # List of hostnames or CIDR ranges the scanner may touch.

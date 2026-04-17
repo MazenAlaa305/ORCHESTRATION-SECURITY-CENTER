@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     SOAR_ENABLED: bool = False
     OPENVAS_ENABLED: bool = False
     LLM_VALIDATION_ENABLED: bool = False  # LLM verdict never overrides reprobe
+    NMAP_ENABLED: bool = True
+    NUCLEI_ENABLED: bool = True
 
     # Version string exposed by GET /api/v1/config/public
     APP_VERSION: str = "0.2.0-hardening"
@@ -121,3 +123,54 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
 
 settings = Settings()
+
+
+# ── Phase B: runtime config overrides ──────────────────────────────────────────
+# Feature flags that can be toggled from the dashboard without a restart.
+# The env-var-derived value is kept as the boot default; the DB overrides it
+# at startup and after every PUT /config/{key}.
+
+RUNTIME_FLAGS = {
+    "SIEM_ENABLED": bool,
+    "SOAR_ENABLED": bool,
+    "OPENVAS_ENABLED": bool,
+    "LLM_VALIDATION_ENABLED": bool,
+    "NMAP_ENABLED": bool,
+    "NUCLEI_ENABLED": bool,
+    "LAB_TRAFFIC_INTENSITY": str,
+    "LLM_PER_SCAN_TOKEN_BUDGET": int,
+    "LLM_DAILY_TOKEN_BUDGET": int,
+}
+
+
+def _coerce(value: str, target_type):
+    if target_type is bool:
+        return str(value).lower() in ("1", "true", "yes", "on")
+    if target_type is int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+    return value
+
+
+def load_runtime_overrides(db_session) -> None:
+    """
+    Read every row of runtime_config and overwrite the matching `settings.*`
+    attribute in place. Called on startup and after each PUT /config/{key}.
+    Silently no-ops if the table does not exist yet (pre-migration).
+    """
+    try:
+        from app.models.config import RuntimeConfig
+        rows = db_session.query(RuntimeConfig).all()
+    except Exception:
+        return
+
+    for row in rows:
+        target_type = RUNTIME_FLAGS.get(row.key)
+        if target_type is None:
+            continue
+        try:
+            setattr(settings, row.key, _coerce(row.value, target_type))
+        except Exception:
+            continue
