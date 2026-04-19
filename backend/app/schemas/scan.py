@@ -154,12 +154,16 @@ class VulnerabilityResponse(VulnerabilityBase):
     proof_of_concept: Optional[str] = None
     remediation: Optional[str] = None
     created_at: datetime
-    
-    # Legacy fields
+
+    title: Optional[str] = None
     host: Optional[str] = None
     port: Optional[int] = None
     service: Optional[str] = None
     cve_id: Optional[str] = None
+    cvss_score: Optional[float] = None
+    cvss_vector: Optional[str] = None
+    template_id: Optional[str] = None
+    detected_by: Optional[str] = None
 
     class Config:
         from_attributes = True

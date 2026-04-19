@@ -2,7 +2,7 @@
 found 404 Database Models
 Extended models for AI-driven DAST platform
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey, Text, Boolean, JSON, Date, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey, Text, Boolean, JSON, Date, UniqueConstraint, LargeBinary
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -452,7 +452,9 @@ class Report(Base):
 
     # The canonical JSON string of findings included in the report
     findings_hash = Column(String(64), nullable=False)
-    # HMAC-SHA256 signature of findings_hash using REPORT_SIGNING_KEY
-    signature = Column(String(64), nullable=False)
+    # HMAC-SHA256 signature of the PDF bytes using REPORT_SIGNING_KEY
+    signature = Column(String(64), nullable=True)
+    # Stored PDF bytes so the report can be re-downloaded and verified later
+    pdf_bytes = Column(LargeBinary, nullable=True)
 
     scan = relationship("Scan")

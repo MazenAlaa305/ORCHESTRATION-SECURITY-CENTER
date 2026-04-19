@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://localhost/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -44,11 +44,15 @@ export const scanService = {
     getScans: () => api.get('/scans/'),
     getScanDetails: (id) => api.get(`/scans/${id}`),
     getReport: (id) => api.get(`/reports/${id}`),
+    generateReport: (scanId) => api.post(`/reports/${scanId}/generate`),
+    getReportMeta: (reportId) => api.get(`/reports/${reportId}/meta`),
+    downloadReportPDF: (reportId) => api.get(`/reports/${reportId}/pdf`, { responseType: 'blob' }),
 };
 
 export const networkService = {
     getAssets: (status = null) => api.get('/network/assets', { params: { status } }),
     getNewDevices: () => api.get('/network/assets/new'),
+    getAssetDetail: (assetId) => api.get(`/network/assets/${assetId}`),
     getActivity: (limit = 20) => api.get('/network/activity', { params: { limit } }),
 };
 

@@ -229,6 +229,60 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         seen_hosts: set[str] = set()
         all_vulns: list[dict] = []
 
+        # Services considered high-risk when exposed without explicit auth layer
+        _HIGH_RISK_SERVICES = {
+            "redis", "mysql", "mssql", "postgres", "postgresql", "mongodb",
+            "smb", "netbios-ssn", "msrpc", "rdp", "vnc", "telnet",
+            "ftp", "rpcbind", "nfs", "ldap", "elasticsearch",
+        }
+        _MEDIUM_RISK_SERVICES = {
+            "ssh", "smtp", "pop3", "imap", "snmp", "tftp", "memcached",
+            "http-proxy", "socks5", "cassandra", "couchdb", "neo4j",
+        }
+
+        def _service_severity(service_name: str, port: int) -> str:
+            svc = (service_name or "").lower()
+            if svc in _HIGH_RISK_SERVICES:
+                return "high"
+            if svc in _MEDIUM_RISK_SERVICES:
+                return "medium"
+            if port in (80, 8080, 8000, 8888):
+                return "low"
+            return "info"
+
+        def _vuln_title(service_name: str, product: str, port: int, ip: str) -> str:
+            label = product or service_name or "Unknown Service"
+            return f"{label.title()} Exposed on {ip}:{port}"
+
+        def _vuln_description(service_name: str, product: str, version: str, port: int, severity: str) -> str:
+            svc_label = f"{product} {version}".strip() if (product or version) else service_name or "unknown service"
+            base = f"Port {port} is open and running {svc_label}."
+            if severity == "high":
+                base += " This service type is commonly targeted in attacks and should not be exposed without authentication and access control."
+            elif severity == "medium":
+                base += " Ensure this service is properly authenticated and patched against known CVEs."
+            return base
+
+        def _remediation(service_name: str, severity: str) -> str:
+            svc = (service_name or "").lower()
+            if svc == "redis":
+                return "Bind Redis to 127.0.0.1, enable requirepass, and use AUTH. Do not expose Redis to the internet."
+            if svc in ("mysql", "postgresql", "postgres", "mssql"):
+                return "Restrict database access to application servers only. Disable remote root login. Use TLS for connections."
+            if svc == "rdp":
+                return "Enable Network Level Authentication (NLA). Use VPN for RDP access. Apply all Windows security patches."
+            if svc == "smb":
+                return "Disable SMBv1. Restrict SMB to internal networks only. Apply all security patches."
+            if svc == "ftp":
+                return "Migrate to SFTP or FTPS. Disable anonymous FTP access. Apply access controls."
+            if svc == "telnet":
+                return "Replace telnet with SSH immediately. Telnet transmits credentials in plaintext."
+            if severity == "high":
+                return "Restrict access via firewall rules. Implement authentication. Monitor for unauthorized access attempts."
+            if severity == "medium":
+                return "Verify this service is intentionally exposed. Apply latest patches and enable logging."
+            return "Review if this service needs to be publicly accessible. Apply the principle of least exposure."
+
         for host_data in results:
             ip = host_data["ip"]
             if ip in seen_hosts:
@@ -244,43 +298,74 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
                 os_name=host_data.get("os_name"),
                 os_accuracy=host_data.get("os_accuracy"),
                 device_type=host_data.get("device_type", "unknown"),
+                os_family=host_data.get("os_family"),
                 is_new="true",
             )
             db.add(asset)
             db.flush()
 
+            open_ports = []
             for port_data in host_data["ports"]:
+                if port_data.get("state") != "open":
+                    continue
+                svc_name = port_data.get("service", "unknown")
+                product  = port_data.get("product", "")
+                version  = port_data.get("version", "")
+                port_num = port_data["port"]
+                severity = _service_severity(svc_name, port_num)
+                open_ports.append(str(port_num))
+
                 db.add(AssetService(
                     asset_id=asset.id,
-                    port=port_data["port"],
+                    port=port_num,
                     protocol=port_data["protocol"],
                     state=port_data["state"],
-                    service_name=port_data["service"],
-                    product=port_data["product"],
-                    version=port_data["version"],
+                    service_name=svc_name,
+                    product=product,
+                    version=version,
                     cpe=port_data.get("cpe"),
                     extra_info=port_data.get("extra_info"),
                 ))
                 vuln = Vulnerability(
                     scan_id=scan.id,
                     host=ip,
-                    port=port_data["port"],
+                    port=port_num,
                     protocol=port_data["protocol"],
-                    service=port_data["service"],
+                    service=svc_name,
                     type="Service Exposure",
-                    severity=port_data["severity"].lower(),
-                    url=f"{port_data['protocol']}://{ip}:{port_data['port']}",
-                    description=f"Service: {port_data['product']} {port_data['version']}",
-                    remediation="Update service or restrict access with firewall rules.",
+                    title=_vuln_title(svc_name, product, port_num, ip),
+                    severity=severity,
+                    url=f"{port_data['protocol']}://{ip}:{port_num}",
+                    description=_vuln_description(svc_name, product, version, port_num, severity),
+                    remediation=_remediation(svc_name, severity),
                 )
                 db.add(vuln)
                 vuln_count += 1
                 all_vulns.append({
                     "host": ip,
-                    "severity": port_data["severity"].lower(),
+                    "severity": severity,
                     "cve_id": "",
-                    "description": f"Service: {port_data['product']}",
+                    "description": f"{product or svc_name} on port {port_num}",
                 })
+
+            # Enrich the persistent network_assets inventory with latest scan data
+            try:
+                from app.models.scan import NetworkAsset
+                net_asset = db.query(NetworkAsset).filter(NetworkAsset.ip_address == ip).first()
+                if net_asset:
+                    if host_data.get("os_name"):
+                        net_asset.os_name = host_data["os_name"]
+                    if host_data.get("mac"):
+                        net_asset.mac_address = host_data["mac"]
+                    if host_data.get("hostnames"):
+                        net_asset.hostname = host_data["hostnames"]
+                    if host_data.get("device_type") and host_data["device_type"] != "unknown":
+                        net_asset.device_type = host_data["device_type"]
+                    if open_ports:
+                        net_asset.open_ports = ",".join(open_ports)
+                    net_asset.last_seen = datetime.utcnow()
+            except Exception as _enrich_err:
+                logger.warning("[Scan %s] NetworkAsset enrich failed: %s", scan_id, _enrich_err)
 
         # Commit nmap results so the async risk engine session can see them
         db.commit()

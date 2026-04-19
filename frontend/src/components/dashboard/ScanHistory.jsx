@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { scanService } from '../../services/api';
-import { FileText, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
+import { FileText, AlertTriangle, CheckCircle, Clock, Shield, Loader } from 'lucide-react';
 
 const ScanHistory = ({ refresh }) => {
     const [scans, setScans] = useState([]);
@@ -20,31 +20,40 @@ const ScanHistory = ({ refresh }) => {
     };
 
     const getStatusIcon = (status) => {
-        switch (status) {
-            case 'COMPLETED': return <CheckCircle className="text-green-500 h-5 w-5" />;
-            case 'FAILED': return <AlertTriangle className="text-red-500 h-5 w-5" />;
-            case 'RUNNING': return <Clock className="text-blue-500 h-5 w-5 animate-pulse" />;
-            default: return <Clock className="text-gray-500 h-5 w-5" />;
-        }
+        const s = String(status).toLowerCase();
+        if (s === 'completed') return <CheckCircle className="text-green-500 h-5 w-5" />;
+        if (s === 'failed')    return <AlertTriangle className="text-red-500 h-5 w-5" />;
+        if (s === 'running')   return <Clock className="text-blue-500 h-5 w-5 animate-pulse" />;
+        return <Clock className="text-gray-500 h-5 w-5" />;
     };
 
     const [expandedScanId, setExpandedScanId] = useState(null);
+    const [generatingId, setGeneratingId] = useState(null);
 
     const togglePreview = (scanId) => {
-        if (expandedScanId === scanId) {
-            setExpandedScanId(null);
-        } else {
-            setExpandedScanId(scanId);
-        }
+        setExpandedScanId(prev => prev === scanId ? null : scanId);
     };
 
-    const handleDownloadReport = async (scanId) => {
+    const handleGenerateAndDownload = async (scanId) => {
         try {
-            // Updated to point to correct endpoint if needed, assuming /api/v1/reports/{id}/pdf exists
-            window.open(`https://localhost/api/v1/reports/${scanId}/pdf`, '_blank');
+            setGeneratingId(scanId);
+            // Generate report and get back the report_id
+            const { data: meta } = await scanService.generateReport(scanId);
+            // Download PDF with auth token via axios (not window.open)
+            const { data: blob } = await scanService.downloadReportPDF(meta.report_id);
+            const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report_${meta.report_id.slice(0, 8)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Failed to download report", error);
-            alert("Failed to download report. Please check backend logs.");
+            console.error("Failed to generate report", error);
+            alert("Report generation failed. Check that the backend is running.");
+        } finally {
+            setGeneratingId(null);
         }
     };
 
@@ -80,7 +89,9 @@ const ScanHistory = ({ refresh }) => {
                                     <td className="px-6 py-4 font-medium text-white">{scan.target_display || scan.target_url || scan.target || "Unknown"}</td>
                                     <td className="px-6 py-4 flex items-center gap-2">
                                         {getStatusIcon(scan.status)}
-                                        <span className={scan.status === 'COMPLETED' ? 'text-green-400' : ''}>{scan.status}</span>
+                                        <span className={String(scan.status).toLowerCase() === 'completed' ? 'text-green-400' : ''}>
+                                            {String(scan.status).toUpperCase()}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded text-xs font-bold ${scan.risk_score > 80 ? 'bg-red-900 text-red-200' :
@@ -98,10 +109,13 @@ const ScanHistory = ({ refresh }) => {
                                             <Shield className="h-4 w-4" /> Preview
                                         </button>
                                         <button
-                                            className="text-purple-400 hover:text-purple-300 flex items-center gap-1 text-xs uppercase font-bold"
-                                            onClick={() => handleDownloadReport(scan.id)}
+                                            className="text-purple-400 hover:text-purple-300 flex items-center gap-1 text-xs uppercase font-bold disabled:opacity-40"
+                                            disabled={generatingId === scan.id}
+                                            onClick={() => handleGenerateAndDownload(scan.id)}
                                         >
-                                            <FileText className="h-4 w-4" /> Report
+                                            {generatingId === scan.id
+                                                ? <><Loader className="h-4 w-4 animate-spin" /> Generating…</>
+                                                : <><FileText className="h-4 w-4" /> Report</>}
                                         </button>
                                     </td>
                                 </tr>
@@ -145,7 +159,7 @@ const ScanHistory = ({ refresh }) => {
                                                         </div>
                                                         <div className="bg-gray-800 p-2 rounded text-center">
                                                             <span className="block text-green-400 font-bold text-lg">
-                                                                {scan.status === 'COMPLETED' ? '100%' : '0%'}
+                                                                {String(scan.status).toLowerCase() === 'completed' ? '100%' : '0%'}
                                                             </span>
                                                             <span className="text-[10px] text-gray-500 uppercase">Progress</span>
                                                         </div>

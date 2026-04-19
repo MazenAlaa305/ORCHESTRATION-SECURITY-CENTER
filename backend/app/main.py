@@ -181,11 +181,34 @@ async def health_check():
     # Celery worker check via Redis queue inspection (basic heuristic)
     workers_ok = redis_ok  # If Redis is up, workers can connect too
 
+    # Schema drift check — verify alembic head matches code
+    schema_ok = False
+    schema_detail = "unknown"
+    try:
+        from alembic.config import Config as AlembicConfig
+        from alembic.script import ScriptDirectory
+        from alembic.runtime.migration import MigrationContext
+        from sqlalchemy import create_engine
+        _engine = create_engine(settings.DATABASE_URL)
+        with _engine.connect() as conn:
+            ctx = MigrationContext.configure(conn)
+            current = ctx.get_current_revision()
+        cfg = AlembicConfig("/app/alembic.ini")
+        script = ScriptDirectory.from_config(cfg)
+        head = script.get_current_head()
+        schema_ok = current == head
+        schema_detail = f"current={current} head={head}"
+        _engine.dispose()
+    except Exception as _se:
+        schema_detail = str(_se)[:80]
+
     return JSONResponse({
         "status": "ok" if redis_ok else "degraded",
         "api": True,
         "redis": redis_ok,
         "workers": workers_ok,
+        "schema_synced": schema_ok,
+        "schema_detail": schema_detail,
     })
 
 

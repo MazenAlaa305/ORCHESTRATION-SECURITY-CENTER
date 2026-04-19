@@ -224,7 +224,7 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                                     {getStatusIcon(vuln.status)}
                                     <h4 className="text-white font-semibold truncate">
-                                        {vuln.type || 'Unknown Vulnerability'}
+                                        {vuln.title || vuln.type || (vuln.host ? `${vuln.type || 'Issue'} — ${vuln.host}${vuln.port ? ':' + vuln.port : ''}` : 'Unknown Vulnerability')}
                                     </h4>
                                     {cveId && (
                                         <a

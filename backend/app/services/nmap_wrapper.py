@@ -23,9 +23,10 @@ class NmapWrapper:
                 # Advanced Discovery: OS detection, Service version, and NSE scripts
                 self.nm.scan(target, arguments="-sV -O -A -T4 --script=vulners,banner,http-enum,smb-os-discovery")
             elif scan_type == "full":
-                self.nm.scan(target, arguments="-sV -T4")
+                self.nm.scan(target, arguments="-sV -O -T4")
             else:
-                self.nm.scan(target, arguments="-F -T4") # Fast scan (top 100 ports)
+                # Quick: service version detection (-sV) on top 100 ports — fast enough, far more informative
+                self.nm.scan(target, arguments="-sV -F -T4")
 
             return self._parse_results()
         except Exception as e:

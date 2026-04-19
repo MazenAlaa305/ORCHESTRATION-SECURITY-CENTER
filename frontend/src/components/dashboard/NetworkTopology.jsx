@@ -107,8 +107,22 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         return 'desktop';
     };
 
-    const handleNodeClick = useCallback((node) => {
+    const handleNodeClick = useCallback(async (node) => {
+        if (node.id === 'hub') { setSelectedNode(node); return; }
+        // Immediately show the node with basic info, then enrich asynchronously
         setSelectedNode(node);
+        if (node.id && typeof node.id === 'number') {
+            try {
+                const { data: detail } = await networkService.getAssetDetail(node.id);
+                setSelectedNode(prev =>
+                    prev && prev.id === node.id
+                        ? { ...prev, details: detail, vulnCount: detail.vuln_count || 0 }
+                        : prev
+                );
+            } catch (err) {
+                console.warn('Asset detail fetch failed', err);
+            }
+        }
         if (fgRef.current) {
             const dist = 50;
             const ratio = 1 + dist / Math.hypot(node.x || 1, node.y || 1);
