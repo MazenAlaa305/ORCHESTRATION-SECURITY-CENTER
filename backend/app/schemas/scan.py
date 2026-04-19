@@ -29,6 +29,7 @@ class SeverityLevel(str, Enum):
 
 class VulnStatus(str, Enum):
     OPEN = "open"
+    IN_PROGRESS = "in_progress"
     FIXED = "fixed"
     FALSE_POSITIVE = "false_positive"
     ACCEPTED = "accepted"
@@ -115,8 +116,6 @@ class ScanResponse(ScanSummary):
     target_url: Optional[str] = None
     configuration: Optional[Dict[str, Any]] = None
     started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-
     completed_at: Optional[datetime] = None
 
 

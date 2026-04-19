@@ -39,9 +39,12 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
     }, [scanId, refresh, filter]);
 
     const fetchVulnerabilities = async () => {
+        setLoading(true);
         try {
-            const params = { ...filter };
-            if (scanId) params.scan_id = scanId;
+            const params = {};
+            if (scanId)           params.scan_id  = scanId;
+            if (filter.severity)  params.severity = filter.severity;
+            if (filter.status)    params.status   = filter.status;
             const response = await vulnerabilityService.list(params);
             setVulnerabilities(response.data || []);
         } catch (error) {
@@ -89,6 +92,8 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
 
     const displayed = vulnerabilities
         .filter(v => {
+            if (filter.severity && (v.severity || '').toLowerCase() !== filter.severity) return false;
+            if (filter.status && (v.status || '') !== filter.status) return false;
             if (search) {
                 const q = search.toLowerCase();
                 return (v.type || '').toLowerCase().includes(q) || (v.url || '').toLowerCase().includes(q) || (v.cve_id || '').toLowerCase().includes(q);
@@ -281,9 +286,14 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                             <div className="flex flex-col gap-2 border-l border-gray-700 pl-4 ml-4 min-w-[140px]" onClick={e => e.stopPropagation()}>
                                 <select
                                     value={vuln.status}
-                                    onChange={(e) => {
-                                        vulnerabilityService.updateWorkflow(vuln.id, { status: e.target.value });
-                                        fetchVulnerabilities();
+                                    onChange={async (e) => {
+                                        const newStatus = e.target.value;
+                                        try {
+                                            await vulnerabilityService.updateWorkflow(vuln.id, { status: newStatus });
+                                            fetchVulnerabilities();
+                                        } catch (err) {
+                                            console.error('Status update failed:', err);
+                                        }
                                     }}
                                     className="text-xs px-2 py-1 rounded bg-gray-800 border border-gray-600 text-white w-full"
                                 >
@@ -318,6 +328,7 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 <IncidentDetailDrawer
                     vuln={selectedVuln}
                     onClose={() => { setShowDrawer(false); setSelectedVuln(null); }}
+                    onStatusChange={fetchVulnerabilities}
                 />
             )}
         </div>

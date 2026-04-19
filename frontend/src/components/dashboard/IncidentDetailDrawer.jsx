@@ -22,7 +22,7 @@ const SEV_CONFIG = {
  * @param {object} vuln — vulnerability object from the API
  * @param {function} onClose — close handler
  */
-const IncidentDetailDrawer = ({ vuln, onClose }) => {
+const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
     const [poc, setPoc] = useState(null);
     const [pocLoading, setPocLoading] = useState(false);
     const [pocExpanded, setPocExpanded] = useState(true);
@@ -68,6 +68,7 @@ const IncidentDetailDrawer = ({ vuln, onClose }) => {
         try {
             await vulnerabilityService.markFixed(vuln.id);
             setActionMsg({ type: 'success', text: 'Marked as fixed' });
+            onStatusChange?.();
         } catch {
             setActionMsg({ type: 'error', text: 'Failed to update status' });
         }
@@ -77,6 +78,7 @@ const IncidentDetailDrawer = ({ vuln, onClose }) => {
         try {
             await vulnerabilityService.markFalsePositive(vuln.id);
             setActionMsg({ type: 'success', text: 'Marked as false positive' });
+            onStatusChange?.();
         } catch {
             setActionMsg({ type: 'error', text: 'Failed to update status' });
         }

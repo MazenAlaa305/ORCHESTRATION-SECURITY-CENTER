@@ -31,6 +31,7 @@ class SeverityLevel(str, enum.Enum):
 
 class VulnStatus(str, enum.Enum):
     OPEN = "open"
+    IN_PROGRESS = "in_progress"
     FIXED = "fixed"
     FALSE_POSITIVE = "false_positive"
     ACCEPTED = "accepted"

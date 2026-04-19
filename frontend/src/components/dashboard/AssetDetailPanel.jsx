@@ -2,7 +2,7 @@ import React from 'react';
 import { Server, Shield, Globe, Terminal, Info, AlertTriangle, Monitor, Radio, Smartphone } from 'lucide-react';
 
 const AssetDetailPanel = ({ node, onClose }) => {
-    if (!node) return null;
+    if (!node || !node.details) return null;
 
     const { details, vulnCount } = node;
     const services = details?.services || [];
