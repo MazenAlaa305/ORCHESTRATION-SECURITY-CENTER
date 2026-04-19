@@ -195,10 +195,41 @@ const TargetsManager = ({ onScanStarted }) => {
                             {target.base_url}
                             <ExternalLink className="h-3 w-3" />
                         </a>
+                        {/* Metadata row */}
+                        <div className="flex items-center gap-2 flex-wrap mb-3">
+                            {target.environment_type && (
+                                <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded border ${
+                                    target.environment_type === 'production' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                                    target.environment_type === 'staging' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
+                                    target.environment_type === 'lab' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                                    'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                }`}>
+                                    {target.environment_type}
+                                </span>
+                            )}
+                            {target.asset_value && target.asset_value !== 'MEDIUM' && (
+                                <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded border bg-orange-500/10 text-orange-400 border-orange-500/30">
+                                    {target.asset_value}
+                                </span>
+                            )}
+                            {target.compliance_tags?.map(tag => (
+                                <span key={tag} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-500">
-                                {target.tech_stack ? Object.values(target.tech_stack).join(', ') : 'Unknown stack'}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-gray-500 text-xs">
+                                    {target.tech_stack ? Object.values(target.tech_stack).join(', ') : 'Unknown stack'}
+                                </span>
+                                {target.last_scanned_at && (
+                                    <span className="text-[10px] text-gray-600 font-mono">
+                                        Last scan: {new Date(target.last_scanned_at).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
                             <button
                                 onClick={() => handleStartAIScan(target.id)}
                                 disabled={scanning === target.id}

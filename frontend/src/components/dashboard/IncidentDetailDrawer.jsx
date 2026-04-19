@@ -4,7 +4,7 @@ import {
     Code, Brain, RefreshCw, Loader2, ChevronDown, ChevronUp,
     Copy, Check, ShieldX, Zap
 } from 'lucide-react';
-import { vulnerabilityService } from '../../services/api';
+import { vulnerabilityService, findingsService } from '../../services/api';
 
 const SEV_CONFIG = {
     critical: { color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/40', label: 'CRITICAL', glow: 'shadow-[0_0_30px_rgba(239,68,68,0.15)]' },
@@ -120,9 +120,14 @@ const IncidentDetailDrawer = ({ vuln, onClose }) => {
                                 )}
                             </div>
                             <h2 className="text-white font-black text-lg tracking-tight mt-1">
-                                {vuln.type || 'Unknown Vulnerability'}
+                                {vuln.title || vuln.type || 'Unknown Vulnerability'}
                             </h2>
                             <p className="text-gray-500 text-xs font-mono mt-0.5">{vuln.url}</p>
+                            {(vuln.host || vuln.port) && (
+                                <p className="text-gray-600 text-xs font-mono mt-0.5">
+                                    {vuln.host}{vuln.port ? `:${vuln.port}` : ''}{vuln.service ? ` (${vuln.service})` : ''}
+                                </p>
+                            )}
                         </div>
                         <button
                             onClick={onClose}
@@ -144,7 +149,20 @@ const IncidentDetailDrawer = ({ vuln, onClose }) => {
                 <div className="flex-1 overflow-y-auto">
 
                     {/* ─── 1. Quick Meta Row ─── */}
-                    <div className="px-6 py-4 grid grid-cols-3 gap-4 border-b border-white/5">
+                    <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-4 border-b border-white/5">
+                        {vuln.cvss_score != null && (
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">CVSS Score</span>
+                                <span className={`text-sm font-black font-mono ${vuln.cvss_score >= 9 ? 'text-red-400' : vuln.cvss_score >= 7 ? 'text-orange-400' : vuln.cvss_score >= 4 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                                    {vuln.cvss_score.toFixed(1)} / 10
+                                </span>
+                                {vuln.cvss_vector && (
+                                    <span className="text-[8px] text-gray-600 font-mono truncate" title={vuln.cvss_vector}>
+                                        {vuln.cvss_vector}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         {vuln.confidence_score != null && (
                             <div className="flex flex-col gap-1">
                                 <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Confidence</span>
@@ -167,10 +185,10 @@ const IncidentDetailDrawer = ({ vuln, onClose }) => {
                                 {vuln.status?.toUpperCase() || 'OPEN'}
                             </span>
                         </div>
-                        {vuln.target_asset && (
+                        {vuln.detected_by && (
                             <div className="flex flex-col gap-1">
-                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Asset</span>
-                                <span className="text-xs font-mono text-white truncate">{vuln.target_asset}</span>
+                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Detected By</span>
+                                <span className="text-xs font-mono text-white">{vuln.detected_by}</span>
                             </div>
                         )}
                     </div>
@@ -179,6 +197,31 @@ const IncidentDetailDrawer = ({ vuln, onClose }) => {
                     {vuln.description && (
                         <div className="px-6 py-4 border-b border-white/5">
                             <p className="text-gray-400 text-sm leading-relaxed">{vuln.description}</p>
+                        </div>
+                    )}
+
+                    {/* ─── 2b. Compliance Tags ─── */}
+                    {vuln.control_tags && Object.keys(vuln.control_tags).length > 0 && (
+                        <div className="px-6 py-3 border-b border-white/5">
+                            <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-2 block">Compliance Mapping</span>
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(vuln.control_tags).map(([framework, control]) => {
+                                    const labels = {
+                                        owasp_top10: 'OWASP',
+                                        cwe: 'CWE',
+                                        iso27001_annex_a: 'ISO 27001',
+                                        nist_csf_function: 'NIST CSF',
+                                        pci_dss_requirement: 'PCI DSS',
+                                    };
+                                    return (
+                                        <span key={framework}
+                                            className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                            <span className="font-black text-[8px] uppercase opacity-70">{labels[framework] || framework}</span>
+                                            {control}
+                                        </span>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 

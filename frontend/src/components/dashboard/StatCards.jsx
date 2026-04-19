@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Bug, Monitor, Zap } from 'lucide-react';
+import { ShieldCheck, Bug, Monitor, Zap, AlertTriangle } from 'lucide-react';
 import { useRealTime } from '../../context/RealTimeContext';
 
 const SEV_COLORS = {
@@ -27,7 +27,7 @@ function useCountUp(target, duration = 900) {
     return value;
 }
 
-const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse }) => {
+const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse, badge }) => {
     const animValue = useCountUp(typeof value === 'number' ? value : 0);
 
     return (
@@ -40,7 +40,10 @@ const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse }) =>
             }}
         >
             <div className="relative z-10 flex items-center justify-between">
-                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">{title}</span>
+                <div className="flex items-center gap-1.5">
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">{title}</span>
+                    {badge}
+                </div>
                 <span style={{ color, opacity: 0.4 }}>
                     {React.cloneElement(icon, { className: 'h-3 w-3' })}
                 </span>
@@ -106,6 +109,9 @@ const StatCards = ({ latestScan, isScanning }) => {
     // Assets — prefer live KPI
     const assetCount = realTime.kpi.total_assets ?? latestScan?.assets?.length ?? 0;
 
+    // Overdue findings (SLA breaches)
+    const overdueCount = realTime.kpi.overdue_findings ?? 0;
+
     // Severity bar segments (proportional)
     const sevSegments = vulnCount > 0
         ? [
@@ -135,11 +141,18 @@ const StatCards = ({ latestScan, isScanning }) => {
             <KPICard
                 title="Vulnerabilities"
                 value={vulnCount}
-                sub="Found"
+                sub={overdueCount > 0 ? `Found · ${overdueCount} Overdue` : "Found"}
                 icon={<Bug />}
                 color={vulnCount === 0 ? '#00ff88' : vulnCount > 5 ? '#ff0055' : '#ffaa00'}
                 bar={vulnCount > 0 ? 100 : 0}
                 barSegments={sevSegments}
+                badge={overdueCount > 0 ? (
+                    <span className="flex items-center gap-0.5 text-[7px] font-bold px-1 py-0.5 rounded"
+                          style={{ background: '#ff005520', color: '#ff0055' }}>
+                        <AlertTriangle className="h-2 w-2" />
+                        {overdueCount} SLA
+                    </span>
+                ) : null}
             />
             <KPICard
                 title="Assets"

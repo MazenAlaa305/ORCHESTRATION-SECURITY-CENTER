@@ -165,6 +165,10 @@ class VulnerabilityResponse(VulnerabilityBase):
     template_id: Optional[str] = None
     detected_by: Optional[str] = None
 
+    # Finding deduplication & compliance (Phase 4.2 / 5.3)
+    finding_id: Optional[str] = None
+    control_tags: Optional[Dict[str, str]] = None
+
     class Config:
         from_attributes = True
 

@@ -150,6 +150,11 @@ export const dashboardService = {
     refreshRiskScores: () => api.post('/dashboard/refresh-risk'),
 };
 
+export const findingsService = {
+    // List deduplicated findings with framework/compliance filtering
+    list: (params = {}) => api.get('/findings', { params }),
+};
+
 export const labService = {
     // Get lab environment status (containers, network, telemetry)
     getStatus: () => api.get('/lab/status'),

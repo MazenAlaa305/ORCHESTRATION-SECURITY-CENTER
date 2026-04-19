@@ -97,13 +97,16 @@ const NetworkTopology = ({ refresh, compact = false }) => {
 
     const determineGroup = (asset) => {
         const type = (asset.device_type || '').toLowerCase();
-        const os   = (asset.os_family   || '').toLowerCase();
+        const os   = (asset.os_family || asset.os_name || '').toLowerCase();
         if (type.includes('server'))  return 'server';
         if (type.includes('router') || type.includes('gateway') || type.includes('wap')) return 'router';
         if (type.includes('phone')  || type.includes('mobile')) return 'mobile';
-        if (os.includes('server')   || os.includes('linux'))  return 'server';
+        if (type.includes('firewall'))  return 'firewall';
+        if (type.includes('database') || type.includes('db'))  return 'database';
+        if (os.includes('server')   || os.includes('linux') || os.includes('ubuntu') || os.includes('centos') || os.includes('debian'))  return 'server';
         if (os.includes('ios')      || os.includes('android'))return 'mobile';
-        if (os.includes('cisco')    || os.includes('bsd'))    return 'router';
+        if (os.includes('cisco')    || os.includes('bsd') || os.includes('junos') || os.includes('mikrotik'))    return 'router';
+        if (os.includes('postgres') || os.includes('mysql') || os.includes('mongo') || os.includes('redis')) return 'database';
         return 'desktop';
     };
 

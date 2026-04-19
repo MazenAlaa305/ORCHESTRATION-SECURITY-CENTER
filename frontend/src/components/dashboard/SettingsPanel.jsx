@@ -6,9 +6,10 @@ import {
     Shield, StopCircle, Zap, XCircle,
 } from 'lucide-react';
 
-import { fetchAllConfig, fetchIntegrationHealth, updateConfig } from '../../api/config';
+import { fetchAllConfig, fetchPublicConfig, fetchIntegrationHealth, updateConfig } from '../../api/config';
 import { labService } from '../../services/api';
 import { useConfig } from '../../context/ConfigContext';
+import { useAuth } from '../../context/AuthContext';
 
 const TOOL_TOGGLES = [
     { key: 'OPENVAS_ENABLED',        label: 'OpenVAS Scanner',   icon: Radar,     desc: 'Network vulnerability scanner (GVM/GMP)' },
@@ -249,16 +250,62 @@ const IntegrationStatus = () => {
     );
 };
 
+// ── Read-only config view for non-admin users ──────────────────────────────
+const ReadOnlyConfig = ({ config }) => (
+    <div className="glass-card p-4">
+        <SectionTitle icon={SettingsIcon} title="System Configuration" subtitle="Read-only view — admin login required to modify settings" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {TOOL_TOGGLES.map(({ key, label, icon: Icon, desc }) => {
+                const configKey = key.toLowerCase();
+                const enabled = config[configKey] ?? false;
+                return (
+                    <div key={key} className="flex items-center justify-between p-3 rounded bg-black/20 border border-white/5">
+                        <div className="flex items-center gap-3">
+                            <Icon size={16} className={enabled ? 'text-cyan-400' : 'text-gray-600'} />
+                            <div>
+                                <div className={`text-sm font-medium ${enabled ? 'text-white' : 'text-gray-500'}`}>{label}</div>
+                                <div className="text-gray-500 text-xs">{desc}</div>
+                            </div>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            enabled
+                                ? 'bg-green-500/10 text-green-400 border border-green-500/30'
+                                : 'bg-gray-500/10 text-gray-500 border border-gray-500/30'
+                        }`}>
+                            {enabled ? 'ON' : 'OFF'}
+                        </span>
+                    </div>
+                );
+            })}
+        </div>
+        <div className="mt-3 p-3 rounded bg-black/20 border border-white/5">
+            <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">Version</div>
+            <div className="text-white text-sm font-mono">{config.version || 'unknown'}</div>
+        </div>
+    </div>
+);
+
 // ── Main Settings Panel ──────────────────────────────────────────────────────
 const SettingsPanel = () => {
     const { refreshConfig } = useConfig();
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'ADMIN';
     const [busyKey, setBusyKey] = useState(null);
     const [error, setError] = useState(null);
     const qc = useQueryClient();
 
-    const { data, refetch, isLoading, isError } = useQuery({
+    // Admin users: fetch all config with metadata
+    const { data, refetch, isLoading: adminLoading, isError: adminError } = useQuery({
         queryKey: ['all-config'],
         queryFn: fetchAllConfig,
+        enabled: isAdmin,
+    });
+
+    // Non-admin users: fetch public config (read-only, never fails)
+    const { data: publicConfig, isLoading: publicLoading } = useQuery({
+        queryKey: ['public-config'],
+        queryFn: fetchPublicConfig,
+        enabled: !isAdmin,
     });
 
     const flags = data?.flags || [];
@@ -278,7 +325,8 @@ const SettingsPanel = () => {
         }
     };
 
-    if (isLoading) {
+    const loading = isAdmin ? adminLoading : publicLoading;
+    if (loading) {
         return (
             <div className="glass-card p-8 flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-transparent border-t-cyan-400 rounded-full animate-spin" />
@@ -286,11 +334,31 @@ const SettingsPanel = () => {
         );
     }
 
-    if (isError) {
+    // Non-admin: show read-only view + integration health
+    if (!isAdmin) {
+        return (
+            <div className="space-y-4 animate-fade-in">
+                <div className="glass-card p-3 bg-cyan-500/10 border-cyan-500/30 text-cyan-300 text-sm flex items-center gap-2">
+                    <Shield size={14} /> Viewing as <span className="font-bold">{user?.role || 'VIEWER'}</span> — log in as ADMIN to modify settings.
+                </div>
+                <ReadOnlyConfig config={publicConfig || {}} />
+                <IntegrationStatus />
+            </div>
+        );
+    }
+
+    // Admin but fetch failed
+    if (adminError) {
         return (
             <div className="glass-card p-8 text-center">
                 <AlertTriangle className="mx-auto text-red-400 mb-2" size={32} />
-                <p className="text-red-300 text-sm">Failed to load config. Admin role required.</p>
+                <p className="text-red-300 text-sm">Failed to load configuration.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-3 px-4 py-1.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs hover:bg-cyan-500/30"
+                >
+                    Retry
+                </button>
             </div>
         );
     }

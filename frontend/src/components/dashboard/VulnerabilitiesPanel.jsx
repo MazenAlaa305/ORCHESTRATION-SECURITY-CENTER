@@ -246,20 +246,35 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                         {vuln.description}
                                     </p>
                                 )}
-                                {vuln.confidence_score && (
-                                    <div className="mt-3 flex items-center gap-3">
-                                        <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest">Confidence Index</span>
-                                        <div className="flex-1 max-w-[120px] h-1 bg-white/5 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-cyber-neon to-cyber-vibrant shadow-[0_0_8px_rgba(34,211,238,0.5)]"
-                                                style={{ width: `${vuln.confidence_score * 100}%` }}
-                                            />
+                                <div className="mt-3 flex items-center gap-4 flex-wrap">
+                                    {vuln.cvss_score != null && (
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest">CVSS</span>
+                                            <span className={`text-[11px] font-mono font-black ${vuln.cvss_score >= 9 ? 'text-red-400' : vuln.cvss_score >= 7 ? 'text-orange-400' : vuln.cvss_score >= 4 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                                                {vuln.cvss_score.toFixed(1)}
+                                            </span>
                                         </div>
-                                        <span className="text-cyber-neon text-[10px] font-mono font-bold">
-                                            {(vuln.confidence_score * 100).toFixed(0)}%
+                                    )}
+                                    {vuln.confidence_score != null && (
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest">Confidence</span>
+                                            <div className="w-[80px] h-1 bg-white/5 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-cyber-neon to-cyber-vibrant shadow-[0_0_8px_rgba(34,211,238,0.5)]"
+                                                    style={{ width: `${vuln.confidence_score * 100}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-cyber-neon text-[10px] font-mono font-bold">
+                                                {(vuln.confidence_score * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                    )}
+                                    {vuln.detected_by && (
+                                        <span className="text-[9px] px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded font-bold uppercase">
+                                            {vuln.detected_by}
                                         </span>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
 
                             {/* Quick actions - stop event propagation so card onclick doesn't fire */}

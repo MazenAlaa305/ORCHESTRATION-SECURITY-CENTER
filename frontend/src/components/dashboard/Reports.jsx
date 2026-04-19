@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { scanService } from '../../services/api';
+import { scanService, vulnerabilityService } from '../../services/api';
 import { FileText, Loader, Download, CheckCircle, AlertTriangle, RefreshCw, Shield, Hash } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -41,6 +41,16 @@ const Reports = ({ refresh }) => {
             setLoading(false);
         }
     };
+
+    const [scanVulns, setScanVulns] = useState([]);
+
+    // Fetch vulnerabilities when a scan is selected (ScanSummary doesn't include them)
+    useEffect(() => {
+        if (!selectedScan?.id) { setScanVulns([]); return; }
+        vulnerabilityService.list({ scan_id: selectedScan.id })
+            .then(res => setScanVulns(res.data || []))
+            .catch(() => setScanVulns([]));
+    }, [selectedScan?.id]);
 
     const selectScan = (scan) => {
         setSelectedScan(scan);
@@ -100,7 +110,7 @@ const Reports = ({ refresh }) => {
         );
     }
 
-    const vulns = selectedScan?.vulnerabilities || [];
+    const vulns = scanVulns;
     const critical = vulns.filter(v => String(v.severity).toLowerCase() === 'critical').length;
     const high     = vulns.filter(v => String(v.severity).toLowerCase() === 'high').length;
     const medium   = vulns.filter(v => String(v.severity).toLowerCase() === 'medium').length;

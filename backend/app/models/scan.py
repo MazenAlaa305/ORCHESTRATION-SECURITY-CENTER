@@ -230,6 +230,13 @@ class Vulnerability(Base):
     scan = relationship("Scan", back_populates="vulnerabilities")
     finding = relationship("Finding", back_populates="observations")
 
+    @property
+    def control_tags(self):
+        """Expose compliance tags from the linked Finding (Phase 5.3)."""
+        if self.finding and self.finding.control_tags:
+            return self.finding.control_tags
+        return None
+
 
 
 # ============================================================================
@@ -366,7 +373,8 @@ class ScanAsset(Base):
     # OS
     os_name = Column(String, nullable=True)
     os_accuracy = Column(Integer, nullable=True)
-    
+    os_family = Column(String, nullable=True)
+
     # Meta
     device_type = Column(String, default="unknown")
     is_new = Column(String, default="false") # Flag for notification

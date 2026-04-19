@@ -161,9 +161,48 @@ const AssetDetailPanel = ({ node, onClose }) => {
                 {/* 3. Security Section */}
                 <section>
                     <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                        <Shield className="w-4 h-4" /> Vulnerabilities
+                        <Shield className="w-4 h-4" /> Vulnerabilities ({vulnCount || details?.vulnerabilities?.length || 0})
                     </h3>
-                    {vulnCount > 0 ? (
+                    {(details?.vulnerabilities?.length > 0) ? (
+                        <div className="space-y-2">
+                            {details.vulnerabilities.map((v, idx) => {
+                                const sevColor = {
+                                    critical: 'border-l-red-500 bg-red-900/10',
+                                    high: 'border-l-orange-500 bg-orange-900/10',
+                                    medium: 'border-l-yellow-500 bg-yellow-900/10',
+                                    low: 'border-l-blue-400 bg-blue-900/10',
+                                }[v.severity] || 'border-l-gray-500 bg-gray-900/10';
+                                const sevBadge = {
+                                    critical: 'bg-red-500/20 text-red-400',
+                                    high: 'bg-orange-500/20 text-orange-400',
+                                    medium: 'bg-yellow-500/20 text-yellow-400',
+                                    low: 'bg-blue-500/20 text-blue-400',
+                                }[v.severity] || 'bg-gray-500/20 text-gray-400';
+                                return (
+                                    <div key={v.id || idx} className={`border-l-2 ${sevColor} rounded-r-lg p-3 border border-gray-700/50`}>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${sevBadge}`}>
+                                                {v.severity}
+                                            </span>
+                                            <span className="text-white text-sm font-medium truncate flex-1">{v.title || v.type}</span>
+                                            {v.cve_id && (
+                                                <a href={`https://nvd.nist.gov/vuln/detail/${v.cve_id}`} target="_blank" rel="noopener noreferrer"
+                                                   className="text-[9px] text-cyan-400 hover:text-cyan-300 font-mono">
+                                                    {v.cve_id}
+                                                </a>
+                                            )}
+                                        </div>
+                                        {v.description && (
+                                            <p className="text-gray-500 text-xs line-clamp-2 mt-1">{v.description}</p>
+                                        )}
+                                        {v.url && (
+                                            <p className="text-gray-600 text-[10px] font-mono mt-1 truncate">{v.url}</p>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : vulnCount > 0 ? (
                         <div className="bg-red-900/20 border border-red-800/50 rounded-lg p-4">
                             <div className="flex items-center gap-3 mb-2">
                                 <AlertTriangle className="text-red-500 w-5 h-5" />

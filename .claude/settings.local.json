@@ -51,7 +51,11 @@
       "Bash(curl -s http://localhost:8000/api/v1/lab/status)",
       "Bash(curl -s http://localhost:8000/api/v1/openvas/status)",
       "Bash(docker stats:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(docker rm *)",
+      "Bash(docker rmi *)",
+      "Bash(docker image *)",
+      "Bash(curl -s -k https://localhost/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@local\",\"password\":\"admin\"}')"
     ]
   }
 }

@@ -102,9 +102,8 @@ function Show-Status {
 function Invoke-SeedTargets {
     Write-Header "Seeding Lab Targets via API"
 
-    # Check if API is reachable
     try {
-        Invoke-RestMethod -Uri "$API_BASE/dashboard/risk-overview" -Method GET -TimeoutSec 5 -ErrorAction Stop
+        Invoke-RestMethod -Uri "http://localhost:8000/health" -Method GET -TimeoutSec 5 -ErrorAction Stop
         Write-Ok "Dashboard API is reachable."
     } catch {
         Write-Err "Dashboard API at $API_BASE is not reachable. Start the main stack first."

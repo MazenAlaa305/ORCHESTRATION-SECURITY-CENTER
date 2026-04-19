@@ -19,11 +19,18 @@ class NmapWrapper:
         try:
             logger.info(f"Starting {scan_type} Nmap scan on {target}")
             
+            # Detect whether we can use -O (requires root/cap_net_raw)
+            import os
+            is_root = os.getuid() == 0 if hasattr(os, 'getuid') else False
+
             if scan_type == "deep":
-                # Advanced Discovery: OS detection, Service version, and NSE scripts
-                self.nm.scan(target, arguments="-sV -O -A -T4 --script=vulners,banner,http-enum,smb-os-discovery")
+                args = "-sV -A -T4 --script=vulners,banner,http-enum,smb-os-discovery"
+                if is_root:
+                    args = "-sV -O -A -T4 --script=vulners,banner,http-enum,smb-os-discovery"
+                self.nm.scan(target, arguments=args)
             elif scan_type == "full":
-                self.nm.scan(target, arguments="-sV -O -T4")
+                args = "-sV -T4" if not is_root else "-sV -O -T4"
+                self.nm.scan(target, arguments=args)
             else:
                 # Quick: service version detection (-sV) on top 100 ports — fast enough, far more informative
                 self.nm.scan(target, arguments="-sV -F -T4")

@@ -48,17 +48,21 @@ class NucleiWrapper:
             output_file = tmp.name
 
         # -j           → JSONL output per finding
-        # -ir          → include raw request/response in each finding
         # -rate-limit  → max RPS to the target (Phase 2.4 safety)
+        # Note: -irr (include request/response) is default true in Nuclei v3.3+
         cmd = [
             self.binary_path,
             "-u", target,
             "-j",
-            "-ir",
             "-rate-limit", str(max(1, max_rps)),
             "-o", output_file,
             "-silent",
         ]
+
+        # Ensure Nuclei has a writable HOME for its config directory
+        # Force override — the celery user's HOME may be /nonexistent
+        env = os.environ.copy()
+        env["HOME"] = "/tmp"
 
         if scan_type == "quick":
             cmd.extend(["-s", "critical,high", "-as"])
@@ -68,7 +72,7 @@ class NucleiWrapper:
 
         try:
             logger.info(f"[NucleiWrapper] Starting scan on {target}: {' '.join(cmd)}")
-            subprocess.run(cmd, check=True, timeout=600)  # 10-minute hard cap
+            subprocess.run(cmd, check=True, timeout=600, env=env)  # 10-minute hard cap
 
             results: List[Dict] = []
             if os.path.exists(output_file):

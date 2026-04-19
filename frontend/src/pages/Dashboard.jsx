@@ -12,7 +12,7 @@ import ActionCenter from '../components/dashboard/ActionCenter';
 import SubTabBar from '../components/ui/SubTabBar';
 import Tabs from '../components/ui/Tabs';
 
-import { scanService, dashboardService } from '../services/api';
+import { scanService, dashboardService, vulnerabilityService } from '../services/api';
 import { useRealTime } from '../context/RealTimeContext';
 import { useConfig } from '../context/ConfigContext';
 
@@ -97,6 +97,16 @@ const Dashboard = () => {
         || scans.some(s => s.status === 'running' || s.status === 'queued');
     const latestScan  = scans[0] ?? null;
 
+    // Fetch vulnerabilities for the latest scan (ScanSummary doesn't include them)
+    const { data: latestScanVulns = [] } = useQuery({
+        queryKey: ['latest-scan-vulns', latestScan?.id],
+        queryFn: () => latestScan?.id
+            ? vulnerabilityService.list({ scan_id: latestScan.id }).then(r => r.data || [])
+            : Promise.resolve([]),
+        enabled: !!latestScan?.id,
+        staleTime: 30_000,
+    });
+
     // Refetch KPI when a scan just finished
     const prevScanning = React.useRef(false);
     useEffect(() => {
@@ -121,7 +131,7 @@ const Dashboard = () => {
     // Vuln trend: last 7 scans in chronological order
     const trendData = [...scans].slice(0, 7).reverse().map(s => ({
         date:  s.started_at ? new Date(s.started_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '?',
-        count: s.vulnerability_count ?? s.vulnerabilities?.length ?? 0,
+        count: s.vulnerabilities_count ?? s.vulnerability_count ?? s.vulnerabilities?.length ?? 0,
     }));
 
     // Heatmap data sourced directly from live KPI counts
@@ -241,7 +251,7 @@ const Dashboard = () => {
                                 </div>
                                 <div className="md:col-span-2 flex flex-col gap-4">
                                     <RiskChart data={
-                                        latestScan?.vulnerabilities?.reduce((acc, v) => {
+                                        latestScanVulns.reduce((acc, v) => {
                                             const sev = (v.severity || 'LOW').toUpperCase();
                                             acc[sev] = (acc[sev] || 0) + 1;
                                             return acc;
