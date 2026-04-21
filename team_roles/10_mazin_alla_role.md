@@ -105,7 +105,7 @@ class TestLoginFlow:
         """The login page must load with email/password fields visible."""
         page.goto(f"{BASE_URL}")
         # Check the title is visible
-        assert page.is_visible("text=Found 404")
+        assert page.is_visible("text=Orchestration Security Center")
         # Check form fields exist
         assert page.is_visible('[data-testid="email-input"]')
         assert page.is_visible('[data-testid="password-input"]')
@@ -263,7 +263,7 @@ def test_login_on_all_browsers(browser_type):
         browser = getattr(p, browser_type).launch()
         page = browser.new_page()
         page.goto("https://localhost")
-        assert page.title() == "Found 404"
+        assert page.title() == "Orchestration Security Center"
         browser.close()
 ```
 

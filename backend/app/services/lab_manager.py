@@ -1,5 +1,5 @@
 """
-Living Lab Manager Service — Found 404
+Living Lab Manager Service — Orchestration Security Center
 Manages the lab environment lifecycle and provides status information.
 """
 

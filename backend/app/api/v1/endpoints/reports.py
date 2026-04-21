@@ -1,6 +1,6 @@
 """
 Reports API endpoints.
-Phase 5.2 — Found 404 Hardening Plan.
+Phase 5.2 — Orchestration Security Center Hardening Plan.
 
 POST /reports/{scan_id}/generate  — build PDF, sign it, store metadata
 GET  /reports/{scan_id}/pdf       — download the stored PDF

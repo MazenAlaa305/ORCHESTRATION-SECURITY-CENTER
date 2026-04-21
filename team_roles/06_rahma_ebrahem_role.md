@@ -8,9 +8,9 @@
 
 ## Role Summary | ملخص الدور
 
-**English:** Rahma owns the look, feel, and usability of the entire dashboard. She is responsible for making Found 404 look like a professional enterprise security platform — not a student project. Her job is to polish components, ensure consistent spacing/color/typography, add loading states, and make every interaction feel smooth. She also writes the UX section of the final project report.
+**English:** Rahma owns the look, feel, and usability of the entire dashboard. She is responsible for making Orchestration Security Center look like a professional enterprise security platform — not a student project. Her job is to polish components, ensure consistent spacing/color/typography, add loading states, and make every interaction feel smooth. She also writes the UX section of the final project report.
 
-**عربي:** رحمة تمتلك المظهر والإحساس وسهولة استخدام لوحة التحكم بالكامل. هي مسؤولة عن جعل Found 404 يبدو كمنصة أمنية مؤسسية احترافية — وليس مشروع طالب. مهمتها صقل المكونات، ضمان التباعد/اللون/الخط المتسق، إضافة حالات التحميل، وجعل كل تفاعل يبدو سلسًا. كما تكتب قسم UX في تقرير المشروع النهائي.
+**عربي:** رحمة تمتلك المظهر والإحساس وسهولة استخدام لوحة التحكم بالكامل. هي مسؤولة عن جعل Orchestration Security Center يبدو كمنصة أمنية مؤسسية احترافية — وليس مشروع طالب. مهمتها صقل المكونات، ضمان التباعد/اللون/الخط المتسق، إضافة حالات التحميل، وجعل كل تفاعل يبدو سلسًا. كما تكتب قسم UX في تقرير المشروع النهائي.
 
 ---
 

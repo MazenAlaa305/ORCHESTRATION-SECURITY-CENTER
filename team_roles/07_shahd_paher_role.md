@@ -124,9 +124,9 @@ def _parse_results(self):
 
 ### Nuclei — The Vulnerability Template Scanner
 
-**English:** Nuclei uses YAML templates to test for specific vulnerabilities. Each template describes: what to send, what to look for in the response, and what it means. Shahd's `nuclei_wrapper.py` selects which templates to run based on what Nmap discovered (the "deterministic chaining" that makes Found 404 special).
+**English:** Nuclei uses YAML templates to test for specific vulnerabilities. Each template describes: what to send, what to look for in the response, and what it means. Shahd's `nuclei_wrapper.py` selects which templates to run based on what Nmap discovered (the "deterministic chaining" that makes Orchestration Security Center special).
 
-**عربي:** يستخدم Nuclei قوالب YAML لاختبار ثغرات محددة. كل قالب يصف: ما يجب إرساله، ما يجب البحث عنه في الاستجابة، وما تعنيه. `nuclei_wrapper.py` الخاص بشهد يختار القوالب لتشغيلها بناءً على ما اكتشفه Nmap ("التسلسل الحتمي" الذي يجعل Found 404 مميزًا).
+**عربي:** يستخدم Nuclei قوالب YAML لاختبار ثغرات محددة. كل قالب يصف: ما يجب إرساله، ما يجب البحث عنه في الاستجابة، وما تعنيه. `nuclei_wrapper.py` الخاص بشهد يختار القوالب لتشغيلها بناءً على ما اكتشفه Nmap ("التسلسل الحتمي" الذي يجعل Orchestration Security Center مميزًا).
 
 ```
 Deterministic Chaining Logic (how Nuclei templates are selected):

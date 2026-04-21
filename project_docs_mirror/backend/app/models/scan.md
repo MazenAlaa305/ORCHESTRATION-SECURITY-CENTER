@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-Defines all **SQLAlchemy ORM database models** (table schemas) for the Found 404 platform. This is the single source of truth for the relational data structure, mapping Python classes to database tables and their columns, types, constraints, and relationships.
+Defines all **SQLAlchemy ORM database models** (table schemas) for the Orchestration Security Center platform. This is the single source of truth for the relational data structure, mapping Python classes to database tables and their columns, types, constraints, and relationships.
 
 ## Key Enumerations
 

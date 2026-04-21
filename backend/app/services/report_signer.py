@@ -1,6 +1,6 @@
 """
 Report signing utilities.
-Phase 5.2 — Found 404 Hardening Plan.
+Phase 5.2 — Orchestration Security Center Hardening Plan.
 
 canonical_findings_hash(findings)
     Deterministic SHA-256 of the sorted canonical JSON of all finding dicts.

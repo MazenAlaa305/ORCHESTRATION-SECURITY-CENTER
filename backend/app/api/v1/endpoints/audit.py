@@ -1,6 +1,6 @@
 """
 Audit chain verification endpoint.
-Phase 5.1 — Found 404 Hardening Plan.
+Phase 5.1 — Orchestration Security Center Hardening Plan.
 
 GET /api/v1/scans/{scan_id}/audit/verify
     Walks the agent_logs hash chain for the given scan and returns whether

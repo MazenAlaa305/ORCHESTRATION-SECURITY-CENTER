@@ -8,9 +8,9 @@
 
 ## Role Summary | ملخص الدور
 
-**English:** Yousef owns everything that makes Found 404 "intelligent." Every scan passes through his code — the 5-agent AI pipeline (ReconAgent → AttackAgent → ValidationAgent → ReportingAgent → SIEMAgent) and the UnifiedRiskEngine that converts raw vulnerability data into a 0-100 risk score. He is also responsible for the Gemini LLM advisory that explains findings in plain English to non-technical users.
+**English:** Yousef owns everything that makes Orchestration Security Center "intelligent." Every scan passes through his code — the 5-agent AI pipeline (ReconAgent → AttackAgent → ValidationAgent → ReportingAgent → SIEMAgent) and the UnifiedRiskEngine that converts raw vulnerability data into a 0-100 risk score. He is also responsible for the Gemini LLM advisory that explains findings in plain English to non-technical users.
 
-**عربي:** يوسف يمتلك كل ما يجعل Found 404 "ذكيًا". كل مسح يمر عبر كوده — خط 5 وكلاء AI (ReconAgent → AttackAgent → ValidationAgent → ReportingAgent → SIEMAgent) ومحرك UnifiedRiskEngine الذي يحوّل بيانات الثغرات الخام إلى درجة خطر من 0 إلى 100. هو أيضًا مسؤول عن استشارة Gemini LLM التي تشرح النتائج بلغة بسيطة للمستخدمين غير التقنيين.
+**عربي:** يوسف يمتلك كل ما يجعل Orchestration Security Center "ذكيًا". كل مسح يمر عبر كوده — خط 5 وكلاء AI (ReconAgent → AttackAgent → ValidationAgent → ReportingAgent → SIEMAgent) ومحرك UnifiedRiskEngine الذي يحوّل بيانات الثغرات الخام إلى درجة خطر من 0 إلى 100. هو أيضًا مسؤول عن استشارة Gemini LLM التي تشرح النتائج بلغة بسيطة للمستخدمين غير التقنيين.
 
 ---
 
@@ -43,9 +43,9 @@
 
 ### `agent_orchestrator.py` — The 5-Agent Pipeline
 
-**English:** This is the brain of Found 404. When a scan is triggered, the orchestrator runs 5 agents in sequence. Each agent receives a "context" dictionary from the previous agent and adds its own findings to it.
+**English:** This is the brain of Orchestration Security Center. When a scan is triggered, the orchestrator runs 5 agents in sequence. Each agent receives a "context" dictionary from the previous agent and adds its own findings to it.
 
-**عربي:** هذا هو دماغ Found 404. عند تشغيل مسح، ينفّذ المنسّق 5 وكلاء بالتسلسل. كل وكيل يستقبل قاموس "سياق" من الوكيل السابق ويضيف نتائجه الخاصة إليه.
+**عربي:** هذا هو دماغ Orchestration Security Center. عند تشغيل مسح، ينفّذ المنسّق 5 وكلاء بالتسلسل. كل وكيل يستقبل قاموس "سياق" من الوكيل السابق ويضيف نتائجه الخاصة إليه.
 
 ```
 Scan Triggered → ReconAgent → AttackAgent → ValidationAgent → ReportingAgent → SIEMAgent

@@ -130,11 +130,11 @@ async def lifespan(app: FastAPI):
 
     # ── 2. Start Redis → WebSocket event bridge ───────────────────────────────
     _redis_listener_task = asyncio.create_task(redis_event_listener())
-    logger.info("Found 404 API started.")
+    logger.info("Orchestration Security Center API started.")
     yield
     if _redis_listener_task and not _redis_listener_task.done():
         _redis_listener_task.cancel()
-    logger.info("Found 404 API shutting down.")
+    logger.info("Orchestration Security Center API shutting down.")
 
 
 
@@ -227,4 +227,4 @@ async def websocket_endpoint(websocket: WebSocket):
 # ── Root ──────────────────────────────────────────────────────────────────────
 @app.get("/", tags=["System"])
 def read_root():
-    return {"message": "Found 404 — SME Cyber Exposure Dashboard API", "version": "2.0.0"}
+    return {"message": "Orchestration Security Center — SME Cyber Exposure Dashboard API", "version": "2.0.0"}

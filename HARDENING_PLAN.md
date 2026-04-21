@@ -1,7 +1,7 @@
-# Found 404 — Hardening & Professionalization Plan
+# Orchestration Security Center — Hardening & Professionalization Plan
 
 **Audience:** An autonomous coding agent (Claude / GPT / etc.) that will execute this plan step by step.
-**Scope:** Harden and refine the existing "Found 404" SME DAST platform. **Do not add new features.** Every step removes a broken promise, closes a reliability gap, or makes an existing capability defensible to a real SME buyer.
+**Scope:** Harden and refine the existing "Orchestration Security Center" SME DAST platform. **Do not add new features.** Every step removes a broken promise, closes a reliability gap, or makes an existing capability defensible to a real SME buyer.
 **Repository:** `d:/FINAL PROJECT/the-dashboard-project-/`
 **Duration:** 6 phases, ~1 week each for a single engineer. Phases can be done in order; do not skip ahead.
 
@@ -713,7 +713,7 @@ and chain rows with sha256(prev || payload) for verifiable integrity.
 - `backend/app/api/v1/endpoints/reports.py`
 
 **Changes:**
-1. Every PDF footer includes `Report ID`, `Generated (UTC)`, `Finding set SHA-256`, `Signed by Found 404 (v<version>)`.
+1. Every PDF footer includes `Report ID`, `Generated (UTC)`, `Finding set SHA-256`, `Signed by Orchestration Security Center (v<version>)`.
 2. `report_signer.py`: HMAC-SHA256 of the PDF bytes using `settings.REPORT_SIGNING_KEY`. Store signature in a new `reports.signature` column. Expose a `GET /reports/{id}/verify` endpoint that recomputes and compares.
 3. The findings set hash is computed from a canonical JSON (sorted keys) of all findings included in the report, so the same inputs always produce the same hash.
 
@@ -779,17 +779,17 @@ table and tag each Finding at ingest; expose framework-filtered queries.
 **Changes:**
 1. Use `prometheus-fastapi-instrumentator`. Expose `/metrics`.
 2. Custom metrics in `metrics.py`:
-   - `found404_scan_started_total{mode}` counter
-   - `found404_scan_completed_total{status}` counter
-   - `found404_scan_duration_seconds` histogram
-   - `found404_findings_open` gauge by severity
-   - `found404_llm_tokens_used_total` counter
-   - `found404_sla_breaches_total` counter
-3. Add a Prometheus container scraping `/metrics`. Grafana is optional but provide a seed dashboard JSON at `infra/grafana/found404.json`.
+   - `osc_scan_started_total{mode}` counter
+   - `osc_scan_completed_total{status}` counter
+   - `osc_scan_duration_seconds` histogram
+   - `osc_findings_open` gauge by severity
+   - `osc_llm_tokens_used_total` counter
+   - `osc_sla_breaches_total` counter
+3. Add a Prometheus container scraping `/metrics`. Grafana is optional but provide a seed dashboard JSON at `infra/grafana/osc.json`.
 
 **Acceptance tests:**
 ```bash
-curl -s http://localhost:8000/metrics | grep -c found404_
+curl -s http://localhost:8000/metrics | grep -c osc_
 # Expected: >= 6
 ```
 
@@ -903,7 +903,7 @@ The plan is complete when **all** of the following are true:
 - [ ] `agent_logs` rejects UPDATE/DELETE at the DB level.
 - [ ] PDF reports embed a reproducible findings-set hash and an HMAC signature.
 - [ ] Findings carry OWASP/CWE/ISO 27001/NIST/PCI tags where known.
-- [ ] Prometheus `/metrics` exposes `found404_*` metrics.
+- [ ] Prometheus `/metrics` exposes `osc_*` metrics.
 - [ ] `/ready` correctly flips to 503 when Redis or DB is unavailable.
 - [ ] `docs/RUNBOOK.md` exists and covers the six failure modes above.
 

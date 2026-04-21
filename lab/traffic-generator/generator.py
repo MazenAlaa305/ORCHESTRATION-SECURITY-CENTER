@@ -1,5 +1,5 @@
 """
-Living Lab Traffic Generator — Found 404
+Living Lab Traffic Generator — Orchestration Security Center
 Generates realistic background network traffic across all lab subnets.
 Produces structured JSON log lines for the log shipper to consume.
 
@@ -72,7 +72,7 @@ def emit_event(category: str, action: str, source_ip: str, dest_ip: str,
         "severity": _severity_for(category, status),
         "details": details or {},
         "lab_zone": _zone_for_ip(dest_ip),
-        "generator": "found404-traffic-gen"
+        "generator": "osc-traffic-gen"
     }
 
     line = json.dumps(event)

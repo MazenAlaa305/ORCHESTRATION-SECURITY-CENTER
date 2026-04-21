@@ -1,5 +1,5 @@
 """
-Living Lab API Endpoints — Found 404
+Living Lab API Endpoints — Orchestration Security Center
 Manage, monitor, and interact with the SME simulation lab.
 """
 

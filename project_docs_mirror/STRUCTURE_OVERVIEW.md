@@ -1,8 +1,8 @@
-# Found 404 — Project Architecture Overview
+# Orchestration Security Center — Project Architecture Overview
 
 ## System Mission
 
-**Found 404** is an AI-driven cybersecurity exposure dashboard designed for Small and Medium Enterprises (SMEs). Its core mission is to allow non-expert users to discover, scan, prioritize, and remediate vulnerabilities across web applications and network infrastructure — all from a single, unified interface. It combines traditional penetration testing tools (Nmap, Nuclei, OpenVAS) with generative AI (Google Gemini) to validate findings and reduce alert fatigue.
+**Orchestration Security Center** is an AI-driven cybersecurity exposure dashboard designed for Small and Medium Enterprises (SMEs). Its core mission is to allow non-expert users to discover, scan, prioritize, and remediate vulnerabilities across web applications and network infrastructure — all from a single, unified interface. It combines traditional penetration testing tools (Nmap, Nuclei, OpenVAS) with generative AI (Google Gemini) to validate findings and reduce alert fatigue.
 
 ---
 

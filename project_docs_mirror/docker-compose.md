@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-This is the **primary production deployment manifest** for the Found 404 platform. It defines and orchestrates all 11 Docker containers that comprise the system, establishing their networking, resource limits, environment variable injection, and inter-service dependencies.
+This is the **primary production deployment manifest** for the Orchestration Security Center platform. It defines and orchestrates all 11 Docker containers that comprise the system, establishing their networking, resource limits, environment variable injection, and inter-service dependencies.
 
 ## Key Services Defined
 

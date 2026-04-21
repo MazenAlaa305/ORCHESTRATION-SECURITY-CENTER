@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-Exposes the **OpenVAS vulnerability scanner integration** as a REST API, allowing the frontend to trigger OpenVAS scans, poll their status, retrieve results, and schedule recurring scans — all through the Found 404 backend without requiring direct user access to the OpenVAS web interface.
+Exposes the **OpenVAS vulnerability scanner integration** as a REST API, allowing the frontend to trigger OpenVAS scans, poll their status, retrieve results, and schedule recurring scans — all through the Orchestration Security Center backend without requiring direct user access to the OpenVAS web interface.
 
 ## Key Endpoints
 

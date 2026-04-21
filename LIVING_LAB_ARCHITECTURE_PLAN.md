@@ -1,8 +1,8 @@
-# Living Lab Architecture Plan — Found 404
+# Living Lab Architecture Plan — Orchestration Security Center
 
 ## Objective
 
-Rebuild the "Living Lab" as an isolated, small-scale virtual environment that realistically simulates a Small-to-Medium Enterprise (SME) network. The lab must generate realistic background traffic, expose intentional vulnerabilities across multiple attack vectors, produce SIEM-compatible telemetry, and integrate seamlessly with the Found 404 dashboard for centralized security orchestration demonstrations.
+Rebuild the "Living Lab" as an isolated, small-scale virtual environment that realistically simulates a Small-to-Medium Enterprise (SME) network. The lab must generate realistic background traffic, expose intentional vulnerabilities across multiple attack vectors, produce SIEM-compatible telemetry, and integrate seamlessly with the Orchestration Security Center dashboard for centralized security orchestration demonstrations.
 
 ---
 
@@ -55,7 +55,7 @@ A 3-tier SME network simulation with 8 services across 4 subnets, complete with:
 
 ```
                     +---------------------------+
-                    |   FOUND 404 DASHBOARD     |
+                    |   ORCHESTRATION SECURITY CENTER DASHBOARD     |
                     |  (default Docker network) |
                     |                           |
                     |  backend:8000             |
@@ -99,7 +99,7 @@ Replace the entire file with the content below. This defines all 8 vulnerable se
 
 ```yaml
 # ============================================================
-# LIVING LAB - Found 404
+# LIVING LAB - Orchestration Security Center
 # SME Network Simulation Environment
 # 4 subnets, 11 containers, realistic enterprise topology
 # ============================================================
@@ -587,7 +587,7 @@ mkdir -p lab/log-shipper
 ## Phase 2 — Vulnerable Services & Attack Vectors
 
 ### Goal
-Configure each lab service with intentional, realistic vulnerabilities that the Found 404 scanner agents can discover.
+Configure each lab service with intentional, realistic vulnerabilities that the Orchestration Security Center scanner agents can discover.
 
 ### Step 2.1 — DNS Server Configuration (Zone Transfer Vulnerability)
 
@@ -876,7 +876,7 @@ faker==22.0.0
 
 ```python
 """
-Living Lab Traffic Generator — Found 404
+Living Lab Traffic Generator — Orchestration Security Center
 Generates realistic background network traffic across all lab subnets.
 Produces structured JSON log lines for the log shipper to consume.
 
@@ -949,7 +949,7 @@ def emit_event(category: str, action: str, source_ip: str, dest_ip: str,
         "severity": _severity_for(category, status),
         "details": details or {},
         "lab_zone": _zone_for_ip(dest_ip),
-        "generator": "found404-traffic-gen"
+        "generator": "osc-traffic-gen"
     }
 
     line = json.dumps(event)
@@ -1331,7 +1331,7 @@ httpx==0.27.0
 
 ```python
 """
-Living Lab Log Shipper — Found 404
+Living Lab Log Shipper — Orchestration Security Center
 Reads structured JSON events from the traffic generator's log file and
 ships them to Elasticsearch in Wazuh-compatible format.
 
@@ -1731,7 +1731,7 @@ This service manages the lab lifecycle and provides health/status information.
 
 ```python
 """
-Living Lab Manager Service — Found 404
+Living Lab Manager Service — Orchestration Security Center
 Manages the lab environment lifecycle and provides status information.
 """
 
@@ -1982,7 +1982,7 @@ lab_manager = LabManager()
 
 ```python
 """
-Living Lab API Endpoints — Found 404
+Living Lab API Endpoints — Orchestration Security Center
 Manage, monitor, and interact with the SME simulation lab.
 """
 
@@ -2764,7 +2764,7 @@ curl -s -X POST http://localhost:8000/api/v1/scans/ai \
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                        FOUND 404 - LIVING LAB TOPOLOGY                      │
+│                        ORCHESTRATION SECURITY CENTER - LIVING LAB TOPOLOGY                      │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐     │
@@ -2836,5 +2836,5 @@ curl -s -X POST http://localhost:8000/api/v1/scans/ai \
 
 ---
 
-*Plan created for the Found 404 project — 2026-04-10*
+*Plan created for the Orchestration Security Center project — 2026-04-10*
 *All file paths are relative to the project root: `d:\FINAL PROJECT\the-dashboard-project-\`*

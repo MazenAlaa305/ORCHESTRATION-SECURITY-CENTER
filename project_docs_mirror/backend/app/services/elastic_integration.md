@@ -15,7 +15,7 @@ Initializes the Elasticsearch Python client using `settings.ELASTICSEARCH_URL`. 
 Queries Elasticsearch for recent security alert documents using the DSL query API. Filters by the `@timestamp` field within the specified time range using a `range` query. Returns a normalized list of alert dictionaries extracted from the `_source` field of each hit.
 
 **`index_scan_result(scan_id, vulnerability) → bool`**
-Indexes a single vulnerability finding into Elasticsearch as a structured document in the `found404-findings` index. The document includes scan ID, timestamp, vulnerability type, severity, URL, and confidence score. Returns `True` on successful indexing.
+Indexes a single vulnerability finding into Elasticsearch as a structured document in the `osc-findings` index. The document includes scan ID, timestamp, vulnerability type, severity, URL, and confidence score. Returns `True` on successful indexing.
 
 **`get_alert_summary() → Dict`**
 Performs an Elasticsearch aggregation query to count alerts grouped by severity level and rule category over the last 24 hours. Returns a summary dictionary used by the dashboard SIEM panel.

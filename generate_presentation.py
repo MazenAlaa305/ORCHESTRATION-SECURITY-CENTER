@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Found 404 — Graduation Project Defense Presentation Generator
+Orchestration Security Center — Graduation Project Defense Presentation Generator
 ==============================================================
 Generates a 30-slide academic defense PPTX with a "Futuristic Glass / iOS" aesthetic.
 
@@ -203,7 +203,7 @@ def new_slide():
 s = new_slide()
 # Large centered title
 _add_text_box(s, Inches(1), Inches(1.5), Inches(11.3), Inches(1),
-              "FOUND 404", size=Pt(60), color=ACCENT_CYAN, bold=True, alignment=PP_ALIGN.CENTER)
+              "ORCHESTRATION SECURITY CENTER", size=Pt(60), color=ACCENT_CYAN, bold=True, alignment=PP_ALIGN.CENTER)
 
 # Subtitle
 _add_text_box(s, Inches(1), Inches(2.6), Inches(11.3), Inches(0.8),
@@ -283,7 +283,7 @@ s = new_slide()
 _add_title(s, "ABSTRACT", "Executive Summary")
 
 abstract_text = (
-    "Found 404 is an AI-driven Dynamic Application Security Testing (DAST) platform "
+    "Orchestration Security Center is an AI-driven Dynamic Application Security Testing (DAST) platform "
     "purpose-built for Small and Medium Enterprises. The system orchestrates a multi-agent "
     "autonomous pipeline\u2014ReconAgent, AttackAgent, ValidationAgent, and ReportingAgent\u2014"
     "powered by Google Gemini LLM, unifying industry-standard tools (Nmap, Nuclei, OpenVAS, "
@@ -403,7 +403,7 @@ tools_data = [
     ("Burp Suite Pro", "Commercial DAST", "Expensive, manual-heavy, no SIEM integration", ACCENT_ORANGE),
     ("DefectDojo", "Vuln aggregation", "No active scanning, no multi-agent pipeline", ACCENT_ORANGE),
     ("Qualys VMDR", "Enterprise VM", "Cost-prohibitive for SMEs, cloud-only", ACCENT_RED),
-    ("Found 404", "AI-Driven DAST + SOAR", "Unified pipeline, deterministic scoring, LLM advisory", ACCENT_GREEN),
+    ("Orchestration Security Center", "AI-Driven DAST + SOAR", "Unified pipeline, deterministic scoring, LLM advisory", ACCENT_GREEN),
 ]
 
 # Column headers
@@ -1314,7 +1314,7 @@ _add_bullet_card(s, Inches(8.6), Inches(1.2), Inches(3.8), Inches(3.0),
     "n8n SOAR",
     ["\u2022 Workflow automation (port 5678)",
      "\u2022 Webhook-triggered responses",
-     "\u2022 Connects to Found 404 API",
+     "\u2022 Connects to Orchestration Security Center API",
      "\u2022 Automated incident workflows",
      "\u2022 Slack/Email notifications",
      "\u2022 Remediation playbooks"],
@@ -1881,7 +1881,7 @@ s = new_slide()
 _add_title(s, "CONCLUSION", "Summary & Key Takeaways")
 
 conclusions = [
-    "Found 404 demonstrates that enterprise-grade security orchestration can be made accessible to SMEs through "
+    "Orchestration Security Center demonstrates that enterprise-grade security orchestration can be made accessible to SMEs through "
     "intelligent automation and AI-driven advisory generation.",
 
     "The Unified Risk Engine provides deterministic, reproducible risk quantification that bridges the gap between "
@@ -1937,7 +1937,7 @@ line.fill.fore_color.rgb = ACCENT_CYAN
 line.line.fill.background()
 
 _add_text_box(s, Inches(1), Inches(4.2), Inches(11.3), Inches(0.5),
-              "Found 404  \u2014  Autonomous Security Orchestration Platform for SMEs",
+              "Orchestration Security Center  \u2014  Autonomous Security Orchestration Platform for SMEs",
               size=Pt(16), color=TEXT_DIM, alignment=PP_ALIGN.CENTER)
 
 # Key topics for discussion

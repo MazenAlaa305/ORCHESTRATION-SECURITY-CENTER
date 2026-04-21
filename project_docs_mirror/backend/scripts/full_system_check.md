@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-A **comprehensive system health verification script** that validates the end-to-end connectivity and functionality of all Found 404 platform components before a demonstration or deployment. Provides a clear pass/fail status for each system component.
+A **comprehensive system health verification script** that validates the end-to-end connectivity and functionality of all Orchestration Security Center platform components before a demonstration or deployment. Provides a clear pass/fail status for each system component.
 
 ## Key Functions
 

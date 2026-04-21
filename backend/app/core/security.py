@@ -1,6 +1,6 @@
 """
 JWT authentication and password hashing utilities.
-Phase 3.1 — Found 404 Hardening Plan.
+Phase 3.1 — Orchestration Security Center Hardening Plan.
 """
 from datetime import datetime, timedelta
 from typing import Optional

@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-A PowerShell automation script that performs the complete, one-command initialization of the Found 404 lab environment. It is designed to be run once on the host machine before any scanning demonstrations. It handles Docker network creation, container orchestration, database seeding, and health verification.
+A PowerShell automation script that performs the complete, one-command initialization of the Orchestration Security Center lab environment. It is designed to be run once on the host machine before any scanning demonstrations. It handles Docker network creation, container orchestration, database seeding, and health verification.
 
 ## Key Functions / Logic Blocks
 

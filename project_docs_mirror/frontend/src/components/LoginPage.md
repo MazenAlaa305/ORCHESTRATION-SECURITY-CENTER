@@ -10,7 +10,7 @@ The **authentication login page** (4,466 bytes) presented to users before access
 Renders the full-page login interface.
 
 **Layout:**
-- Centered card on a dark background with the Found 404 logo/branding
+- Centered card on a dark background with the Orchestration Security Center logo/branding
 - Form fields: Username/Email and Password inputs
 - "Sign In" submit button with loading state
 - Optional "Remember Me" checkbox

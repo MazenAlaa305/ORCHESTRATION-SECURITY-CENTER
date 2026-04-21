@@ -8,9 +8,9 @@
 
 ## Role Summary | ملخص الدور
 
-**English:** Shaban owns the "plumbing" of Found 404 — the invisible infrastructure that makes everything run. When you click "Scan", his code picks up that request (Celery), runs it in the background (worker), sends live updates to the browser (Redis pub/sub → WebSocket), and ensures Docker containers stay healthy. He is also the first line of defense when a container crashes.
+**English:** Shaban owns the "plumbing" of Orchestration Security Center — the invisible infrastructure that makes everything run. When you click "Scan", his code picks up that request (Celery), runs it in the background (worker), sends live updates to the browser (Redis pub/sub → WebSocket), and ensures Docker containers stay healthy. He is also the first line of defense when a container crashes.
 
-**عربي:** شعبان يمتلك "السباكة" الخاصة بـ Found 404 — البنية التحتية غير المرئية التي تجعل كل شيء يعمل. عندما تنقر "مسح"، كوده يلتقط هذا الطلب (Celery)، يشغّله في الخلفية (عامل)، يرسل تحديثات فورية للمتصفح (Redis pub/sub → WebSocket)، ويضمن بقاء حاويات Docker بصحة جيدة. هو أيضًا الخط الأول للدفاع عند تعطّل حاوية.
+**عربي:** شعبان يمتلك "السباكة" الخاصة بـ Orchestration Security Center — البنية التحتية غير المرئية التي تجعل كل شيء يعمل. عندما تنقر "مسح"، كوده يلتقط هذا الطلب (Celery)، يشغّله في الخلفية (عامل)، يرسل تحديثات فورية للمتصفح (Redis pub/sub → WebSocket)، ويضمن بقاء حاويات Docker بصحة جيدة. هو أيضًا الخط الأول للدفاع عند تعطّل حاوية.
 
 ---
 

@@ -1,4 +1,4 @@
-# Found 404 — Use Cases, Advantages & Disadvantages
+# Orchestration Security Center — Use Cases, Advantages & Disadvantages
 
 > **An AI-Driven Security Orchestration Platform for Small-to-Medium Enterprises (SMEs)**
 
@@ -17,7 +17,7 @@
 
 ## What Is This Project Used For?
 
-Found 404 is an **automated cybersecurity orchestration platform** that helps organizations — especially **Small-to-Medium Enterprises (SMEs)** — discover, assess, and prioritize security vulnerabilities across their networks and web applications. Instead of requiring a dedicated security operations center (SOC) or hiring expensive cybersecurity professionals, Found 404 provides a **single unified dashboard** that:
+Orchestration Security Center is an **automated cybersecurity orchestration platform** that helps organizations — especially **Small-to-Medium Enterprises (SMEs)** — discover, assess, and prioritize security vulnerabilities across their networks and web applications. Instead of requiring a dedicated security operations center (SOC) or hiring expensive cybersecurity professionals, Orchestration Security Center provides a **single unified dashboard** that:
 
 - **Scans networks and applications automatically** — Chains multiple industry-standard security tools (Nmap, Nuclei, OpenVAS) through a 4-stage deterministic pipeline (Recon → Attack → Validation → Risk Scoring).
 - **Scores risk in business terms** — Translates raw technical findings into a 0–100 Risk Score and a Health Score that non-technical administrators can immediately understand.
@@ -27,13 +27,13 @@ Found 404 is an **automated cybersecurity orchestration platform** that helps or
 
 ### In Simple Terms
 
-> Found 404 turns **thousands of raw security alerts** into **5 prioritized, plain-language action items** that tell a non-technical person exactly what to fix and how.
+> Orchestration Security Center turns **thousands of raw security alerts** into **5 prioritized, plain-language action items** that tell a non-technical person exactly what to fix and how.
 
 ---
 
 ## Target Audience
 
-| Audience | How They Use Found 404 |
+| Audience | How They Use Orchestration Security Center |
 |----------|----------------------|
 | **SME IT Administrators** | Run one-click security assessments without needing cybersecurity expertise |
 | **Small Business Owners** | View the health score dashboard to understand their security posture at a glance |
@@ -47,29 +47,29 @@ Found 404 is an **automated cybersecurity orchestration platform** that helps or
 ## Real-World Use Cases
 
 ### 1. SME Security Posture Assessment
-A small e-commerce company with 20 employees and no security team uses Found 404 to scan their web server and internal network. The platform discovers open ports, detects SQL injection vulnerabilities in their shopping cart, and gives the IT admin a clear action item: *"Parameterize all SQL queries in the checkout endpoint — priority: immediate."*
+A small e-commerce company with 20 employees and no security team uses Orchestration Security Center to scan their web server and internal network. The platform discovers open ports, detects SQL injection vulnerabilities in their shopping cart, and gives the IT admin a clear action item: *"Parameterize all SQL queries in the checkout endpoint — priority: immediate."*
 
 ### 2. Network Infrastructure Auditing
-An IT department at a mid-sized company needs to audit their internal office network. Found 404's Nmap-based reconnaissance discovers all active hosts, open ports, and running services across multiple subnets, then automatically chains Nuclei templates to check for weak credentials on exposed services like SMB file shares and Redis caches.
+An IT department at a mid-sized company needs to audit their internal office network. Orchestration Security Center's Nmap-based reconnaissance discovers all active hosts, open ports, and running services across multiple subnets, then automatically chains Nuclei templates to check for weak credentials on exposed services like SMB file shares and Redis caches.
 
 ### 3. Compliance Preparation
-Before an annual security review, a company runs Found 404 to generate a comprehensive PDF report documenting all discovered vulnerabilities, their severity, and the remediation steps taken. This provides evidence of proactive security management.
+Before an annual security review, a company runs Orchestration Security Center to generate a comprehensive PDF report documenting all discovered vulnerabilities, their severity, and the remediation steps taken. This provides evidence of proactive security management.
 
 ### 4. Educational Lab Environment
-Students use Found 404's built-in lab — containing 8 intentionally vulnerable containers across 4 network zones (DMZ, Corporate, Data, Management) — to practice real-world vulnerability assessment. The lab includes OWASP Juice Shop, weak-credential Samba shares, unprotected Redis caches, and more.
+Students use Orchestration Security Center's built-in lab — containing 8 intentionally vulnerable containers across 4 network zones (DMZ, Corporate, Data, Management) — to practice real-world vulnerability assessment. The lab includes OWASP Juice Shop, weak-credential Samba shares, unprotected Redis caches, and more.
 
 ### 5. Continuous Security Monitoring
-A startup integrates Found 404 with Wazuh SIEM and n8n SOAR to continuously monitor their infrastructure. When a critical vulnerability is detected, n8n automatically triggers a remediation workflow (e.g., firewall rule update, Slack notification).
+A startup integrates Orchestration Security Center with Wazuh SIEM and n8n SOAR to continuously monitor their infrastructure. When a critical vulnerability is detected, n8n automatically triggers a remediation workflow (e.g., firewall rule update, Slack notification).
 
 ### 6. Incident Response Support
-When a security incident occurs, the IT team uses Found 404 to quickly scan the affected network segment, identify exposed services and vulnerabilities, and prioritize fixes based on the AI-generated business impact analysis.
+When a security incident occurs, the IT team uses Orchestration Security Center to quickly scan the affected network segment, identify exposed services and vulnerabilities, and prioritize fixes based on the AI-generated business impact analysis.
 
 ---
 
 ## Advantages
 
 ### ✅ 1. All-in-One Platform
-Found 404 unifies **network scanning** (Nmap), **vulnerability detection** (Nuclei + OpenVAS), **SIEM** (Wazuh + Elasticsearch), **SOAR** (n8n), and **AI advisory** (Gemini) into a single dashboard. Users don't need to learn, install, or correlate results from 6+ separate tools.
+Orchestration Security Center unifies **network scanning** (Nmap), **vulnerability detection** (Nuclei + OpenVAS), **SIEM** (Wazuh + Elasticsearch), **SOAR** (n8n), and **AI advisory** (Gemini) into a single dashboard. Users don't need to learn, install, or correlate results from 6+ separate tools.
 
 ### ✅ 2. Zero Cybersecurity Expertise Required
 The platform is specifically designed for **non-technical users**. AI-generated explanations describe vulnerabilities in plain language, and action items tell users *exactly* what to fix in order of priority. The Health Score (0–100) provides an at-a-glance understanding of security posture.
@@ -90,7 +90,7 @@ The entire 11-service stack deploys with a single `docker compose up -d` command
 All scan results stream in **real-time via WebSocket** with sub-second latency. The dashboard features live KPI cards, animated gauges, interactive D3.js network topology, risk heatmaps, and a live orchestration feed showing agent activity as it happens.
 
 ### ✅ 8. Smart Vulnerability Chaining
-Instead of running every test against every target, Found 404 uses **intelligent service-to-template mapping**. If Nmap finds port 445 (SMB) open, it runs SMB-specific templates — not web SQL injection tests. This reduces scan time and noise dramatically.
+Instead of running every test against every target, Orchestration Security Center uses **intelligent service-to-template mapping**. If Nmap finds port 445 (SMB) open, it runs SMB-specific templates — not web SQL injection tests. This reduces scan time and noise dramatically.
 
 ### ✅ 9. Built-in Lab Environment
 Comes with a **pre-configured lab** of 8 vulnerable containers across 4 network subnets, allowing safe practice, demonstrations, and testing without needing access to production systems.
@@ -140,13 +140,13 @@ The dashboard is **web-only** (desktop/laptop browser). There is no mobile compa
 The platform does **not map vulnerabilities to specific compliance frameworks** (PCI-DSS, HIPAA, SOC 2, ISO 27001). SMEs needing compliance-specific reporting must do this mapping manually.
 
 ### ❌ 10. No SAST (Source Code Analysis)
-Found 404 is a **DAST (Dynamic Application Security Testing)** platform — it tests running applications from the outside. It does **not analyze source code** for vulnerabilities, meaning some code-level issues (hardcoded secrets, insecure dependencies) may go undetected.
+Orchestration Security Center is a **DAST (Dynamic Application Security Testing)** platform — it tests running applications from the outside. It does **not analyze source code** for vulnerabilities, meaning some code-level issues (hardcoded secrets, insecure dependencies) may go undetected.
 
 ### ❌ 11. Internet Dependency for AI Features
 The AI advisory feature requires an **active internet connection** to communicate with the Google Gemini API. Air-gapped or offline environments lose this capability entirely.
 
 ### ❌ 12. Docker Dependency
-The entire platform **requires Docker** to run. Organizations that cannot or do not use container technology (due to policy, infrastructure limitations, or lack of knowledge) cannot deploy Found 404 without significant modification.
+The entire platform **requires Docker** to run. Organizations that cannot or do not use container technology (due to policy, infrastructure limitations, or lack of knowledge) cannot deploy Orchestration Security Center without significant modification.
 
 ---
 

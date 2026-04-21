@@ -1,4 +1,4 @@
-# Found 404 — Run Guide, Lab Guide & Use Cases
+# Orchestration Security Center — Run Guide, Lab Guide & Use Cases
 
 > Complete instructions for running the dashboard, deploying the lab, and manually walking through every use case.
 
@@ -194,7 +194,7 @@ After reset, go back to Step 1 and repeat the full startup sequence.
 
 ## Part 5 — Manual Use Cases
 
-These are step-by-step walkthroughs for demonstrating every major feature of Found 404 in the lab environment.
+These are step-by-step walkthroughs for demonstrating every major feature of Orchestration Security Center in the lab environment.
 
 ---
 
@@ -217,7 +217,7 @@ These are step-by-step walkthroughs for demonstrating every major feature of Fou
 
 ### Use Case 2: Deterministic Tool Chaining (SMB Attack Path)
 
-**Goal:** Demonstrate how Found 404 avoids alert fatigue by only running relevant tests.
+**Goal:** Demonstrate how Orchestration Security Center avoids alert fatigue by only running relevant tests.
 
 **Steps:**
 1. In **Targets Manager**, add target: `lab_misconfig_infra` (172.31.0.50)

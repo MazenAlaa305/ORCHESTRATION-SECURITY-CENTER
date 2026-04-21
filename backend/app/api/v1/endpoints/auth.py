@@ -1,6 +1,6 @@
 """
 Authentication endpoints.
-Phase 3.1 — Found 404 Hardening Plan.
+Phase 3.1 — Orchestration Security Center Hardening Plan.
 
 Routes:
   POST /auth/login  → issue JWT

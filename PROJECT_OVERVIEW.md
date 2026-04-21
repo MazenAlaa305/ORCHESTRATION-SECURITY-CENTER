@@ -1,4 +1,4 @@
-# Found 404 — Complete Project Overview
+# Orchestration Security Center — Complete Project Overview
 
 > **An AI-assisted, deterministic cybersecurity orchestration platform for Small and Medium Enterprises (SMEs).**
 > Graduation project — Team of 11 | Team Leader: Omar Kapil
@@ -7,7 +7,7 @@
 
 ## Table of Contents
 
-1. [What is Found 404?](#what-is-found-404)
+1. [What is Orchestration Security Center?](#what-is-found-404)
 2. [The Problem It Solves](#the-problem-it-solves)
 3. [Architecture Overview](#architecture-overview)
 4. [Technology Stack](#technology-stack)
@@ -24,11 +24,11 @@
 
 ---
 
-## What is Found 404?
+## What is Orchestration Security Center?
 
-Found 404 is a **deterministic cybersecurity orchestration dashboard** built for IT administrators at SMEs who need professional-grade threat visibility without a dedicated Security Operations Center (SOC). It chains multiple open-source security tools together automatically, scores risk in business terms, and presents everything in a single unified dashboard.
+Orchestration Security Center is a **deterministic cybersecurity orchestration dashboard** built for IT administrators at SMEs who need professional-grade threat visibility without a dedicated Security Operations Center (SOC). It chains multiple open-source security tools together automatically, scores risk in business terms, and presents everything in a single unified dashboard.
 
-The name "Found 404" is a play on the HTTP 404 error — the system finds the vulnerabilities that other tools miss or bury in noise.
+The name "Orchestration Security Center" is a play on the HTTP 404 error — the system finds the vulnerabilities that other tools miss or bury in noise.
 
 ---
 
@@ -40,9 +40,9 @@ SMEs face a "protection gap":
 - IT admins spend hours manually correlating Nmap output, Nuclei results, and SIEM logs
 - CVSS scores don't translate into business impact
 
-**Found 404's answer: Deterministic Orchestration.**
+**Orchestration Security Center's answer: Deterministic Orchestration.**
 
-Instead of firing every test at every target, Found 404 uses a rule-based chaining engine. When Nmap finds port 445 open, it runs SMB-specific Nuclei templates — not web SQL injection tests. When a vulnerability is confirmed, it generates a single, plain-language action item for the admin. The result: 1,000 raw logs become 5 prioritized action items.
+Instead of firing every test at every target, Orchestration Security Center uses a rule-based chaining engine. When Nmap finds port 445 open, it runs SMB-specific Nuclei templates — not web SQL injection tests. When a vulnerability is confirmed, it generates a single, plain-language action item for the admin. The result: 1,000 raw logs become 5 prioritized action items.
 
 ---
 
@@ -276,7 +276,7 @@ Message types handled: `KPI_UPDATE`, `SCAN_STATUS`, `LOG_MESSAGE`, `ORCHESTRATIO
 
 ## Lab Environment
 
-The lab is a self-contained, multi-subnet network of intentionally vulnerable Docker containers that simulates a realistic SME enterprise topology. It now spans **4 subnets and 10 active containers** across DMZ, Corporate, Data, and Management zones, used to demonstrate and test Found 404's scanning capabilities.
+The lab is a self-contained, multi-subnet network of intentionally vulnerable Docker containers that simulates a realistic SME enterprise topology. It now spans **4 subnets and 10 active containers** across DMZ, Corporate, Data, and Management zones, used to demonstrate and test Orchestration Security Center's scanning capabilities.
 
 ### Lab Target Personas
 
@@ -326,7 +326,7 @@ the-dashboard-project-_lab_network (external bridge)
 
 ## The 4-Stage Scan Pipeline
 
-This is the core of Found 404. Initiated from the dashboard UI, the full pipeline runs asynchronously via Celery.
+This is the core of Orchestration Security Center. Initiated from the dashboard UI, the full pipeline runs asynchronously via Celery.
 
 ```
 Stage 1: RECON (ReconAgent + Nmap)
@@ -398,7 +398,7 @@ Health Score = 100
 
 ## AI Advisory Role
 
-Found 404 uses **Gemini 1.5 Flash** as a **Technical Educator**, not a decision-maker.
+Orchestration Security Center uses **Gemini 1.5 Flash** as a **Technical Educator**, not a decision-maker.
 
 The AI does NOT make scan decisions. It only provides explanations after the deterministic engine has already scored the risk. For each top-3 critical asset, the `IntelligenceAgent` generates:
 
@@ -420,7 +420,7 @@ This output is displayed in the `AssetDetailPanel` component under "SME Security
 ### Wazuh (EDR / IDS)
 - Receives agent events from lab containers via `lab_log_shipper`
 - Detects suspicious activity patterns (brute force, port scans)
-- Alerts forwarded to the Found 404 dashboard via `wazuh_integration.py`
+- Alerts forwarded to the Orchestration Security Center dashboard via `wazuh_integration.py`
 
 ### Elasticsearch + Kibana
 - Receives forwarded logs from Wazuh and direct lab container output

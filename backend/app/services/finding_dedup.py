@@ -1,6 +1,6 @@
 """
 Finding deduplication service.
-Phase 4.2 — Found 404 Hardening Plan.
+Phase 4.2 — Orchestration Security Center Hardening Plan.
 
 Each unique security issue per target is represented by a single `Finding` row.
 `Vulnerability` rows are *observations* — re-detecting the same issue on a second

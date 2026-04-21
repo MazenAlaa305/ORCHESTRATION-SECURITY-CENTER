@@ -1,6 +1,6 @@
 """
 SLA clock for Findings.
-Phase 4.3 — Found 404 Hardening Plan.
+Phase 4.3 — Orchestration Security Center Hardening Plan.
 
 Default SLA windows (overridable via settings):
   CRITICAL : 7 days

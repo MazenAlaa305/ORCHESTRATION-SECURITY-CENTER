@@ -1,6 +1,6 @@
 """
 Framework tagging service.
-Phase 5.3 — Found 404 Hardening Plan.
+Phase 5.3 — Orchestration Security Center Hardening Plan.
 
 Maps Nuclei template categories (and template IDs) to control frameworks:
   OWASP Top 10 2021, CWE, ISO 27001:2013 Annex A,

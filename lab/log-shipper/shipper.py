@@ -1,5 +1,5 @@
 """
-Living Lab Log Shipper — Found 404
+Living Lab Log Shipper — Orchestration Security Center
 Reads structured JSON events from the traffic generator's log file and
 ships them to Elasticsearch in Wazuh-compatible format.
 

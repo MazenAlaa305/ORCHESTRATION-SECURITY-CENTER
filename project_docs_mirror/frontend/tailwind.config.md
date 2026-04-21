@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-The **Tailwind CSS configuration file** that extends the default Tailwind theme with custom design tokens specific to the Found 404 cybersecurity dashboard aesthetic.
+The **Tailwind CSS configuration file** that extends the default Tailwind theme with custom design tokens specific to the Orchestration Security Center cybersecurity dashboard aesthetic.
 
 ## Key Configuration Sections
 

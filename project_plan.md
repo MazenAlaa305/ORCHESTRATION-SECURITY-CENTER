@@ -1,15 +1,15 @@
-# Found 404 — Graduation Project Master Plan (v2)
+# Orchestration Security Center — Graduation Project Master Plan (v2)
 
-> **Project:** Found 404 — AI-Driven Cybersecurity Exposure Platform for SMEs
+> **Project:** Orchestration Security Center — AI-Driven Cybersecurity Exposure Platform for SMEs
 > **Start Date:** March 2, 2026 | **Deadline:** July 2, 2026 (University Presentation)
 > **Last Updated:** April 19, 2026 | **Current Week:** Week 10 of 16
 > **Team Size:** 11 members | **Team Leader:** Omar Kapil
 
 ---
 
-## What is Found 404?
+## What is Orchestration Security Center?
 
-Found 404 is an AI-driven Dynamic Application Security Testing (DAST) platform for Small-to-Medium Enterprises. It combines automated vulnerability discovery, sequential AI agent orchestration, risk scoring, and real-time visualization into a single dashboard. The platform maps an organization's attack surface, explains risks in plain language, and suggests actionable remediation — removing the need for a dedicated security team.
+Orchestration Security Center is an AI-driven Dynamic Application Security Testing (DAST) platform for Small-to-Medium Enterprises. It combines automated vulnerability discovery, sequential AI agent orchestration, risk scoring, and real-time visualization into a single dashboard. The platform maps an organization's attack surface, explains risks in plain language, and suggests actionable remediation — removing the need for a dedicated security team.
 
 **Core Architecture:**
 ```
@@ -398,7 +398,7 @@ backend/tests/test_nmap_wrapper.py           ← Unit tests for Nmap result pars
 **Responsibilities:**
 - Ensure Wazuh receives logs from lab containers
 - Build Kibana dashboards showing alert activity
-- Wire SIEM data into the Found 404 dashboard via API
+- Wire SIEM data into the Orchestration Security Center dashboard via API
 
 **Files He/She Owns / Must Work On:**
 ```
@@ -429,7 +429,7 @@ backend/tests/test_siem_integration.py       ← Mock Wazuh API tests
 | 10 | Verify Wazuh receives logs from all lab containers; fix broken log shippers |
 | 11 | Build `alert_correlator.py` — maps Wazuh alerts to scan vulnerability records |
 | 12 | Create and export Kibana dashboard for the demo; import into Docker container |
-| 13 | Full end-to-end: trigger attack → see Wazuh alert → see it on Found 404 dashboard |
+| 13 | Full end-to-end: trigger attack → see Wazuh alert → see it on Orchestration Security Center dashboard |
 
 ---
 
@@ -514,7 +514,7 @@ backend/tests/test_endpoints.py              ← All REST endpoint tests (happy 
 backend/tests/test_auth_flow.py              ← Login, token, protected route tests
 backend/tests/test_websocket.py              ← WebSocket connection + message format tests
 backend/tests/conftest.py                    ← Shared fixtures (test DB, test client, mock user)
-postman/Found404_API.postman_collection.json ← Full Postman collection for manual testing
+postman/OrchestrationSecurityCenter_API.postman_collection.json ← Full Postman collection for manual testing
 ```
 
 **What He Must Learn:**
@@ -664,7 +664,7 @@ docs/ARCHITECTURE_DIAGRAM.md                 ← Mermaid diagram of full system 
 | Frontend | Omnia | Build `SeverityDonut.jsx` with live data |
 | Frontend | Rahma | Build `RemediationPanel.jsx` |
 | Security | Shahd | Write 3 attack scenario docs (SQLi, XSS, Misconfig) |
-| Security | Mariz | Build `alert_correlator.py` — Wazuh → Found 404 mapping |
+| Security | Mariz | Build `alert_correlator.py` — Wazuh → Orchestration Security Center mapping |
 | DevOps/QA | Omar K | **UAT Session** with all 11 members — collect bugs |
 | DevOps/QA | Yosef | Auth + RBAC tests; UAT bug hunting |
 | DevOps/QA | Mazin | UAT: test every dashboard tab and button |

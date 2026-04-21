@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-This is the **lab environment deployment manifest**. It defines intentionally vulnerable target containers used exclusively for testing and demonstrating the Found 404 scanning capabilities in a safe, isolated environment. It should never be exposed to the public internet.
+This is the **lab environment deployment manifest**. It defines intentionally vulnerable target containers used exclusively for testing and demonstrating the Orchestration Security Center scanning capabilities in a safe, isolated environment. It should never be exposed to the public internet.
 
 ## Key Services Defined
 

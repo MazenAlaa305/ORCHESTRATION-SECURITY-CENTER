@@ -1,4 +1,4 @@
-# Found 404 — Phase 5 + Gap-Fix Execution Plan
+# Orchestration Security Center — Phase 5 + Gap-Fix Execution Plan
 
 **Audience:** An autonomous AI coding agent (Claude / GPT / Gemini).
 **Repository root:** `d:/بروجيكت/last update/the-dashboard-project--main(1)/the-dashboard-project--main/`
@@ -1023,7 +1023,7 @@ Create the file `backend/app/api/v1/endpoints/audit.py`:
 ```python
 """
 Audit chain verification endpoint.
-Phase 5.1 — Found 404 Hardening Plan.
+Phase 5.1 — Orchestration Security Center Hardening Plan.
 
 GET /api/v1/scans/{scan_id}/audit/verify
     Walks the agent_logs hash chain for the given scan and returns whether
@@ -1289,7 +1289,7 @@ def downgrade() -> None:
 ```python
 """
 Report signing utilities.
-Phase 5.2 — Found 404 Hardening Plan.
+Phase 5.2 — Orchestration Security Center Hardening Plan.
 
 canonical_findings_hash(findings)
     Deterministic SHA-256 of the sorted canonical JSON of all finding dicts.
@@ -1379,7 +1379,7 @@ The `generate_report` static method currently ends with `buffer.seek(0); return 
            )
            from app.core.config import settings as _settings
            footer_text = (
-               f"Found 404 v{_settings.APP_VERSION} | "
+               f"Orchestration Security Center v{_settings.APP_VERSION} | "
                f"Report ID: {scan_id or 'N/A'} | "
                f"Generated UTC: {datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')} | "
                f"Findings SHA-256: {findings_hash[:16]}…{findings_hash[-8:] if findings_hash else 'N/A'} | "
@@ -1400,7 +1400,7 @@ Replace the entire file with:
 ```python
 """
 Reports API endpoints.
-Phase 5.2 — Found 404 Hardening Plan.
+Phase 5.2 — Orchestration Security Center Hardening Plan.
 
 POST /reports/{scan_id}/generate  — build PDF, sign it, store metadata
 GET  /reports/{scan_id}/pdf       — download the stored PDF
@@ -1791,7 +1791,7 @@ Create `backend/app/data/control_mappings.json`:
 ```python
 """
 Framework tagging service.
-Phase 5.3 — Found 404 Hardening Plan.
+Phase 5.3 — Orchestration Security Center Hardening Plan.
 
 Maps Nuclei template categories (and template IDs) to control frameworks:
   OWASP Top 10 2021, CWE, ISO 27001:2013 Annex A,
@@ -1917,7 +1917,7 @@ Inside `deduplicate_scan`, in the `else` branch (new Finding creation, around li
 ```python
 """
 Findings API endpoint.
-Phase 5.3 — Found 404 Hardening Plan.
+Phase 5.3 — Orchestration Security Center Hardening Plan.
 
 GET /api/v1/findings
     Returns paginated Finding records with optional filtering by framework,

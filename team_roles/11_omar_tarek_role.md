@@ -109,7 +109,7 @@ Nmap/Nuclei → شبكة المختبر → حاويات ضعيفة (Juice Shop�
 **عربي:** يجب أن يتبع `FYP_Documentation.md` تنسيق التقرير الأكاديمي. عمر طارق يكتب ويحافظ على جميع الأقسام. كل عضو في الفريق يساهم بمحتوى قسمه الخاص، لكن عمر طارق يُنسّق ويحرّر ويجمع الوثيقة النهائية.
 
 ```markdown
-# Found 404 — SME Cybersecurity Dashboard
+# Orchestration Security Center — SME Cybersecurity Dashboard
 # Final Year Project Report
 
 ## 1. Abstract (Omar Tarek writes this — 200 words)
@@ -118,7 +118,7 @@ how it works, what results we achieved.
 
 ## 2. Introduction
 - 2.1 Problem Statement: SMEs lack dedicated security teams
-- 2.2 Proposed Solution: Found 404 — AI-driven DAST platform
+- 2.2 Proposed Solution: Orchestration Security Center — AI-driven DAST platform
 - 2.3 Project Scope: What we include and what we exclude
 - 2.4 Report Structure: What each chapter covers
 
@@ -163,7 +163,7 @@ how it works, what results we achieved.
 **عربي:** هذا أهم وثيقة ينشئها عمر طارق. كل عضو في الفريق يتبع هذا السكريبت خلال التقديم لضمان عرض سلس واحترافي. يحدد من يتحدث، وما يقوله، وما ينقر عليه.
 
 ```markdown
-# Found 404 — Final Demo Script
+# Orchestration Security Center — Final Demo Script
 # July 2, 2026
 
 ## Pre-Demo Checklist (Omar Kapil runs this 30 minutes before)
@@ -180,10 +180,10 @@ how it works, what results we achieved.
 **SPEAKER:** Omar Kapil
 **SLIDE:** Slide 1 — Project Title
 **SAY:**
-"Good morning. We are team Found 404. 
+"Good morning. We are team Orchestration Security Center. 
  Small and medium enterprises make up 90% of businesses in Egypt, 
  but they cannot afford a dedicated security analyst. 
- Found 404 is our solution — an AI-driven security platform that 
+ Orchestration Security Center is our solution — an AI-driven security platform that 
  automatically discovers vulnerabilities, explains them in plain English, 
  and tells business owners exactly what to fix first.
  
@@ -197,7 +197,7 @@ how it works, what results we achieved.
 **SPEAKER:** Reem Amin
 **SCREEN:** Browser open at http://localhost:8000/docs
 **SAY:**
-"This is the Found 404 API, built with FastAPI.
+"This is the Orchestration Security Center API, built with FastAPI.
  It has 40+ endpoints organized by function:
  targets, scans, vulnerabilities, reports, and authentication.
  
@@ -239,7 +239,7 @@ Step 6: [CLICK on Reports tab]
 
 Step 7: [SHOW Action Center]
 **SAY:** "Instead of 200 raw vulnerability lines,
- Found 404 gives 5 prioritized action items.
+ Orchestration Security Center gives 5 prioritized action items.
  Item 1: Patch SQL injection in the user login endpoint. Immediate priority."
 ```
 

@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-The **primary navigation component** for the Found 404 dashboard. Renders a vertical sidebar with icon+label navigation links for all major dashboard sections. Supports a collapsible mode for more screen real estate on smaller displays.
+The **primary navigation component** for the Orchestration Security Center dashboard. Renders a vertical sidebar with icon+label navigation links for all major dashboard sections. Supports a collapsible mode for more screen real estate on smaller displays.
 
 ## Key Logic
 

@@ -1,6 +1,6 @@
 """
 Findings API endpoint.
-Phase 5.3 — Found 404 Hardening Plan.
+Phase 5.3 — Orchestration Security Center Hardening Plan.
 
 GET /api/v1/findings
     Returns paginated Finding records with optional filtering by framework,

@@ -1,5 +1,5 @@
 # ============================================================
-# LIVING LAB - Found 404
+# LIVING LAB - Orchestration Security Center
 # SME Network Simulation Environment (LITE MODE)
 # Default: 6 containers (~900MB RAM). For full 10-container topology
 # pass --profile full-lab to docker compose up.

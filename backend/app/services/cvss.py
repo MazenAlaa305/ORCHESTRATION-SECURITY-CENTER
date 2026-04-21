@@ -1,6 +1,6 @@
 """
 CVSS v3.1 Base Score and Environmental Score calculator.
-Phase 4.1 — Found 404 Hardening Plan.
+Phase 4.1 — Orchestration Security Center Hardening Plan.
 
 Reference: https://www.first.org/cvss/v3.1/specification-document
 Implements the official formula exactly — no invented weighting.

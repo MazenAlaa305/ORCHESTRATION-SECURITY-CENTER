@@ -11,7 +11,7 @@ A functional React component that renders `<Dashboard />` directly without any a
 
 ## Design Decision
 
-The minimal `App.jsx` is a deliberate architectural choice: since Found 404 is a single-page dashboard application (not a multi-page site), there is no need for a router or page-level conditional rendering at this level. The `Layout` and `Sidebar` components are composed inside the `Dashboard` page rather than here, keeping this file purely as a React tree root marker.
+The minimal `App.jsx` is a deliberate architectural choice: since Orchestration Security Center is a single-page dashboard application (not a multi-page site), there is no need for a router or page-level conditional rendering at this level. The `Layout` and `Sidebar` components are composed inside the `Dashboard` page rather than here, keeping this file purely as a React tree root marker.
 
 ## Dependencies
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">Found 404</h1>
+  <h1 align="center">Orchestration Security Center</h1>
   <h3 align="center">AI-Driven Security Orchestration Platform for SMEs</h3>
   <p align="center"><strong>Final Year Project Documentation</strong></p>
 </p>
@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| **Project Title** | Found 404 — An AI-Driven Dynamic Application Security Testing and Orchestration Platform for Small-to-Medium Enterprises |
+| **Project Title** | Orchestration Security Center — An AI-Driven Dynamic Application Security Testing and Orchestration Platform for Small-to-Medium Enterprises |
 | **Student Name** | Omar Abdelaziz Kapil |
 | **Institution** | HITU (Higher Institute of Technology and Information) |
 | **Academic Year** | 2025–2026 |
@@ -82,7 +82,7 @@
 
 ## Declaration
 
-I hereby declare that this Final Year Project entitled "Found 404 — An AI-Driven Dynamic Application Security Testing and Orchestration Platform for Small-to-Medium Enterprises" is the result of my own original work carried out under the supervision of [Supervisor Name]. This project has not been submitted for any other degree or qualification at any other institution. All sources of information and literature used are duly acknowledged in the references section.
+I hereby declare that this Final Year Project entitled "Orchestration Security Center — An AI-Driven Dynamic Application Security Testing and Orchestration Platform for Small-to-Medium Enterprises" is the result of my own original work carried out under the supervision of [Supervisor Name]. This project has not been submitted for any other degree or qualification at any other institution. All sources of information and literature used are duly acknowledged in the references section.
 
 **Student Signature:** ________________________
 
@@ -92,7 +92,7 @@ I hereby declare that this Final Year Project entitled "Found 404 — An AI-Driv
 
 ## Approval / Certification
 
-This is to certify that the Final Year Project entitled "Found 404 — An AI-Driven Dynamic Application Security Testing and Orchestration Platform for Small-to-Medium Enterprises" submitted by Omar Abdelaziz Kapil has been examined and approved for the award of the degree.
+This is to certify that the Final Year Project entitled "Orchestration Security Center — An AI-Driven Dynamic Application Security Testing and Orchestration Platform for Small-to-Medium Enterprises" submitted by Omar Abdelaziz Kapil has been examined and approved for the award of the degree.
 
 **Supervisor Signature:** ________________________
 
@@ -116,7 +116,7 @@ First and foremost, all praise and gratitude are due to God Almighty for grantin
 
 I extend my sincere gratitude to my supervisor, [Supervisor Name], for their invaluable guidance, constructive feedback, and continuous support throughout the development of this project. Their expertise in cybersecurity and software engineering provided the academic rigor this work required.
 
-I also wish to acknowledge the contributions of the entire Found 404 project team: Reem Amin (Backend/AI Sub-Leader), Rahma Ebrahem (Frontend Sub-Leader), Shahd Paher (Security Sub-Leader), Yousef Abdel Hady, Mohamed Shaban, Omnia Helmy, Mariz Ehap, Omar Tarek, Yosef Ali, and Mazin Alla. Each member played a vital role in bringing this platform to life.
+I also wish to acknowledge the contributions of the entire Orchestration Security Center project team: Reem Amin (Backend/AI Sub-Leader), Rahma Ebrahem (Frontend Sub-Leader), Shahd Paher (Security Sub-Leader), Yousef Abdel Hady, Mohamed Shaban, Omnia Helmy, Mariz Ehap, Omar Tarek, Yosef Ali, and Mazin Alla. Each member played a vital role in bringing this platform to life.
 
 Finally, I thank the faculty and staff at HITU for providing a stimulating academic environment and the resources necessary to complete this work.
 
@@ -124,7 +124,7 @@ Finally, I thank the faculty and staff at HITU for providing a stimulating acade
 
 ## Abstract
 
-Cybersecurity remains a critical challenge for Small-to-Medium Enterprises (SMEs) that typically lack the dedicated security teams and financial resources available to large corporations. Existing Dynamic Application Security Testing (DAST) platforms such as Burp Suite Enterprise, Tenable Nessus, and OWASP ZAP offer powerful capabilities but demand specialized expertise, making them impractical for non-technical SME administrators. This project introduces "Found 404," an AI-driven security orchestration platform that automates the entire vulnerability assessment lifecycle -- from reconnaissance and attack simulation through risk scoring to actionable remediation guidance -- within a single, unified dashboard designed for non-expert users.
+Cybersecurity remains a critical challenge for Small-to-Medium Enterprises (SMEs) that typically lack the dedicated security teams and financial resources available to large corporations. Existing Dynamic Application Security Testing (DAST) platforms such as Burp Suite Enterprise, Tenable Nessus, and OWASP ZAP offer powerful capabilities but demand specialized expertise, making them impractical for non-technical SME administrators. This project introduces "Orchestration Security Center," an AI-driven security orchestration platform that automates the entire vulnerability assessment lifecycle -- from reconnaissance and attack simulation through risk scoring to actionable remediation guidance -- within a single, unified dashboard designed for non-expert users.
 
 The platform employs a multi-agent orchestration architecture built on FastAPI (Python) and React (JavaScript), integrating industry-standard security tools including Nmap, Nuclei, and OpenVAS through a deterministic, rule-based chaining pipeline. A UnifiedRiskEngine calculates quantitative risk and health scores using CVSS-weighted severity penalties, asset criticality multipliers, and network exposure modifiers. Google Gemini AI serves in an advisory-only capacity, generating SME-friendly explanations of risk findings, business impact assessments, and prioritized remediation steps. Real-time scan progress and alert streaming are delivered via WebSocket and Redis Pub/Sub, while Docker Compose orchestrates eleven microservices including PostgreSQL, Redis, Celery, Elasticsearch, Wazuh SIEM, and n8n SOAR automation.
 
@@ -251,7 +251,7 @@ Dynamic Application Security Testing (DAST) is a black-box testing methodology t
 
 The emergence of Large Language Models (LLMs) and AI-driven automation presents an opportunity to democratize cybersecurity for resource-constrained organizations. By combining deterministic security scanning tools with AI-powered advisory capabilities, it becomes possible to create platforms that not only discover vulnerabilities but also explain their significance in business terms and provide actionable remediation guidance that non-technical users can follow [5].
 
-This project, "Found 404," addresses this gap by developing an AI-driven security orchestration platform that automates the complete vulnerability assessment lifecycle -- from network reconnaissance through vulnerability scanning, risk scoring, and remediation guidance -- within a unified, visually intuitive dashboard designed specifically for SME administrators without specialized cybersecurity training.
+This project, "Orchestration Security Center," addresses this gap by developing an AI-driven security orchestration platform that automates the complete vulnerability assessment lifecycle -- from network reconnaissance through vulnerability scanning, risk scoring, and remediation guidance -- within a unified, visually intuitive dashboard designed specifically for SME administrators without specialized cybersecurity training.
 
 ## 1.2 Problem Statement
 
@@ -317,7 +317,7 @@ The primary objectives of this project are:
 
 This project holds significant academic and practical value for several reasons:
 
-**Academic Contribution:** The project demonstrates a novel approach to combining deterministic rule-based security tool chaining with AI-driven advisory capabilities in a multi-agent architecture. Unlike fully autonomous AI security systems that risk unpredictable behavior, Found 404 employs a hybrid model where all scanning and scoring decisions are deterministic and reproducible, with AI limited to an advisory-only role for generating human-readable explanations. This architecture pattern -- deterministic orchestration with AI advisory augmentation -- represents a pragmatic approach to trustworthy AI integration in security-critical domains.
+**Academic Contribution:** The project demonstrates a novel approach to combining deterministic rule-based security tool chaining with AI-driven advisory capabilities in a multi-agent architecture. Unlike fully autonomous AI security systems that risk unpredictable behavior, Orchestration Security Center employs a hybrid model where all scanning and scoring decisions are deterministic and reproducible, with AI limited to an advisory-only role for generating human-readable explanations. This architecture pattern -- deterministic orchestration with AI advisory augmentation -- represents a pragmatic approach to trustworthy AI integration in security-critical domains.
 
 **Practical Impact for SMEs:** The platform directly addresses the cybersecurity gap faced by SMEs by providing:
 
@@ -338,7 +338,7 @@ This report is organized into six chapters:
 | Chapter | Description |
 |---------|-------------|
 | **Chapter 1 -- Introduction** | Presents the background, problem statement, objectives, scope, and significance of the project. |
-| **Chapter 2 -- Literature Review** | Reviews existing DAST platforms, security orchestration architectures, AI applications in cybersecurity, and identifies the research gap that Found 404 addresses. |
+| **Chapter 2 -- Literature Review** | Reviews existing DAST platforms, security orchestration architectures, AI applications in cybersecurity, and identifies the research gap that Orchestration Security Center addresses. |
 | **Chapter 3 -- Methodology / System Design** | Describes the Agile SDLC methodology, system architecture, functional and non-functional requirements, use case diagrams, data flow diagrams, database design, and UI wireframes. |
 | **Chapter 4 -- Implementation** | Details the development environment, module-by-module implementation with code snippets and screenshots, component integration, and challenges faced. |
 | **Chapter 5 -- Testing & Evaluation** | Presents the testing strategy, test cases and results across unit, integration, system, and UAT levels, and evaluates performance metrics. |
@@ -352,7 +352,7 @@ This report is organized into six chapters:
 
 ## 2.1 Introduction
 
-This chapter presents a comprehensive review of existing research and commercial solutions in the domains of Dynamic Application Security Testing, security orchestration platforms, AI-driven vulnerability assessment, and SME cybersecurity tools. The review establishes the theoretical foundation for the Found 404 platform and identifies the specific research gap that this project addresses.
+This chapter presents a comprehensive review of existing research and commercial solutions in the domains of Dynamic Application Security Testing, security orchestration platforms, AI-driven vulnerability assessment, and SME cybersecurity tools. The review establishes the theoretical foundation for the Orchestration Security Center platform and identifies the specific research gap that this project addresses.
 
 ## 2.2 Review of Related Existing Systems
 
@@ -416,7 +416,7 @@ n8n is an open-source workflow automation platform that can function as a lightw
 
 > **Table 2.1:** Comparison of Existing DAST and Security Platforms
 
-| Feature | OWASP ZAP | Burp Suite Enterprise | Nessus | OpenVAS | Nuclei | **Found 404** |
+| Feature | OWASP ZAP | Burp Suite Enterprise | Nessus | OpenVAS | Nuclei | **Orchestration Security Center** |
 |---|---|---|---|---|---|---|
 | **License** | Free / OSS | $8,999/yr | $3,990/yr | Free / OSS | Free / OSS | **Free / OSS** |
 | **Web App DAST** | Yes | Yes | No | No | Partial | **Yes** |
@@ -476,7 +476,7 @@ The literature review reveals a clear research gap at the intersection of three 
 
 3. **Accessibility Gap:** Existing platforms are designed for security professionals. No open-source solution provides a complete, real-time security dashboard with interactive visualizations (force-directed topology, risk heatmaps, live orchestration feeds) that an SME owner without cybersecurity training can effectively use to understand and improve their security posture.
 
-> **Found 404** addresses this gap by combining deterministic, multi-agent security orchestration with AI-driven advisory capabilities within an SME-optimized dashboard -- a combination that does not exist in any reviewed platform.
+> **Orchestration Security Center** addresses this gap by combining deterministic, multi-agent security orchestration with AI-driven advisory capabilities within an SME-optimized dashboard -- a combination that does not exist in any reviewed platform.
 
 ---
 
@@ -486,7 +486,7 @@ The literature review reveals a clear research gap at the intersection of three 
 
 ## 3.1 Introduction
 
-This chapter describes the development methodology, system architecture, requirements analysis, and design artifacts for the Found 404 platform. The design follows an iterative Agile approach with four development phases spanning sixteen weeks, informed by the Software Development Life Cycle (SDLC) principles.
+This chapter describes the development methodology, system architecture, requirements analysis, and design artifacts for the Orchestration Security Center platform. The design follows an iterative Agile approach with four development phases spanning sixteen weeks, informed by the Software Development Life Cycle (SDLC) principles.
 
 ## 3.2 Research / Development Methodology
 
@@ -529,7 +529,7 @@ The project used Git for version control with GitHub as the remote repository. F
 
 ### 3.3.1 High-Level Architecture
 
-Found 404 follows a client-server architecture with an agentic orchestration layer. The system comprises three main tiers:
+Orchestration Security Center follows a client-server architecture with an agentic orchestration layer. The system comprises three main tiers:
 
 **Presentation Tier (Frontend):**
 A React 18 single-page application built with Vite, using Tailwind CSS for styling and a custom cybersecurity-themed design system. The frontend communicates with the backend via REST API calls (Axios) and receives real-time updates through a persistent WebSocket connection.
@@ -708,7 +708,7 @@ The platform implements a publish-subscribe pattern for real-time event streamin
 
 > *[Figure 3.5: DFD Level 0]*
 >
-> The context diagram shows the Found 404 system as a single process with the following external entities and data flows:
+> The context diagram shows the Orchestration Security Center system as a single process with the following external entities and data flows:
 
 | External Entity | Data To System | Data From System |
 |---|---|---|
@@ -869,7 +869,7 @@ The dashboard uses a two-tier navigation system:
 
 ## 4.1 Introduction
 
-This chapter details the implementation of the Found 404 platform, covering the development environment, module-by-module implementation with code snippets and screenshots, component integration, and challenges encountered during development. The implementation spans approximately 10,000 lines of Python backend code and 8,000 lines of React/JavaScript frontend code.
+This chapter details the implementation of the Orchestration Security Center platform, covering the development environment, module-by-module implementation with code snippets and screenshots, component integration, and challenges encountered during development. The implementation spans approximately 10,000 lines of Python backend code and 8,000 lines of React/JavaScript frontend code.
 
 ## 4.2 Development Environment & Tools
 
@@ -930,11 +930,11 @@ The FastAPI application is initialized in `backend/app/main.py` with the followi
 async def lifespan(app: FastAPI):
     global _redis_listener_task
     _redis_listener_task = asyncio.create_task(redis_event_listener())
-    logger.info("Found 404 API started.")
+    logger.info("Orchestration Security Center API started.")
     yield
     if _redis_listener_task and not _redis_listener_task.done():
         _redis_listener_task.cancel()
-    logger.info("Found 404 API shutting down.")
+    logger.info("Orchestration Security Center API shutting down.")
 ```
 
 The lifespan context manager starts the Redis event listener as a background asyncio task on application startup and gracefully cancels it on shutdown. This ensures WebSocket event bridging operates continuously throughout the application lifecycle.
@@ -1313,7 +1313,7 @@ Enabling the backend to scan lab targets required creating an external Docker ne
 
 ## 5.1 Introduction
 
-This chapter presents the testing strategy, test case design, execution results, and performance evaluation of the Found 404 platform. Testing was conducted across four levels: unit testing, integration testing, system testing, and user acceptance testing (UAT).
+This chapter presents the testing strategy, test case design, execution results, and performance evaluation of the Orchestration Security Center platform. Testing was conducted across four levels: unit testing, integration testing, system testing, and user acceptance testing (UAT).
 
 ## 5.2 Testing Strategy
 
@@ -1446,7 +1446,7 @@ UAT was conducted with all eleven team members acting as SME administrator perso
 
 ## 5.5 Discussion of Results
 
-The testing results demonstrate that the Found 404 platform meets its stated objectives:
+The testing results demonstrate that the Orchestration Security Center platform meets its stated objectives:
 
 1. **Vulnerability Detection Effectiveness:** The platform successfully detected OWASP Top 10 vulnerabilities (SQLi, XSS, misconfigurations) across all six lab targets using the combined Nmap + Nuclei + custom payload pipeline.
 
@@ -1466,7 +1466,7 @@ The testing results demonstrate that the Found 404 platform meets its stated obj
 
 ## 6.1 Summary of the Project
 
-The Found 404 project successfully designed, implemented, and evaluated an AI-driven security orchestration platform tailored for Small-to-Medium Enterprises. The platform integrates five sequential security agents (Reconnaissance, Attack, Validation, Risk Scoring, Reporting) into a deterministic pipeline that chains industry-standard tools (Nmap, Nuclei, OpenVAS) with AI-powered advisory capabilities (Google Gemini). The entire system is deployable as a Docker Compose stack of eleven microservices and provides a real-time, visually intuitive dashboard with interactive network topology, risk heatmaps, vulnerability trend charts, and prioritized action items.
+The Orchestration Security Center project successfully designed, implemented, and evaluated an AI-driven security orchestration platform tailored for Small-to-Medium Enterprises. The platform integrates five sequential security agents (Reconnaissance, Attack, Validation, Risk Scoring, Reporting) into a deterministic pipeline that chains industry-standard tools (Nmap, Nuclei, OpenVAS) with AI-powered advisory capabilities (Google Gemini). The entire system is deployable as a Docker Compose stack of eleven microservices and provides a real-time, visually intuitive dashboard with interactive network topology, risk heatmaps, vulnerability trend charts, and prioritized action items.
 
 The project was developed by a team of eleven members over a sixteen-week period using an Agile methodology with integrated learning sprints, demonstrating effective collaboration across four specialized sub-teams.
 
@@ -1596,7 +1596,7 @@ The project was developed by a team of eleven members over a sixteen-week period
 
 ## Appendix A: Source Code Repository
 
-The complete source code for the Found 404 platform is available at:
+The complete source code for the Orchestration Security Center platform is available at:
 
 **GitHub Repository:** https://github.com/omarkapil/the-dashboard-project-
 

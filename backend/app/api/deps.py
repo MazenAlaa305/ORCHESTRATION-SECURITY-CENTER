@@ -1,6 +1,6 @@
 """
 FastAPI dependency injectors for authentication and RBAC.
-Phase 3.1 — Found 404 Hardening Plan.
+Phase 3.1 — Orchestration Security Center Hardening Plan.
 """
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

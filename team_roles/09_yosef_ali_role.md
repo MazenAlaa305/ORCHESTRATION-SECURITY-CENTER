@@ -30,7 +30,7 @@
 | `backend/tests/test_endpoints.py` | All REST endpoint tests (happy + error paths) | جميع اختبارات نقاط النهاية |
 | `backend/tests/test_auth_flow.py` | Login, token, protected route tests | اختبارات تسجيل الدخول والرمز والمسارات المحمية |
 | `backend/tests/test_websocket.py` | WebSocket connection + message format tests | اختبارات WebSocket |
-| `postman/Found404_API.postman_collection.json` | Full Postman collection | مجموعة Postman الكاملة |
+| `postman/OrchestrationSecurityCenter_API.postman_collection.json` | Full Postman collection | مجموعة Postman الكاملة |
 
 ---
 

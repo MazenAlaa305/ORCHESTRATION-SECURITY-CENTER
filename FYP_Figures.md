@@ -1,4 +1,4 @@
-# Found 404 — FYP Figures
+# Orchestration Security Center — FYP Figures
 
 > All figures generated as Mermaid.js code blocks for native rendering in Markdown-compatible environments.
 > Visual style: minimalist, professional, consistent with IEEE/ACM academic standards.
@@ -314,7 +314,7 @@ erDiagram
 ```mermaid
 flowchart LR
     ADMIN["<b>SME<br/>Administrator</b>"]
-    SYSTEM(["<b>Found 404<br/>Platform</b>"])
+    SYSTEM(["<b>Orchestration Security Center<br/>Platform</b>"])
     NMAP_E["<b>Nmap</b>"]
     NUCLEI_E["<b>Nuclei</b>"]
     OPENVAS_E["<b>OpenVAS</b>"]
@@ -353,7 +353,7 @@ flowchart LR
     style N8N_E fill:#374151,stroke:#6b7280,color:#e0e0e0
 ```
 
-**Figure 3.5:** *Data Flow Diagram — Level 0 (Context Diagram) — The Found 404 system represented as a single process interacting with the SME Administrator (primary external entity) and six tool/service entities (Nmap, Nuclei, OpenVAS, Google Gemini, Wazuh, n8n), showing bidirectional data flows for scan requests, vulnerability findings, advisory text, and security events.*
+**Figure 3.5:** *Data Flow Diagram — Level 0 (Context Diagram) — The Orchestration Security Center system represented as a single process interacting with the SME Administrator (primary external entity) and six tool/service entities (Nmap, Nuclei, OpenVAS, Google Gemini, Wazuh, n8n), showing bidirectional data flows for scan requests, vulnerability findings, advisory text, and security events.*
 
 ---
 
@@ -363,7 +363,7 @@ flowchart LR
 flowchart TB
     ADMIN["<b>SME Administrator</b>"]
 
-    subgraph System["<b>Found 404 — Internal Processes</b>"]
+    subgraph System["<b>Orchestration Security Center — Internal Processes</b>"]
         P1["<b>P1</b><br/>Target<br/>Management"]
         P2["<b>P2</b><br/>Scan<br/>Orchestration"]
         P3["<b>P3</b><br/>Reconnaissance"]
@@ -429,7 +429,7 @@ flowchart TB
     style D3 fill:#475569,stroke:#64748b,color:#fff
 ```
 
-**Figure 3.6:** *Data Flow Diagram — Level 1 (Detailed) — Decomposition of the Found 404 system into eight processes: P1 (Target Management), P2 (Scan Orchestration), P3 (Reconnaissance), P4 (Attack Simulation), P5 (Validation & Scoring), P6 (Real-Time Broadcasting), P7 (Report Generation), P8 (Dashboard Rendering); with three data stores: D1 (PostgreSQL), D2 (Redis), D3 (Elasticsearch).*
+**Figure 3.6:** *Data Flow Diagram — Level 1 (Detailed) — Decomposition of the Orchestration Security Center system into eight processes: P1 (Target Management), P2 (Scan Orchestration), P3 (Reconnaissance), P4 (Attack Simulation), P5 (Validation & Scoring), P6 (Real-Time Broadcasting), P7 (Report Generation), P8 (Dashboard Rendering); with three data stores: D1 (PostgreSQL), D2 (Redis), D3 (Elasticsearch).*
 
 ---
 
@@ -439,7 +439,7 @@ flowchart TB
 flowchart LR
     ACTOR["👤<br/><b>SME<br/>Administrator</b>"]
 
-    subgraph UseCases["<b>Found 404 — System Boundary</b>"]
+    subgraph UseCases["<b>Orchestration Security Center — System Boundary</b>"]
         UC1["UC1: Manage Targets<br/><i>CRUD operations</i>"]
         UC2["UC2: Initiate Scan<br/><i>Quick / Full / Custom</i>"]
         UC3["UC3: Monitor Scan Progress<br/><i>Real-time feed</i>"]

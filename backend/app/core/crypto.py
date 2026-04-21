@@ -1,6 +1,6 @@
 """
 Fernet symmetric encryption for Target.auth_credentials at rest.
-Phase 3.2 — Found 404 Hardening Plan.
+Phase 3.2 — Orchestration Security Center Hardening Plan.
 
 Usage:
     encrypted = encrypt_json({"password": "secret"})   # returns str

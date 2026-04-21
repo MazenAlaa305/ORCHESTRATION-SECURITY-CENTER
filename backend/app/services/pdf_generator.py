@@ -1,5 +1,5 @@
 """
-Professional PDF Report Generator — Found 404
+Professional PDF Report Generator — Orchestration Security Center
 
 Produces an audit-ready, multi-section security report:
   1. Cover page
@@ -67,8 +67,8 @@ class PDFReportGenerator:
             leftMargin=0.75 * inch,
             topMargin=0.75 * inch,
             bottomMargin=0.6 * inch,
-            title=f"Found 404 Security Report — {scan_data.get('target', 'Unknown')}",
-            author="Found 404 Security Platform",
+            title=f"Orchestration Security Center Security Report — {scan_data.get('target', 'Unknown')}",
+            author="Orchestration Security Center Security Platform",
         )
 
         styles = _build_styles()
@@ -211,7 +211,7 @@ def _cover_page(scan_data: dict, styles: dict, report_id: str) -> list:
 
     elements = [
         Spacer(1, 1.2 * inch),
-        Paragraph("FOUND 404", styles["cover_title"]),
+        Paragraph("ORCHESTRATION SECURITY CENTER", styles["cover_title"]),
         Paragraph("Security Assessment Report", styles["cover_sub"]),
         Spacer(1, 0.6 * inch),
     ]
@@ -273,7 +273,7 @@ def _executive_summary(scan_data: dict, sev_counts: dict, styles: dict) -> list:
     elements = [Paragraph("1. Executive Summary", styles["h1"])]
 
     lead = (
-        f"On {_fmt_date(scan_data.get('completed_at'))}, Found 404 completed a "
+        f"On {_fmt_date(scan_data.get('completed_at'))}, Orchestration Security Center completed a "
         f"<b>{_safe(scan_data.get('scan_type', 'full'))}</b> security assessment of "
         f"<b>{target}</b>. The assessment discovered "
         f"<b>{asset_count}</b> asset(s) and identified <b>{total_vulns}</b> vulnerabilities "
@@ -729,7 +729,7 @@ def _appendix(scan_data: dict, styles: dict, report_id: str, findings_hash: str)
     meta = [
         ["Report ID", report_id or "N/A"],
         ["Scan ID", str(scan_data.get("scan_id", "N/A"))],
-        ["Platform Version", f"Found 404 v{app_version}"],
+        ["Platform Version", f"Orchestration Security Center v{app_version}"],
         ["Generated (UTC)", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")],
         ["Scan Started", _fmt_date(scan_data.get("started_at"))],
         ["Scan Completed", _fmt_date(scan_data.get("completed_at"))],
@@ -755,7 +755,7 @@ def _appendix(scan_data: dict, styles: dict, report_id: str, findings_hash: str)
     elements.append(Paragraph(
         "Methodology: Assessment follows OWASP Testing Guide v4.2 and NIST SP 800-115. "
         "Severity ratings align with CVSS v3.1. All findings were validated by "
-        "Found 404's AI orchestration layer before inclusion in this report.",
+        "Orchestration Security Center's AI orchestration layer before inclusion in this report.",
         styles["muted"]
     ))
     return elements
@@ -765,6 +765,6 @@ def _page_footer(canvas, doc) -> None:
     canvas.saveState()
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(MUTED)
-    canvas.drawString(0.75 * inch, 0.4 * inch, "Found 404 — Confidential Security Report")
+    canvas.drawString(0.75 * inch, 0.4 * inch, "Orchestration Security Center — Confidential Security Report")
     canvas.drawRightString(letter[0] - 0.75 * inch, 0.4 * inch, f"Page {doc.page}")
     canvas.restoreState()

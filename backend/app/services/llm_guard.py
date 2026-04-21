@@ -1,6 +1,6 @@
 """
 LLM safety layer: prompt redaction and token-budget circuit breakers.
-Phase 3.3 — Found 404 Hardening Plan.
+Phase 3.3 — Orchestration Security Center Hardening Plan.
 
 Components
 ----------

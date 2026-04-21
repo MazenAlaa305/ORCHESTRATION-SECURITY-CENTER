@@ -8,9 +8,9 @@
 
 ## Role Summary | ملخص الدور
 
-**English:** Mariz owns the SIEM (Security Information and Event Management) layer of Found 404. Her job is to make security alerts from Wazuh appear on the Found 404 dashboard in real-time. She connects the lab containers → log shipper → Elasticsearch → Wazuh → Found 404 API → dashboard. She also builds the Kibana dashboards used in the demo.
+**English:** Mariz owns the SIEM (Security Information and Event Management) layer of Orchestration Security Center. Her job is to make security alerts from Wazuh appear on the Orchestration Security Center dashboard in real-time. She connects the lab containers → log shipper → Elasticsearch → Wazuh → Orchestration Security Center API → dashboard. She also builds the Kibana dashboards used in the demo.
 
-**عربي:** ماريز تمتلك طبقة SIEM (إدارة معلومات الأمن والأحداث) في Found 404. مهمتها هي جعل تنبيهات الأمن من Wazuh تظهر على لوحة تحكم Found 404 في الوقت الفعلي. تصل حاويات المختبر → ناقل السجلات → Elasticsearch → Wazuh → API Found 404 → لوحة التحكم. كما تبني لوحات تحكم Kibana المستخدمة في العرض التوضيحي.
+**عربي:** ماريز تمتلك طبقة SIEM (إدارة معلومات الأمن والأحداث) في Orchestration Security Center. مهمتها هي جعل تنبيهات الأمن من Wazuh تظهر على لوحة تحكم Orchestration Security Center في الوقت الفعلي. تصل حاويات المختبر → ناقل السجلات → Elasticsearch → Wazuh → API Orchestration Security Center → لوحة التحكم. كما تبني لوحات تحكم Kibana المستخدمة في العرض التوضيحي.
 
 ---
 
@@ -38,9 +38,9 @@
 
 ### `wazuh_integration.py` — The Wazuh Client
 
-**English:** Wazuh is a SIEM that collects and analyzes security logs from all systems. The Found 404 backend calls Wazuh's REST API to fetch alerts and display them on the dashboard. Authentication uses HTTP Basic Auth (username:password encoded in Base64), which then returns a JWT token for subsequent calls.
+**English:** Wazuh is a SIEM that collects and analyzes security logs from all systems. The Orchestration Security Center backend calls Wazuh's REST API to fetch alerts and display them on the dashboard. Authentication uses HTTP Basic Auth (username:password encoded in Base64), which then returns a JWT token for subsequent calls.
 
-**عربي:** Wazuh هو SIEM يجمع ويحلل سجلات أمنية من جميع الأنظمة. يستدعي الـ backend في Found 404 Wazuh REST API لجلب التنبيهات وعرضها على لوحة التحكم. المصادقة تستخدم HTTP Basic Auth (اسم المستخدم:كلمة المرور مُشفّرة في Base64)، ثم تُرجع رمز JWT للاستدعاءات التالية.
+**عربي:** Wazuh هو SIEM يجمع ويحلل سجلات أمنية من جميع الأنظمة. يستدعي الـ backend في Orchestration Security Center Wazuh REST API لجلب التنبيهات وعرضها على لوحة التحكم. المصادقة تستخدم HTTP Basic Auth (اسم المستخدم:كلمة المرور مُشفّرة في Base64)، ثم تُرجع رمز JWT للاستدعاءات التالية.
 
 ```python
 class WazuhIntegration:
@@ -167,9 +167,9 @@ async def get_alerts(self, limit=50, severity=None):
 
 ### The Data Flow Mariz Must Understand
 
-**English:** The complete path from "something happens in the lab" to "alert appears on the Found 404 dashboard":
+**English:** The complete path from "something happens in the lab" to "alert appears on the Orchestration Security Center dashboard":
 
-**عربي:** المسار الكامل من "يحدث شيء ما في المختبر" إلى "يظهر التنبيه على لوحة تحكم Found 404":
+**عربي:** المسار الكامل من "يحدث شيء ما في المختبر" إلى "يظهر التنبيه على لوحة تحكم Orchestration Security Center":
 
 ```
 1. lab_traffic_gen generates HTTP requests to lab_webserver
@@ -189,8 +189,8 @@ async def get_alerts(self, limit=50, severity=None):
    (If a rule matches → creates an Alert)
    (إذا تطابقت قاعدة → ينشئ تنبيهًا)
    ↓
-6. Found 404 dashboard calls GET /api/v1/siem/alerts (every 30s)
-   لوحة تحكم Found 404 تستدعي API كل 30 ثانية
+6. Orchestration Security Center dashboard calls GET /api/v1/siem/alerts (every 30s)
+   لوحة تحكم Orchestration Security Center تستدعي API كل 30 ثانية
    ↓
 7. siem.py endpoint calls wazuh_integration.get_alerts()
    نقطة نهاية siem.py تستدعي wazuh_integration.get_alerts()
@@ -259,6 +259,6 @@ async def correlate_alerts_with_findings(scan_id: str, db: AsyncSession):
 | Week | Task | المهمة |
 |------|------|-------|
 | 10 | Verify Wazuh receives logs from all lab containers; fix broken shippers | التحقق من استقبال Wazuh للسجلات |
-| 11 | Build `alert_correlator.py`; Wazuh alerts → Found 404 findings link | بناء مُرتّب التنبيهات |
+| 11 | Build `alert_correlator.py`; Wazuh alerts → Orchestration Security Center findings link | بناء مُرتّب التنبيهات |
 | 12 | Create + export Kibana dashboard for the demo | إنشاء + تصدير لوحة تحكم Kibana |
 | 13 | Full SIEM pipeline test: attack → Wazuh alert → dashboard display | اختبار خط SIEM الكامل |

@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-The **central intelligence engine** of the Found 404 platform. Implements a multi-agent AI pipeline using an abstract base class pattern. Each agent encapsulates a distinct phase of the penetration testing workflow. The `AgentOrchestrator` class coordinates the full sequential pipeline from reconnaissance to reporting. Every agent action is logged to the database for complete audit transparency.
+The **central intelligence engine** of the Orchestration Security Center platform. Implements a multi-agent AI pipeline using an abstract base class pattern. Each agent encapsulates a distinct phase of the penetration testing workflow. The `AgentOrchestrator` class coordinates the full sequential pipeline from reconnaissance to reporting. Every agent action is logged to the database for complete audit transparency.
 
 ---
 

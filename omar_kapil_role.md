@@ -468,10 +468,10 @@ These are named Docker volumes. Docker manages where on your hard drive the data
 ## الجزء الرابع — docker-compose.lab.yml (شبكة الأهداف الوهمية)
 
 **English intro:**
-The lab is a simulated SME network — 6 to 10 vulnerable Docker containers pretending to be a real company's infrastructure. The Found 404 scanner attacks THESE containers during demos instead of real systems.
+The lab is a simulated SME network — 6 to 10 vulnerable Docker containers pretending to be a real company's infrastructure. The Orchestration Security Center scanner attacks THESE containers during demos instead of real systems.
 
 **عربي:**
-المختبر هو شبكة مؤسسات صغيرة ومتوسطة محاكاة — 6 إلى 10 حاويات Docker ضعيفة تتظاهر بأنها بنية تحتية لشركة حقيقية. يهاجم ماسح Found 404 هذه الحاويات خلال العروض التوضيحية بدلًا من الأنظمة الحقيقية.
+المختبر هو شبكة مؤسسات صغيرة ومتوسطة محاكاة — 6 إلى 10 حاويات Docker ضعيفة تتظاهر بأنها بنية تحتية لشركة حقيقية. يهاجم ماسح Orchestration Security Center هذه الحاويات خلال العروض التوضيحية بدلًا من الأنظمة الحقيقية.
 
 ### The 4 Subnets (Networks)
 ### الشبكات الأربع (Subnets)
@@ -1106,10 +1106,10 @@ jobs:
 ### 2. `SECURITY_AUDIT.md` — Platform Self-Audit Report
 
 **English:**
-A document Omar writes in Week 12 that proves the Found 404 platform itself is secure (not just the things it scans). Covers: no hardcoded secrets, JWT properly configured, no SQL injection in the backend API, Docker containers run as non-root users, etc.
+A document Omar writes in Week 12 that proves the Orchestration Security Center platform itself is secure (not just the things it scans). Covers: no hardcoded secrets, JWT properly configured, no SQL injection in the backend API, Docker containers run as non-root users, etc.
 
 **عربي:**
-وثيقة يكتبها عمر في الأسبوع 12 تُثبت أن منصة Found 404 نفسها آمنة (وليس فقط الأشياء التي تمسحها). تشمل: لا أسرار مُضمّنة في الكود، JWT مُعدّ بشكل صحيح، لا حقن SQL في API الـ backend، حاويات Docker تعمل كمستخدمين غير root، إلخ.
+وثيقة يكتبها عمر في الأسبوع 12 تُثبت أن منصة Orchestration Security Center نفسها آمنة (وليس فقط الأشياء التي تمسحها). تشمل: لا أسرار مُضمّنة في الكود، JWT مُعدّ بشكل صحيح، لا حقن SQL في API الـ backend، حاويات Docker تعمل كمستخدمين غير root، إلخ.
 
 ### 3. `FINAL_DEMO_SCRIPT.md` — Presentation Day Script
 
@@ -1256,7 +1256,7 @@ On July 2, 2026, Omar does these things IN ORDER:
 **During presentation (Omar's speaking segments):**
 ```
 Segment 1 — Introduction (3 min):
-"Found 404 is an AI-driven security platform for SMEs.
+"Orchestration Security Center is an AI-driven security platform for SMEs.
  It replaces a team of security analysts with an automated pipeline:
  Nmap discovery → AI agent chaining → risk scoring → actionable report.
  Today we'll demonstrate it live against our simulated SME network."
@@ -1279,7 +1279,7 @@ Segment 3 — Q&A Coordination (10 min):
 **خلال التقديم (فقرات عمر الكلامية):**
 ```
 الفقرة 1 — المقدمة (3 دقائق):
-"Found 404 منصة أمنية مدعومة بالذكاء الاصطناعي للمؤسسات الصغيرة والمتوسطة.
+"Orchestration Security Center منصة أمنية مدعومة بالذكاء الاصطناعي للمؤسسات الصغيرة والمتوسطة.
  تُستبدل فريق محللي أمن بخط أنابيب آلي:
  اكتشاف Nmap → تسلسل وكلاء AI → تسجيل المخاطر → تقرير قابل للتنفيذ.
  اليوم سنُوضّح ذلك مباشرةً على شبكة مؤسستنا الوهمية."
@@ -1336,5 +1336,5 @@ Segment 3 — Q&A Coordination (10 min):
 
 ---
 
-*Created: April 19, 2026 | For: Omar Kapil | Project: Found 404*
-*تاريخ الإنشاء: 19 أبريل 2026 | لـ: عمر كابيل | المشروع: Found 404*
+*Created: April 19, 2026 | For: Omar Kapil | Project: Orchestration Security Center*
+*تاريخ الإنشاء: 19 أبريل 2026 | لـ: عمر كابيل | المشروع: Orchestration Security Center*

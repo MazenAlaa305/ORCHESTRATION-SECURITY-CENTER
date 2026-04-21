@@ -2,7 +2,7 @@
 
 ## File Purpose
 
-Provides a **real-time AI agent reasoning chain viewer** (15,399 bytes) — a transparent, inspectable log of exactly what each AI agent did during a scan. This component is a key differentiator of the Found 404 platform, demonstrating AI transparency and explainability.
+Provides a **real-time AI agent reasoning chain viewer** (15,399 bytes) — a transparent, inspectable log of exactly what each AI agent did during a scan. This component is a key differentiator of the Orchestration Security Center platform, demonstrating AI transparency and explainability.
 
 ## Key Components
 
