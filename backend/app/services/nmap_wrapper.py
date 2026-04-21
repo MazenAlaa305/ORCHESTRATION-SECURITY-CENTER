@@ -1,11 +1,10 @@
-import nmap
-import json
 import logging
 
 logger = logging.getLogger(__name__)
 
 class NmapWrapper:
     def __init__(self):
+        import nmap  # lazy — avoids loading python-nmap at startup before any scan runs
         self.nm = nmap.PortScanner()
 
     def scan_target(self, target, scan_type="quick"):

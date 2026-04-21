@@ -236,18 +236,28 @@ class ReconAgent(BaseAgent):
                     import asyncio
                     
                     page = await self.browser_context.new_page()
-                    
+                    page.set_default_navigation_timeout(15000)
+                    page.set_default_timeout(10000)
+
+                    # Block resource types not needed for crawling — reduces memory per page
+                    await page.route(
+                        "**/*",
+                        lambda route: route.abort()
+                        if route.request.resource_type in ("image", "stylesheet", "font", "media")
+                        else route.continue_()
+                    )
+
                     # Two-tier wait_until strategy
                     try:
                         await page.goto(target_url, wait_until="networkidle", timeout=15000)
                     except (PlaywrightError, asyncio.TimeoutError, Exception):
                         # Fallback to domcontentloaded for slower apps
                         await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
-                    
-                    # Extract all links
+
+                    # Extract all links (cap at 20 unique in-scope URLs)
                     links = await page.eval_on_selector_all(
                         "a[href]",
-                        "elements => elements.map(el => el.href)"
+                        "elements => elements.map(el => el.href).slice(0, 40)"
                     )
                     
                     # Extract forms
@@ -271,8 +281,10 @@ class ReconAgent(BaseAgent):
                     
                     tech_stack = self._detect_tech_stack(headers, await page.content())
                     
-                    # Filter and dedupe links — scope_guard drops out-of-scope URLs
+                    # Filter and dedupe links — scope_guard drops out-of-scope URLs, cap at 20
                     for link in links:
+                        if len(discovered_endpoints) >= 20:
+                            break
                         if link in [e["url"] for e in discovered_endpoints]:
                             continue
                         if scope_guard and not scope_guard.is_in_scope(link):
@@ -1113,7 +1125,20 @@ class AgentOrchestrator:
         try:
             from playwright.async_api import async_playwright
             playwright = await async_playwright().start()
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(
+                headless=True,
+                args=[
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--disable-extensions',
+                    '--disable-background-timer-throttling',
+                    '--disable-renderer-backgrounding',
+                    '--no-zygote',
+                    '--single-process',
+                    '--js-flags=--max-old-space-size=128',
+                ],
+            )
             browser_context = await browser.new_context()
         except Exception as e:
             logger.debug(f"Failed to initialize Playwright: {e}")

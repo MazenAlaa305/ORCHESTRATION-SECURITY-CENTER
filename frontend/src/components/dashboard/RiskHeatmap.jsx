@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3';
+import { select } from 'd3-selection';
+import { hierarchy, treemap } from 'd3-hierarchy';
+import { easeCubicOut } from 'd3-ease';
+import 'd3-transition';
 
 const SEV_COLORS = {
     critical: '#ff0055',
@@ -27,7 +30,7 @@ const RiskHeatmap = ({ data = [] }) => {
 
     useEffect(() => {
         const filtered = (data || []).filter(d => d.value > 0);
-        const svg = d3.select(svgRef.current);
+        const svg = select(svgRef.current);
         svg.selectAll('*').remove();
 
         if (!filtered.length) return;
@@ -37,11 +40,11 @@ const RiskHeatmap = ({ data = [] }) => {
             .attr('viewBox', `0 0 ${width} ${height}`)
             .style('background', 'transparent');
 
-        const root = d3.hierarchy({ children: filtered })
+        const root = hierarchy({ children: filtered })
             .sum(d => d.value)
             .sort((a, b) => b.value - a.value);
 
-        d3.treemap().size([width, height]).padding(3)(root);
+        treemap().size([width, height]).padding(3)(root);
 
         const cell = svg.selectAll('g')
             .data(root.leaves())
@@ -57,7 +60,7 @@ const RiskHeatmap = ({ data = [] }) => {
             .attr('rx', 3)
             .attr('stroke', 'rgba(0,0,0,0.3)')
             .attr('stroke-width', 1)
-          .transition().duration(400).ease(d3.easeCubicOut)
+          .transition().duration(400).ease(easeCubicOut)
             .attr('opacity', 0.75);
 
         // Count label (only on large enough cells)

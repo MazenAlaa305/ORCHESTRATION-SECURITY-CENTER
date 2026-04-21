@@ -55,15 +55,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 512M
+          cpus: '0.75'
+          memory: 384M
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
     container_name: sme_dashboard_frontend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     environment:
       - VITE_API_URL=https://localhost/api/v1
     depends_on:
@@ -73,20 +72,30 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 384M
+          cpus: '0.10'
+          memory: 48M
 
   db:
     image: postgres:15-alpine
     container_name: sme_dashboard_db
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=32MB
+      -c effective_cache_size=128MB
+      -c checkpoint_completion_target=0.9
+      -c max_connections=30
+      -c wal_buffers=4MB
+      -c synchronous_commit=off
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 512M
+          cpus: '0.5'
+          memory: 256M
         reservations:
-          cpus: '0.2'
-          memory: 128M
+          cpus: '0.1'
+          memory: 64M
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
@@ -105,26 +114,32 @@ services:
   redis:
     image: redis:7-alpine
     container_name: sme_dashboard_redis
+    command: >
+      redis-server
+      --maxmemory 80mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
     deploy:
       resources:
         limits:
-          cpus: '0.25'
-          memory: 128M
+          cpus: '0.15'
+          memory: 96M
     ports:
       - "6379:6379"
 
   celery_worker:
     build: ./backend
     container_name: sme_dashboard_celery
-    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=1
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 1024M
+          cpus: '1.0'
+          memory: 512M
         reservations:
-          cpus: '0.5'
-          memory: 256M
+          cpus: '0.3'
+          memory: 128M
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
@@ -191,7 +206,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
     ports:
       - "9200:9200"
     volumes:

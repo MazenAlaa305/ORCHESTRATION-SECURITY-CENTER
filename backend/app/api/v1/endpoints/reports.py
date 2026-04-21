@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.scan import Scan, Report
-from app.services.pdf_generator import PDFReportGenerator
 from app.services.report_signer import canonical_findings_hash, sign_pdf, verify_signature
 
 router = APIRouter()
@@ -124,6 +123,7 @@ def generate_report(scan_id: str, db: Session = Depends(get_db)):
         fhash = canonical_findings_hash(findings)
         scan_data = _build_scan_data(scan)
 
+        from app.services.pdf_generator import PDFReportGenerator  # lazy — avoids loading reportlab at startup
         report_id = str(uuid.uuid4())
         pdf_buffer = PDFReportGenerator.generate_report(
             scan_data, scan_id=report_id, findings_hash=fhash

@@ -1,18 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Line, Doughnut } from 'react-chartjs-2';
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler,
-} from 'chart.js';
+    ResponsiveContainer, LineChart, Line,
+    XAxis, YAxis, Tooltip, Legend,
+    PieChart, Pie, Cell,
+} from 'recharts';
 import NetworkTopology from './NetworkTopology';
 import { useAuth } from '../context/AuthContext';
 import ErrorBoundary from './ErrorBoundary';
@@ -20,18 +12,6 @@ import TabNavigation from './TabNavigation';
 import MetricCard from './MetricCard';
 import ReportGenerator from './ReportGenerator';
 import '../gradient-styles.css';
-
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-);
 
 const Dashboard = () => {
     return (
@@ -260,30 +240,23 @@ const OverviewTab = ({ data, externalRisk }) => {
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
                 <h3 className="text-lg font-bold mb-4 text-[#bf00ff]">Risk Trend</h3>
                 <div className="h-64">
-                    <Line
-                        data={{
-                            labels: data.trend?.map(d => d.date) || [],
-                            datasets: [{
-                                label: 'Risk Score',
-                                data: data.trend?.map(d => d.score) || [],
-                                borderColor: '#bf00ff',
-                                backgroundColor: 'rgba(191, 0, 255, 0.1)',
-                                tension: 0.4,
-                                fill: true
-                            }]
-                        }}
-                        options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
-                            },
-                            scales: {
-                                x: { grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } },
-                                y: { grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } }
-                            }
-                        }}
-                    />
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={data.trend || []}>
+                            <XAxis dataKey="date" tick={{ fill: '#9ca3af' }} />
+                            <YAxis tick={{ fill: '#9ca3af' }} />
+                            <Tooltip
+                                contentStyle={{ background: '#111827', border: '1px solid #374151', color: '#fff' }}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="score"
+                                name="Risk Score"
+                                stroke="#bf00ff"
+                                strokeWidth={2}
+                                dot={false}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
         </div>
@@ -393,24 +366,37 @@ const VulnerabilitiesTab = ({ data }) => {
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
                 <h3 className="text-lg font-bold mb-4">Severity Distribution</h3>
                 <div className="h-64 flex items-center justify-center">
-                    <div className="w-64">
-                        <Doughnut
-                            data={{
-                                labels: ['Critical', 'High', 'Medium', 'Low'],
-                                datasets: [{
-                                    data: [12, 19, 3, 5],
-                                    backgroundColor: ['#ff0055', '#ff6600', '#ffcc00', '#00f2ff'],
-                                    borderWidth: 0
-                                }]
-                            }}
-                            options={{
-                                responsive: true,
-                                plugins: {
-                                    legend: { position: 'bottom', labels: { color: '#9ca3af' } }
-                                }
-                            }}
-                        />
-                    </div>
+                    <ResponsiveContainer width={280} height={240}>
+                        <PieChart>
+                            <Pie
+                                data={[
+                                    { name: 'Critical', value: 12 },
+                                    { name: 'High',     value: 19 },
+                                    { name: 'Medium',   value: 3  },
+                                    { name: 'Low',      value: 5  },
+                                ]}
+                                cx="50%"
+                                cy="45%"
+                                innerRadius={55}
+                                outerRadius={85}
+                                dataKey="value"
+                            >
+                                {['#ff0055','#ff6600','#ffcc00','#00f2ff'].map((color, i) => (
+                                    <Cell key={i} fill={color} />
+                                ))}
+                            </Pie>
+                            <Legend
+                                iconType="circle"
+                                iconSize={8}
+                                formatter={(value) => (
+                                    <span style={{ color: '#9ca3af', fontSize: 12 }}>{value}</span>
+                                )}
+                            />
+                            <Tooltip
+                                contentStyle={{ background: '#111827', border: '1px solid #374151', color: '#fff' }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
         </div>
