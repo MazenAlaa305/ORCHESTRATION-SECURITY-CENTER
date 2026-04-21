@@ -18,7 +18,6 @@ const ConfigContext = createContext(null);
 /** Safe defaults — kept in sync with fetchPublicConfig()'s SAFE_DEFAULTS. */
 const INITIAL_STATE = {
     siem_enabled: false,
-    soar_enabled: false,
     openvas_enabled: false,
     llm_validation_enabled: false,
     nmap_enabled: true,
@@ -54,7 +53,7 @@ export const ConfigProvider = ({ children }) => {
  * useConfig — read the backend feature flags inside any component.
  *
  * @throws {Error} if called outside <ConfigProvider>.
- * @returns {{ siem_enabled, soar_enabled, openvas_enabled, llm_validation_enabled, version, loaded }}
+ * @returns {{ siem_enabled, openvas_enabled, llm_validation_enabled, version, loaded }}
  */
 export const useConfig = () => {
     const ctx = useContext(ConfigContext);

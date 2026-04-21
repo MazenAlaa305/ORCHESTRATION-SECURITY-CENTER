@@ -97,7 +97,7 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
                         onClick={() => setModalOpen(true)}
                         disabled={isRunning}
                         className="text-[9px] font-mono text-cyan-300 hover:text-cyan-200 uppercase tracking-widest flex items-center gap-1 disabled:opacity-50"
-                        title="Configure tools, schedule, SOAR/SIEM, and auto-report"
+                        title="Configure tools, schedule, SIEM, and auto-report"
                     >
                         <Settings2 className="h-3 w-3" />
                         Advanced

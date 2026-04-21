@@ -40,7 +40,6 @@ def get_public_config():
     """Feature-flag map consumed by the frontend on app load."""
     return {
         "siem_enabled": settings.SIEM_ENABLED,
-        "soar_enabled": settings.SOAR_ENABLED,
         "openvas_enabled": settings.OPENVAS_ENABLED,
         "llm_validation_enabled": settings.LLM_VALIDATION_ENABLED,
         "nmap_enabled": settings.NMAP_ENABLED,
@@ -121,7 +120,6 @@ async def get_integration_health():
     tasks = [
         check_http("elasticsearch", f"{settings.ELASTICSEARCH_URL}/", settings.SIEM_ENABLED),
         check_http("wazuh", f"{settings.WAZUH_API_URL}/", settings.SIEM_ENABLED),
-        check_http("n8n", settings.N8N_WEBHOOK_URL.rstrip("/webhook/") or "http://n8n:5678", settings.SOAR_ENABLED),
     ]
     await asyncio.gather(*tasks, return_exceptions=True)
 

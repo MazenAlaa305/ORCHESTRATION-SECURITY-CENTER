@@ -39,7 +39,6 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
     const [tools, setTools] = useState(['nmap', 'nuclei']);
     const [schedule, setSchedule] = useState('');
     const [autoReport, setAutoReport] = useState(false);
-    const [soarTrigger, setSoarTrigger] = useState(false);
     const [siemForward, setSiemForward] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -78,7 +77,6 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
                 scan_type: scanType,
                 tools: scanType === 'custom' ? tools : null,
                 auto_report: autoReport,
-                soar_trigger: soarTrigger,
                 siem_forward: siemForward,
             };
             if (targetMode === 'existing') payload.target_id = selectedTargetId;
@@ -261,10 +259,6 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
                                 <label className="flex items-center justify-between p-2 rounded bg-black/20 border border-white/10">
                                     <span className="text-white text-sm flex items-center gap-2"><FileText size={14} /> Auto-generate PDF report</span>
                                     <input type="checkbox" checked={autoReport} onChange={e => setAutoReport(e.target.checked)} className="accent-cyan-400 w-4 h-4" />
-                                </label>
-                                <label className={`flex items-center justify-between p-2 rounded bg-black/20 border border-white/10 ${!cfg.soar_enabled ? 'opacity-50' : ''}`}>
-                                    <span className="text-white text-sm flex items-center gap-2"><Zap size={14} /> SOAR trigger on critical (n8n)</span>
-                                    <input type="checkbox" checked={soarTrigger} disabled={!cfg.soar_enabled} onChange={e => setSoarTrigger(e.target.checked)} className="accent-cyan-400 w-4 h-4" />
                                 </label>
                                 <label className={`flex items-center justify-between p-2 rounded bg-black/20 border border-white/10 ${!cfg.siem_enabled ? 'opacity-50' : ''}`}>
                                     <span className="text-white text-sm flex items-center gap-2"><Activity size={14} /> Forward findings to SIEM</span>

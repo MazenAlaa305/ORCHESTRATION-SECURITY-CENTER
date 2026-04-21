@@ -53,7 +53,6 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
     if scan_in.tools is not None:
         configuration["tools"] = scan_in.tools
     configuration.setdefault("auto_report", scan_in.auto_report)
-    configuration.setdefault("soar_trigger", scan_in.soar_trigger)
     configuration.setdefault("siem_forward", scan_in.siem_forward)
 
     # Apply scan_type presets when tools aren't explicitly chosen.
@@ -117,7 +116,6 @@ def create_schedule(scan_in: ScanCreate):
         "tools": scan_in.tools,
         "schedule": scan_in.schedule,
         "auto_report": scan_in.auto_report,
-        "soar_trigger": scan_in.soar_trigger,
         "siem_forward": scan_in.siem_forward,
         "enabled": True,
     }

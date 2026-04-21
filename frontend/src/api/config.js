@@ -10,7 +10,6 @@ import api from '../services/api';
 /** Safe defaults — used when the endpoint is unreachable so the app never crashes. */
 const SAFE_DEFAULTS = {
     siem_enabled: false,
-    soar_enabled: false,
     openvas_enabled: false,
     llm_validation_enabled: false,
     nmap_enabled: true,

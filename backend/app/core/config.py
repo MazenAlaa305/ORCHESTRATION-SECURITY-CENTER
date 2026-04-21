@@ -31,12 +31,11 @@ class Settings(BaseSettings):
     # AI
     GEMINI_API_KEY: str = ""
     
-    # SIEM and SOAR
+    # SIEM
     ELASTICSEARCH_URL: str = "http://localhost:9200"
     WAZUH_API_URL: str = "https://localhost:55000"
     WAZUH_API_USER: str = "wazuh"
     WAZUH_API_PASSWORD: str = "wazuh"
-    N8N_WEBHOOK_URL: str = "http://localhost:5678/webhook/"
     # Living Lab
     LAB_ENABLED: bool = True
     LAB_COMPOSE_FILE: str = "docker-compose.lab.yml"
@@ -73,7 +72,6 @@ class Settings(BaseSettings):
     # backing service is reachable and tested. This prevents the UI from
     # silently showing fake / empty data when a service is unavailable.
     SIEM_ENABLED: bool = False
-    SOAR_ENABLED: bool = False
     OPENVAS_ENABLED: bool = False
     LLM_VALIDATION_ENABLED: bool = False  # LLM verdict never overrides reprobe
     NMAP_ENABLED: bool = True
@@ -132,7 +130,6 @@ settings = Settings()
 
 RUNTIME_FLAGS = {
     "SIEM_ENABLED": bool,
-    "SOAR_ENABLED": bool,
     "OPENVAS_ENABLED": bool,
     "LLM_VALIDATION_ENABLED": bool,
     "NMAP_ENABLED": bool,

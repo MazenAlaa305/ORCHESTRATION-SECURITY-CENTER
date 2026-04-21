@@ -91,7 +91,6 @@ class ScanCreate(BaseModel):
     configuration: Optional[Dict[str, Any]] = None
     schedule: Optional[str] = None       # cron expression for recurring scans
     auto_report: bool = False            # generate PDF when the scan completes
-    soar_trigger: bool = False           # fire SOAR webhook on critical findings
     siem_forward: bool = False           # forward findings to Elasticsearch
 
 

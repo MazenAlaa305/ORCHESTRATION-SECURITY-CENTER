@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Activity, AlertTriangle, Brain, CheckCircle, Database, FlaskConical,
     Network, Play, Radar, RefreshCw, Server, Settings as SettingsIcon,
-    Shield, StopCircle, Zap, XCircle,
+    Shield, StopCircle, XCircle,
 } from 'lucide-react';
 
 import { fetchAllConfig, fetchPublicConfig, fetchIntegrationHealth, updateConfig } from '../../api/config';
@@ -14,7 +14,6 @@ import { useAuth } from '../../context/AuthContext';
 const TOOL_TOGGLES = [
     { key: 'OPENVAS_ENABLED',        label: 'OpenVAS Scanner',   icon: Radar,     desc: 'Network vulnerability scanner (GVM/GMP)' },
     { key: 'SIEM_ENABLED',           label: 'SIEM Integration',  icon: Activity,  desc: 'Elasticsearch + Wazuh event pipeline' },
-    { key: 'SOAR_ENABLED',           label: 'SOAR Automation',   icon: Zap,       desc: 'n8n webhook for automated response' },
     { key: 'LLM_VALIDATION_ENABLED', label: 'LLM AI Validation', icon: Brain,     desc: 'Gemini triage of findings (never overrides reprobe)' },
     { key: 'NMAP_ENABLED',           label: 'Nmap Scanning',     icon: Network,   desc: 'Port and service discovery' },
     { key: 'NUCLEI_ENABLED',         label: 'Nuclei Scanning',   icon: Shield,    desc: 'Template-driven vulnerability scanner' },
