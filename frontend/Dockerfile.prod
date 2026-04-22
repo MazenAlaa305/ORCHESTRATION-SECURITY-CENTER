@@ -6,7 +6,7 @@ ARG VITE_API_URL=https://localhost/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 
 COPY package.json package-lock.json* ./
-RUN npm ci --prefer-offline
+RUN npm install
 COPY . .
 RUN npm run build
 

@@ -96,6 +96,9 @@ const Dashboard = () => {
     const isScanning  = realTime.scanStatus === 'RUNNING'
         || scans.some(s => s.status === 'running' || s.status === 'queued');
     const latestScan  = scans[0] ?? null;
+    const latestOpenVASScan = scans.find(s =>
+        s.configuration?.openvas_task_id || s.scan_type === 'openvas'
+    ) ?? null;
 
     // Fetch vulnerabilities for the latest scan (ScanSummary doesn't include them)
     const { data: latestScanVulns = [] } = useQuery({
@@ -131,7 +134,7 @@ const Dashboard = () => {
     // Vuln trend: last 7 scans in chronological order
     const trendData = [...scans].slice(0, 7).reverse().map(s => ({
         date:  s.started_at ? new Date(s.started_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '?',
-        count: s.vulnerabilities_count ?? s.vulnerability_count ?? s.vulnerabilities?.length ?? 0,
+        count: s.vulnerabilities_count ?? 0,
     }));
 
     // Heatmap data sourced directly from live KPI counts
@@ -258,8 +261,8 @@ const Dashboard = () => {
                                         }, {})
                                     } />
                                     <VulnerabilitiesList
-                                        taskId={latestScan?.configuration?.openvas_task_id}
-                                        scanId={latestScan?.id}
+                                        taskId={latestOpenVASScan?.configuration?.openvas_task_id}
+                                        scanId={latestOpenVASScan?.id}
                                     />
                                 </div>
                             </div>

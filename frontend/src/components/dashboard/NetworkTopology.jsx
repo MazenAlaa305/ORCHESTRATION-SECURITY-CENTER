@@ -9,7 +9,7 @@ import { networkService } from '../../services/api';
 const getNodeColor = (node) => {
     if (node.id === 'hub')         return '#00ffff';
     if (node.riskScore >= 75)      return '#ff0055';
-    if (node.riskScore >= 50)      return '#ffaa00';
+    if (node.riskScore >= 50)      return '#ff6a00';
     if (node.riskScore >= 20)      return '#ffaa00';
     if ((node.vulnCount || 0) > 0) return '#ffaa00';
     return '#00ff88';
@@ -127,10 +127,8 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             }
         }
         if (fgRef.current) {
-            const dist = 50;
-            const ratio = 1 + dist / Math.hypot(node.x || 1, node.y || 1);
-            fgRef.current.centerAt(node.x * ratio, node.y * ratio, 1000);
-            fgRef.current.zoom(3.5, 1200);
+            fgRef.current.centerAt(node.x, node.y, 800);
+            fgRef.current.zoom(3.5, 1000);
         }
     }, []);
 
