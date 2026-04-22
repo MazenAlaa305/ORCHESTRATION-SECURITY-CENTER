@@ -126,7 +126,7 @@ Finally, I thank the faculty and staff at HITU for providing a stimulating acade
 
 Cybersecurity remains a critical challenge for Small-to-Medium Enterprises (SMEs) that typically lack the dedicated security teams and financial resources available to large corporations. Existing Dynamic Application Security Testing (DAST) platforms such as Burp Suite Enterprise, Tenable Nessus, and OWASP ZAP offer powerful capabilities but demand specialized expertise, making them impractical for non-technical SME administrators. This project introduces "Orchestration Security Center," an AI-driven security orchestration platform that automates the entire vulnerability assessment lifecycle -- from reconnaissance and attack simulation through risk scoring to actionable remediation guidance -- within a single, unified dashboard designed for non-expert users.
 
-The platform employs a multi-agent orchestration architecture built on FastAPI (Python) and React (JavaScript), integrating industry-standard security tools including Nmap, Nuclei, and OpenVAS through a deterministic, rule-based chaining pipeline. A UnifiedRiskEngine calculates quantitative risk and health scores using CVSS-weighted severity penalties, asset criticality multipliers, and network exposure modifiers. Google Gemini AI serves in an advisory-only capacity, generating SME-friendly explanations of risk findings, business impact assessments, and prioritized remediation steps. Real-time scan progress and alert streaming are delivered via WebSocket and Redis Pub/Sub, while Docker Compose orchestrates eleven microservices including PostgreSQL, Redis, Celery, Elasticsearch, Wazuh SIEM, and n8n SOAR automation.
+The platform employs a multi-agent orchestration architecture built on FastAPI (Python) and React (JavaScript), integrating industry-standard security tools including Nmap, Nuclei, and OpenVAS through a deterministic, rule-based chaining pipeline. A UnifiedRiskEngine calculates quantitative risk and health scores using CVSS-weighted severity penalties, asset criticality multipliers, and network exposure modifiers. Google Gemini AI serves in an advisory-only capacity, generating SME-friendly explanations of risk findings, business impact assessments, and prioritized remediation steps. Real-time scan progress and alert streaming are delivered via WebSocket and Redis Pub/Sub, while Docker Compose orchestrates ten microservices including PostgreSQL, Redis, Celery, Elasticsearch, and Wazuh SIEM.
 
 Evaluation results demonstrate that the platform successfully detects OWASP Top 10 vulnerabilities across six pre-configured lab targets, generates deterministic risk scores with 100% reproducibility, and provides actionable remediation items that require no prior security expertise to interpret. The project validates the hypothesis that AI-augmented, tool-chained security orchestration can bridge the cybersecurity gap for resource-constrained SMEs.
 
@@ -224,7 +224,6 @@ Evaluation results demonstrate that the platform successfully detects OWASP Top 
 | SIEM | Security Information and Event Management |
 | SMB | Server Message Block |
 | SME | Small-to-Medium Enterprise |
-| SOAR | Security Orchestration, Automation, and Response |
 | SQL | Structured Query Language |
 | SQLi | SQL Injection |
 | SSH | Secure Shell |
@@ -283,7 +282,7 @@ The primary objectives of this project are:
 
 5. **Build a real-time, visually intuitive security dashboard** using React with interactive components including network topology visualization, risk heatmaps, vulnerability trend charts, and live scan orchestration feeds.
 
-6. **Deploy the platform as a containerized microservices architecture** using Docker Compose, integrating PostgreSQL, Redis, Celery, Elasticsearch, Wazuh SIEM, and n8n SOAR to provide a complete security operations capability.
+6. **Deploy the platform as a containerized microservices architecture** using Docker Compose, integrating PostgreSQL, Redis, Celery, Elasticsearch, and Wazuh SIEM to provide a complete security operations capability.
 
 7. **Validate the platform** against a controlled lab environment containing six pre-configured vulnerable targets, demonstrating effective detection of OWASP Top 10 vulnerabilities and generation of actionable remediation items.
 
@@ -300,8 +299,7 @@ The primary objectives of this project are:
 - Interactive security dashboard with network topology, risk heatmaps, vulnerability trends, and action center
 - PDF report generation for executive and technical stakeholders
 - SIEM integration via Wazuh and Elasticsearch for log ingestion and correlation
-- SOAR integration via n8n for automated remediation workflow playbooks
-- Containerized deployment via Docker Compose with eleven orchestrated services
+- Containerized deployment via Docker Compose with ten orchestrated services
 - Controlled lab environment with six vulnerable target containers for testing
 
 ### Out of Scope
@@ -370,7 +368,7 @@ PortSwigger's Burp Suite is the industry standard for professional web applicati
 
 - **Strengths:** Burp Suite offers the most comprehensive active scanning engine, excellent detection accuracy, a powerful Intruder module for custom attack automation, and detailed vulnerability reports with remediation advice.
 
-- **Limitations:** Burp Suite Professional costs $449/user/year, and Enterprise starts at $8,999/year, making it prohibitively expensive for SMEs. Both editions require significant security expertise to configure, interpret, and act on results. There is no integrated network scanning, SIEM, or SOAR capability -- users must operate these as separate tools [15].
+- **Limitations:** Burp Suite Professional costs $449/user/year, and Enterprise starts at $8,999/year, making it prohibitively expensive for SMEs. Both editions require significant security expertise to configure, interpret, and act on results. There is no integrated network scanning or SIEM capability -- users must operate these as separate tools [15].
 
 ### 2.2.3 Tenable Nessus / Tenable.io
 
@@ -404,14 +402,6 @@ Wazuh is an open-source security platform providing unified SIEM, intrusion dete
 
 - **Limitations:** Wazuh is a monitoring and detection platform, not a DAST tool. It does not perform active vulnerability scanning or attack simulation. Configuration requires Linux system administration expertise. Integration with DAST outputs requires custom development [23].
 
-### 2.2.7 n8n (Workflow Automation / SOAR)
-
-n8n is an open-source workflow automation platform that can function as a lightweight SOAR engine [24]. It enables the creation of automated workflows triggered by webhooks, schedules, or external events, connecting to over 400 service integrations.
-
-- **Strengths:** n8n is self-hostable and open-source, provides a visual workflow editor, supports webhook triggers for real-time automation, and can execute remediation actions such as firewall rule updates, notification dispatching, and ticketing system integration.
-
-- **Limitations:** n8n is a general-purpose automation tool, not a security-specific SOAR platform. Security playbook templates must be custom-built. There is no built-in threat intelligence or incident response framework [25].
-
 ## 2.3 Comparison of Existing Solutions
 
 > **Table 2.1:** Comparison of Existing DAST and Security Platforms
@@ -427,7 +417,6 @@ n8n is an open-source workflow automation platform that can function as a lightw
 | **SME-Friendly UI** | Moderate | No | No | No | No | **Yes** |
 | **Real-Time Dashboard** | No | Limited | Limited | GSA | No | **Yes (WebSocket)** |
 | **SIEM Integration** | No | No | Yes | No | No | **Yes (Wazuh)** |
-| **SOAR Automation** | No | No | No | No | No | **Yes (n8n)** |
 | **Containerized Deploy** | Manual | No | No | Docker | Docker | **Docker Compose** |
 | **Remediation Guidance** | Generic | Detailed | CVE-based | CVE-based | Template | **AI-Generated** |
 | **Target Audience** | Pentesters | Pentesters | IT Security | IT Security | DevSecOps | **SME Admins** |
@@ -452,7 +441,7 @@ Nmap is the industry-standard open-source network scanning tool for host discove
 
 ### 2.4.5 Docker Compose -- Container Orchestration
 
-Docker Compose enables the definition and management of multi-container applications through a declarative YAML configuration [31]. The project's docker-compose.yml orchestrates eleven services with defined dependencies, resource limits, networking, and persistent storage volumes, enabling one-command deployment of the entire platform stack.
+Docker Compose enables the definition and management of multi-container applications through a declarative YAML configuration [31]. The project's docker-compose.yml orchestrates ten services with defined dependencies, resource limits, networking, and persistent storage volumes, enabling one-command deployment of the entire platform stack.
 
 ### 2.4.6 Google Gemini AI -- Large Language Model
 
@@ -470,7 +459,7 @@ PostgreSQL 15 is used as the primary relational database, accessed through SQLAl
 
 The literature review reveals a clear research gap at the intersection of three domains:
 
-1. **Tool Integration Gap:** No existing open-source platform combines network scanning (Nmap), template-based vulnerability detection (Nuclei), comprehensive vulnerability assessment (OpenVAS), SIEM (Wazuh), and SOAR (n8n) into a single, unified orchestration pipeline.
+1. **Tool Integration Gap:** No existing open-source platform combines network scanning (Nmap), template-based vulnerability detection (Nuclei), comprehensive vulnerability assessment (OpenVAS), and SIEM (Wazuh) into a single, unified orchestration pipeline.
 
 2. **AI Advisory Gap:** While AI is increasingly used in cybersecurity for anomaly detection and threat intelligence, no existing DAST platform provides AI-generated, plain-language vulnerability explanations and remediation guidance specifically designed for non-technical SME administrators.
 
@@ -543,12 +532,11 @@ PostgreSQL 15 serves as the primary relational database (accessed via SQLAlchemy
 **External Integrations:**
 
 - Wazuh 4.7.2 -- SIEM agent for endpoint monitoring and log collection
-- n8n -- SOAR engine for automated remediation playbooks
 - OpenVAS -- Additional vulnerability scanning via Greenbone Management Protocol
 
 > *[Figure 3.1: High-Level System Architecture Diagram]*
 >
-> A three-tier architecture diagram showing the React Frontend connecting via HTTP/WebSocket to the FastAPI Backend, which interfaces with PostgreSQL, Redis, Celery Workers, and external services (Nmap, Nuclei, OpenVAS, Wazuh, n8n, Gemini AI). Docker Compose encapsulates all services.
+> A three-tier architecture diagram showing the React Frontend connecting via HTTP/WebSocket to the FastAPI Backend, which interfaces with PostgreSQL, Redis, Celery Workers, and external services (Nmap, Nuclei, OpenVAS, Wazuh, Gemini AI). Docker Compose encapsulates all services.
 
 ### 3.3.2 Agent Orchestration Pipeline
 
@@ -657,8 +645,7 @@ The platform implements a publish-subscribe pattern for real-time event streamin
 | FR-16 | Vulnerability Management | High | Users shall be able to view, filter, and update the status of discovered vulnerabilities (OPEN, FIXED, FALSE_POSITIVE, ACCEPTED). |
 | FR-17 | PDF Report Generation | Medium | The system shall generate downloadable PDF reports containing executive summaries, vulnerability details, and remediation recommendations. |
 | FR-18 | SIEM Integration | Low | The system shall integrate with Wazuh and Elasticsearch for log ingestion, storage, and correlation display. |
-| FR-19 | SOAR Integration | Low | The system shall integrate with n8n for automated remediation workflow execution via webhook triggers. |
-| FR-20 | Scan History | Medium | Users shall be able to view a chronological history of all scan executions with status, duration, and finding counts. |
+| FR-19 | Scan History | Medium | Users shall be able to view a chronological history of all scan executions with status, duration, and finding counts. |
 
 ### 3.4.2 Non-Functional Requirements
 
@@ -718,7 +705,6 @@ The platform implements a publish-subscribe pattern for real-time event streamin
 | OpenVAS | -- | Vulnerability Results |
 | Google Gemini | Risk Context | Advisory Text |
 | Wazuh | Log Queries | Security Events |
-| n8n | Webhook Triggers | Workflow Status |
 
 ### 3.5.3 Data Flow Diagram -- Level 1
 
@@ -838,7 +824,6 @@ The dashboard uses a two-tier navigation system:
 | elasticsearch | sme_dashboard_elastic | 9200 | Elasticsearch 8.11.1 | Log storage and search |
 | kibana | sme_dashboard_kibana | 5601 | Kibana 8.11.1 | Log visualization |
 | wazuh | sme_dashboard_wazuh | 1514, 1515, 55000 | Wazuh 4.7.2 | SIEM agent manager |
-| n8n | sme_dashboard_n8n | 5678 | n8n (latest) | SOAR workflow automation |
 
 **Networking:** Two Docker networks are configured -- a default internal network for inter-service communication and an external `lab_network` that bridges the main stack to vulnerable lab target containers.
 
@@ -1479,7 +1464,7 @@ The project was developed by a team of eleven members over a sixteen-week period
 | **O3:** Deterministic UnifiedRiskEngine | Achieved | Risk (0-100) and Health (100-0) scores with 100% reproducibility |
 | **O4:** AI Advisory layer | Achieved | Gemini-powered risk explanations, business impact, and remediation guidance |
 | **O5:** Real-time security dashboard | Achieved | WebSocket-driven dashboard with StatCards, NetworkTopology, RiskHeatmap, VulnTrend, OrchestrationFeed, ActionCenter |
-| **O6:** Containerized microservices deployment | Achieved | 11-service Docker Compose with PostgreSQL, Redis, Celery, Elasticsearch, Wazuh, n8n |
+| **O6:** Containerized microservices deployment | Achieved | 10-service Docker Compose with PostgreSQL, Redis, Celery, Elasticsearch, Wazuh |
 | **O7:** Validation against lab environment | Achieved | Six vulnerable targets scanned, OWASP Top 10 detected, actionable remediation generated |
 
 ## 6.3 Limitations
@@ -1566,10 +1551,6 @@ The project was developed by a team of eleven members over a sixteen-week period
 
 [23] A. Chuvakin, K. Schmidt, and C. Phillips, *Logging and Log Management*, Burlington, MA, USA: Syngress, 2012.
 
-[24] n8n GmbH, "n8n Documentation -- Workflow Automation," 2024. Available: https://docs.n8n.io
-
-[25] D. Mishra, "Security Orchestration, Automation, and Response (SOAR): A Comprehensive Overview," *International Journal of Cybersecurity Intelligence & Cybercrime*, vol. 6, no. 2, pp. 45-62, 2023.
-
 [26] S. Ramirez, "FastAPI Documentation," 2024. Available: https://fastapi.tiangolo.com
 
 [27] TechEmpower, "Web Framework Benchmarks -- Round 22," TechEmpower Inc., 2024.
@@ -1633,7 +1614,6 @@ backend/
 │       ├── pdf_generator.py        # ReportLab PDF generation
 │       ├── ai_advisor.py           # AI recommendation engine
 │       ├── wazuh_integration.py    # Wazuh REST API client
-│       ├── soar_orchestrator.py    # n8n webhook caller
 │       ├── scan_tasks.py           # Celery task definitions
 │       └── event_publisher.py      # Redis Pub/Sub publisher
 ├── Dockerfile

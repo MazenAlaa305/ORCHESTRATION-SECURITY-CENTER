@@ -35,7 +35,6 @@ graph TB
         NUCLEI["<b>Nuclei</b><br/>Template Scanner"]
         OPENVAS["<b>OpenVAS</b><br/>Vuln Scanner<br/>Port 9392"]
         WAZUH["<b>Wazuh 4.7</b><br/>SIEM Agent<br/>Port 55000"]
-        N8N["<b>n8n</b><br/>SOAR Engine<br/>Port 5678"]
         GEMINI["<b>Google Gemini</b><br/>AI Advisory"]
     end
 
@@ -52,7 +51,6 @@ graph TB
     CELERY --> NUCLEI
     API --> OPENVAS
     API --> WAZUH
-    API --> N8N
     ORCH --> GEMINI
     WAZUH --> ES
     REDIS -. "Pub/Sub<br/>ws_events" .-> API
@@ -73,11 +71,10 @@ graph TB
     style NUCLEI fill:#374151,stroke:#6b7280,color:#e0e0e0
     style OPENVAS fill:#374151,stroke:#6b7280,color:#e0e0e0
     style WAZUH fill:#374151,stroke:#6b7280,color:#e0e0e0
-    style N8N fill:#374151,stroke:#6b7280,color:#e0e0e0
     style GEMINI fill:#374151,stroke:#6b7280,color:#e0e0e0
 ```
 
-**Figure 3.1:** *High-Level System Architecture Diagram — Three-tier client-server architecture showing the React presentation tier, FastAPI application tier with agent orchestration and Celery workers, data tier (PostgreSQL, Redis, Elasticsearch), and external integrations (Nmap, Nuclei, OpenVAS, Wazuh, n8n, Google Gemini). All services are orchestrated via Docker Compose.*
+**Figure 3.1:** *High-Level System Architecture Diagram — Three-tier client-server architecture showing the React presentation tier, FastAPI application tier with agent orchestration and Celery workers, data tier (PostgreSQL, Redis, Elasticsearch), and external integrations (Nmap, Nuclei, OpenVAS, Wazuh, Google Gemini). All services are orchestrated via Docker Compose.*
 
 ---
 
@@ -320,7 +317,6 @@ flowchart LR
     OPENVAS_E["<b>OpenVAS</b>"]
     GEMINI_E["<b>Google<br/>Gemini</b>"]
     WAZUH_E["<b>Wazuh</b>"]
-    N8N_E["<b>n8n</b>"]
 
     ADMIN -- "Scan Request<br/>Target Data<br/>Vuln Status Updates" --> SYSTEM
     SYSTEM -- "Dashboard Data<br/>Real-Time Events<br/>PDF Reports<br/>Action Items" --> ADMIN
@@ -340,9 +336,6 @@ flowchart LR
     SYSTEM -- "Log Queries" --> WAZUH_E
     WAZUH_E -- "Security Events" --> SYSTEM
 
-    SYSTEM -- "Webhook Triggers" --> N8N_E
-    N8N_E -- "Workflow Status" --> SYSTEM
-
     style ADMIN fill:#2563eb,stroke:#1d4ed8,color:#fff
     style SYSTEM fill:#475569,stroke:#64748b,color:#fff,stroke-width:3px
     style NMAP_E fill:#374151,stroke:#6b7280,color:#e0e0e0
@@ -350,10 +343,9 @@ flowchart LR
     style OPENVAS_E fill:#374151,stroke:#6b7280,color:#e0e0e0
     style GEMINI_E fill:#374151,stroke:#6b7280,color:#e0e0e0
     style WAZUH_E fill:#374151,stroke:#6b7280,color:#e0e0e0
-    style N8N_E fill:#374151,stroke:#6b7280,color:#e0e0e0
 ```
 
-**Figure 3.5:** *Data Flow Diagram — Level 0 (Context Diagram) — The Orchestration Security Center system represented as a single process interacting with the SME Administrator (primary external entity) and six tool/service entities (Nmap, Nuclei, OpenVAS, Google Gemini, Wazuh, n8n), showing bidirectional data flows for scan requests, vulnerability findings, advisory text, and security events.*
+**Figure 3.5:** *Data Flow Diagram — Level 0 (Context Diagram) — The Orchestration Security Center system represented as a single process interacting with the SME Administrator (primary external entity) and five tool/service entities (Nmap, Nuclei, OpenVAS, Google Gemini, Wazuh), showing bidirectional data flows for scan requests, vulnerability findings, advisory text, and security events.*
 
 ---
 
@@ -513,7 +505,6 @@ flowchart TB
             OV["<b>openvas</b><br/>Greenbone<br/>:9390, :9392"]
             WZ["<b>wazuh</b><br/>Wazuh 4.7<br/>:1514, :55000"]
             KB["<b>kibana</b><br/>Kibana 8.11<br/>:5601"]
-            NN["<b>n8n</b><br/>SOAR Engine<br/>:5678"]
         end
     end
 
@@ -535,7 +526,6 @@ flowchart TB
     KB --> EL
     BE --> OV
     BE --> WZ
-    BE --> NN
     FE_S -- "HTTP/WS" --> BE
     BE -. "lab_network" .-> LabNetwork
 
@@ -554,10 +544,9 @@ flowchart TB
     style OV fill:#dc2626,stroke:#b91c1c,color:#fff
     style WZ fill:#dc2626,stroke:#b91c1c,color:#fff
     style KB fill:#dc2626,stroke:#b91c1c,color:#fff
-    style NN fill:#dc2626,stroke:#b91c1c,color:#fff
 ```
 
-**Figure 3.8:** *Docker Compose Service Architecture — Eleven containerized microservices organized into three layers: Application (FastAPI, React, Celery Worker, Celery Beat), Data (PostgreSQL, Redis, Elasticsearch), and Security (OpenVAS, Wazuh, Kibana, n8n). An external lab_network bridges the stack to six vulnerable target containers for testing.*
+**Figure 3.8:** *Docker Compose Service Architecture — Ten containerized microservices organized into three layers: Application (FastAPI, React, Celery Worker, Celery Beat), Data (PostgreSQL, Redis, Elasticsearch), and Security (OpenVAS, Wazuh, Kibana). An external lab_network bridges the stack to six vulnerable target containers for testing.*
 
 ---
 
@@ -802,7 +791,6 @@ flowchart LR
     SERVICES --> PDF["pdf_generator.py"]
     SERVICES --> AIA["ai_advisor.py"]
     SERVICES --> WI["wazuh_integration.py"]
-    SERVICES --> SOAR["soar_orchestrator.py"]
     SERVICES --> ST["scan_tasks.py"]
     SERVICES --> EP_PUB["event_publisher.py"]
 
