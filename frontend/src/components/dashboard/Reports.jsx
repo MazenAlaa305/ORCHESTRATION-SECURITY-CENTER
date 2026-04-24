@@ -27,8 +27,9 @@ const Reports = ({ refresh }) => {
         try {
             setLoading(true);
             setError(null);
-            const { data } = await scanService.getScans();
-            const completed = (data || []).filter(s => String(s.status).toLowerCase() === 'completed');
+            // Phase 4: list is now `{items, total, page, page_size}`.
+            const { data } = await scanService.getScans({ page: 1, page_size: 100, status: 'completed' });
+            const completed = (data?.items || []).filter(s => String(s.status).toLowerCase() === 'completed');
             setScans(completed);
             if (completed.length > 0) {
                 setSelectedScan(completed[0]);

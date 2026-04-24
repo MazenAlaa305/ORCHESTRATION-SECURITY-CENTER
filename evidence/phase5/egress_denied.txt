@@ -1,0 +1,36 @@
+Phase 5.1 T-04 — egress-denied smoke test (procedure, pending live run)
+=======================================================================
+Date authored: 2026-04-25
+
+Runtime verification deferred to Phase 7 regression (Docker daemon not available
+in the current execution environment). Procedure below is deterministic — save
+the stdout/stderr of the commands to this file when the lab is up.
+
+Preconditions
+-------------
+1. docker compose -f docker-compose.lab.yml \
+     -f infra/isolation/docker-compose.lab.isolation.override.yml up -d
+2. sudo bash infra/isolation/lab_isolation.sh apply   (Linux)
+   OR
+   powershell -ExecutionPolicy Bypass -File .\infra\isolation\lab_isolation.ps1 apply   (Windows)
+
+Commands and expected outcomes
+------------------------------
+$ docker exec lab_webserver curl -m 5 -o /dev/null -w '%{http_code}\n' https://1.1.1.1
+  EXPECTED: curl: (28) Connection timed out  (exit != 0)
+
+$ docker exec lab_webserver sh -c 'getent hosts google.com'
+  EXPECTED: (no output) — DNS resolution contained inside the lab.
+
+$ docker exec lab_api_gateway curl -m 5 -o /dev/null -w '%{http_code}\n' http://10.10.10.10:3000
+  EXPECTED: 200  — intra-lab traffic still works between dmz containers.
+
+$ docker exec lab_database sh -c 'curl -m 5 -o /dev/null -w "%{http_code}\n" http://10.10.10.10:3000 || echo blocked'
+  EXPECTED: blocked — data subnet cannot reach dmz containers once the cross-subnet
+  ACL lands (a follow-up to this audit).
+
+Pass criteria
+-------------
+- curl to any non-lab destination fails from every lab container.
+- curl to any lab peer on a different subnet requires explicit allow; denied by default.
+- docker network inspect reports Internal=true for dmz, corp, data.

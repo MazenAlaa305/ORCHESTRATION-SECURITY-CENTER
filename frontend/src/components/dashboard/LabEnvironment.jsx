@@ -172,16 +172,47 @@ const EventFeed = ({ events }) => {
     );
 };
 
+// ── Phase 5.3: translate Docker daemon errors into plain-English messages ───
+const humanizeLabError = (err) => {
+    if (!err) return null;
+    const detail = err?.response?.data?.detail || err?.message || String(err);
+    const lower = detail.toLowerCase();
+    if (lower.includes('cannot connect to the docker daemon') || lower.includes('docker daemon')) {
+        return 'Docker Desktop is not running. Start Docker Desktop and press Refresh.';
+    }
+    if (lower.includes('permission denied') && lower.includes('docker')) {
+        return 'The backend does not have permission to reach the Docker socket. Add the backend user to the docker group and restart.';
+    }
+    if (lower.includes('timeout') || lower.includes('timed out')) {
+        return 'Docker is slow to respond — the daemon may be starting. Wait a few seconds and press Refresh.';
+    }
+    if (err?.response?.status >= 500) {
+        return 'The backend could not reach the lab manager. Check the backend logs.';
+    }
+    if (err?.response?.status === 401 || err?.response?.status === 403) {
+        return 'You are not authorized to control the lab. Sign in as an analyst or admin.';
+    }
+    return detail;
+};
+
 // ── Main Component ───────────────────────────────────────────────────────────
 const LabEnvironment = () => {
     const queryClient = useQueryClient();
     const [scanningTarget, setScanningTarget] = useState(null);
 
     // Fetch lab status
-    const { data: statusData, isLoading: statusLoading, refetch: refetchStatus, isRefetching } = useQuery({
+    // Phase 5.3: a 10s cadence is fast enough to feel live for container state
+    // transitions without pestering Docker once per second. WS push is the
+    // preferred future path, documented in Phase 5.3 notes.
+    const {
+        data: statusData, isLoading: statusLoading,
+        refetch: refetchStatus, isRefetching,
+        error: statusError,
+    } = useQuery({
         queryKey: ['lab-status'],
         queryFn: () => labService.getStatus().then(r => r.data),
-        refetchInterval: 30000,
+        refetchInterval: 10000,
+        retry: 1,
     });
 
     // Fetch lab events
@@ -189,6 +220,7 @@ const LabEnvironment = () => {
         queryKey: ['lab-events'],
         queryFn: () => labService.getEvents(30).then(r => r.data),
         refetchInterval: 15000,
+        retry: 1,
     });
 
     // Seed mutation
@@ -210,6 +242,8 @@ const LabEnvironment = () => {
             setScanningTarget(null);
         },
     });
+
+    const friendlyError = humanizeLabError(statusError || seedMutation.error || scanMutation.error);
 
     const handleScan = (target) => {
         setScanningTarget(target.container);
@@ -235,6 +269,21 @@ const LabEnvironment = () => {
 
     return (
         <div className="space-y-4">
+            {/* Friendly error banner (Phase 5.3) */}
+            {friendlyError && (
+                <div className="glass-card border border-red-500/30 bg-red-500/10 p-3 flex items-start gap-3">
+                    <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <div className="text-red-300 text-sm font-semibold">Lab control is unavailable</div>
+                        <div className="text-red-200/80 text-xs mt-0.5">{friendlyError}</div>
+                    </div>
+                    <button onClick={() => refetchStatus()}
+                        className="text-xs px-2 py-1 rounded border border-red-400/40 text-red-300 hover:bg-red-500/20">
+                        Retry
+                    </button>
+                </div>
+            )}
+
             {/* Status Header */}
             <LabStatusHeader status={statusData} onRefresh={refetchStatus} isRefreshing={isRefetching} />
 

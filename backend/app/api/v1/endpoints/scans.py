@@ -2,18 +2,19 @@
 PentesterFlow API Endpoints - Scans
 Extended scan endpoints with AI agent integration
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional
+from datetime import datetime
 import asyncio
 
 from app.core.database import get_db, get_async_db, async_session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func, asc, desc
 from app.models.scan import Scan, ScanStatus, Target, ScanAsset
 from app.schemas.scan import (
-    ScanCreate, ScanResponse, ScanDetail, ScanSummary,
-    AgentLogResponse
+    ScanCreate, ScanResponse, ScanDetail,
+    AgentLogResponse, ScanListPage,
 )
 from app.services.scan_tasks import run_scan_task
 from app.api.deps import require_role
@@ -195,23 +196,60 @@ async def create_ai_scan(scan_in: ScanCreate, db: AsyncSession = Depends(get_asy
     return scan
 
 
-@router.get("/", response_model=List[ScanSummary])
+@router.get("/", response_model=ScanListPage)
 def list_scans(
-    skip: int = 0, 
-    limit: int = 100, 
-    status: Optional[str] = None,
-    db: Session = Depends(get_db)
+    page: int = Query(1, ge=1, description="1-indexed page number"),
+    page_size: int = Query(25, ge=1, le=200, description="Rows per page (max 200)"),
+    status: Optional[str] = Query(None, description="Filter by ScanStatus value"),
+    scan_type: Optional[str] = Query(None, description="Filter by scan profile"),
+    target: Optional[str] = Query(None, description="Substring match on target_url"),
+    date_from: Optional[datetime] = Query(None, description="Inclusive lower bound on started_at (ISO 8601)"),
+    date_to: Optional[datetime] = Query(None, description="Inclusive upper bound on started_at (ISO 8601)"),
+    sort: str = Query("started_at", description="Sort column: started_at | duration | risk_score"),
+    order: str = Query("desc", description="asc | desc"),
+    db: Session = Depends(get_db),
 ):
     """
-    List all scans with optional status filter.
+    Paginated scan list used by the History tab (Phase 4).
+
+    Returns a uniform `{items, total, page, page_size}` envelope. All filters
+    and sorting are applied at the DB layer so the client never has to slice
+    or re-sort a full-table fetch.
     """
     query = db.query(Scan)
-    
+
     if status:
         query = query.filter(Scan.status == status)
-    
-    scans = query.order_by(Scan.started_at.desc()).offset(skip).limit(limit).all()
-    return scans
+    if scan_type:
+        query = query.filter(Scan.scan_type == scan_type)
+    if target:
+        query = query.filter(Scan.target_url.ilike(f"%{target}%"))
+    if date_from:
+        query = query.filter(Scan.started_at >= date_from)
+    if date_to:
+        query = query.filter(Scan.started_at <= date_to)
+
+    total = query.with_entities(func.count(Scan.id)).scalar() or 0
+
+    # Sort whitelist — any unknown value falls back to started_at.
+    sort_map = {
+        "started_at": Scan.started_at,
+        "duration": Scan.completed_at,
+        "risk_score": Scan.risk_score,
+    }
+    sort_col = sort_map.get(sort, Scan.started_at)
+    direction = asc if order.lower() == "asc" else desc
+    query = query.order_by(direction(sort_col))
+
+    offset = (page - 1) * page_size
+    items = query.offset(offset).limit(page_size).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 @router.get("/{scan_id}", response_model=ScanDetail)

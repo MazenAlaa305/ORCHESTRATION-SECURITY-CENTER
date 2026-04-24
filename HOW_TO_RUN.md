@@ -41,6 +41,77 @@ When it finishes, open **https://localhost** (accept the self-signed cert).
 
 ---
 
+## Non-Expert 3-Click Workflow (Phase 5.3)
+
+If you don't want to drop to a terminal after the first run, everything below
+is in the UI:
+
+1. **Sign in** at `https://localhost` as an analyst/admin.
+2. Open the **Lab Environment** tab. It shows container status live. If Docker
+   Desktop isn't running yet, a plain-English banner tells you so ("Docker
+   Desktop is not running. Start Docker Desktop and press Refresh.") — no Python
+   stack traces.
+3. Click **Seed Targets**, then click **Scan** on any lab target card. Watch
+   progress via the Scanning Banner. Go to **Scan History** to see the result
+   row and generate a PDF report.
+
+When you're done, run `docker compose down` and `docker compose -f docker-compose.lab.yml down` to stop.
+
+---
+
+## Lab Network Isolation (Phase 5.1)
+
+The lab networks (`dmz`, `corp`, `data`) are intentionally vulnerable. They
+must not be reachable from the host's LAN or the internet. Two artifacts
+enforce this:
+
+- **Compose override:** [infra/isolation/docker-compose.lab.isolation.override.yml](infra/isolation/docker-compose.lab.isolation.override.yml)
+  marks every lab network `internal: true` and rebinds published ports to
+  `127.0.0.1` (loopback only).
+- **Host firewall rules:** [infra/isolation/lab_isolation.sh](infra/isolation/lab_isolation.sh)
+  (Linux/iptables) and [infra/isolation/lab_isolation.ps1](infra/isolation/lab_isolation.ps1)
+  (Windows/netsh) deny outbound traffic from the lab subnets with a minimal
+  intra-lab allowlist.
+
+### Start the lab with isolation enforced
+
+```powershell
+# Apply host firewall rules (one-time, persistent)
+powershell -ExecutionPolicy Bypass -File .\infra\isolation\lab_isolation.ps1 apply
+
+# Start lab containers with the isolation override
+docker compose -f docker-compose.lab.yml `
+               -f infra/isolation/docker-compose.lab.isolation.override.yml `
+               up -d
+```
+
+### Verify isolation is active
+
+```powershell
+# 1. Networks are internal
+docker network inspect the-dashboard-project-_lab_dmz --format '{{.Internal}}'
+# → true
+
+# 2. Container cannot reach the internet
+docker exec lab_webserver curl -m 5 https://1.1.1.1
+# → curl: (28) Connection timed out
+
+# 3. Firewall rules are active
+powershell -ExecutionPolicy Bypass -File .\infra\isolation\lab_isolation.ps1 verify
+```
+
+### Recover if the lab starts in a half-up state
+
+```powershell
+docker compose -f docker-compose.lab.yml down
+docker network prune -f
+docker compose -f docker-compose.lab.yml `
+               -f infra/isolation/docker-compose.lab.isolation.override.yml `
+               up -d --force-recreate
+```
+
+---
+
 ## Part 1 — Running the Main Dashboard (Manual Steps)
 
 ### Step 1: Create the Lab Network Bridge
@@ -438,4 +509,4 @@ The backend is restarting or overloaded. The frontend reconnects automatically w
 
 ---
 
-*Last updated: April 17, 2026*
+*Last updated: 2026-04-25 (stabilization phase 5 — lab isolation & simplified configuration)*

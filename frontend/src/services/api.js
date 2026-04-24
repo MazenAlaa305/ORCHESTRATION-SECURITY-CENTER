@@ -41,7 +41,8 @@ api.interceptors.response.use(
 
 export const scanService = {
     startScan: (target, type = 'quick') => api.post('/scans/', { target_url: target, scan_type: type }),
-    getScans: () => api.get('/scans/'),
+    // Paginated envelope: `{items, total, page, page_size}` (Phase 4).
+    getScans: (params = {}) => api.get('/scans/', { params }),
     getScanDetails: (id) => api.get(`/scans/${id}`),
     getReport: (id) => api.get(`/reports/${id}`),
     generateReport: (scanId) => api.post(`/reports/${scanId}/generate`),

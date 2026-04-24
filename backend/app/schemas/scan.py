@@ -118,6 +118,18 @@ class ScanResponse(ScanSummary):
     completed_at: Optional[datetime] = None
 
 
+class ScanListPage(BaseModel):
+    """
+    Uniform paginated envelope for the scan list (Phase 4).
+    Enforces the `{items, total, page, page_size}` shape required by the
+    refactored History tab.
+    """
+    items: List[ScanSummary]
+    total: int
+    page: int
+    page_size: int
+
+
 class ScanDetail(ScanResponse):
     agent_thoughts: Optional[Dict[str, Any]] = None
     vulnerabilities: List["VulnerabilityResponse"] = []

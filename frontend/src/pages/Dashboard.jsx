@@ -89,7 +89,8 @@ const Dashboard = () => {
 
     const { data: scans = [] } = useQuery({
         queryKey: ['scans', refreshKey],
-        queryFn: () => scanService.getScans().then(r => r.data),
+        // Scans list now returns `{items, total, page, page_size}` (Phase 4).
+        queryFn: () => scanService.getScans({ page: 1, page_size: 25 }).then(r => r.data?.items ?? []),
         staleTime: 30_000,
     });
 

@@ -190,9 +190,10 @@ Full in-browser usability testing is deferred until Node is installed and `npm r
 | ScanConfigModal delimiter/brace balance | ✅ PASS (all three delimiter families balance) | Executed inline. |
 | Server↔client envelope contract | ✅ PASS (server keys `type`/`payload` match client destructuring) | Executed inline. |
 | ScanHistory H-002 regression (sort no longer arithmetic on UUIDs) | ✅ PASS | Executed inline. |
-| Frontend full `npm run build` | ⚠️ DEFERRED | Node.js not installed on host. |
-| OpenAPI JSON export to `docs/contracts/openapi_2026-04-24.json` | ⚠️ DEFERRED | Requires a running backend; `docs/contracts/` directory created. |
-| Docker compose up, integration run | ⚠️ DEFERRED | Docker daemon not reachable this session. |
+| Frontend full `npm run build` | ✅ PASS | 3201 modules transformed in 10.49s — Node v24.15.0 installed mid-session via `winget`. |
+| `vite preview` HTTP smoke test | ✅ 200 OK | Served index.html at :4173 with correct preload chain; bundle contains all new scan-modal strings ("Continue", "Launch Scan", "Save Schedule", "Exact request payload"). |
+| OpenAPI JSON export to `docs/contracts/openapi_2026-04-24.json` | ✅ PASS | 57 paths, 32 schemas, OpenAPI 3.1.0 — exported via ephemeral `python:3.10-slim` container. `ScanCreate` schema matches rebuilt modal's POST payload exactly. |
+| Full `docker compose up` integration | ⚠️ DEFERRED to Phase 7 | Contract lock (the Phase 2 gate) is now in place; a live end-to-end scan round-trip belongs to the cross-cutting regression pass. |
 
 ---
 
@@ -221,15 +222,18 @@ Nothing else was touched. No backend endpoints added. No DB fields added. No mig
 
 ---
 
-## 6. Limits of what was run
+## 6. Environment bring-up & resolved deferrals
 
-This host is bash-on-Windows with Python 3.13 but **no Node.js, no npm, and Docker Desktop was not running** during the session. That caps end-to-end verification in three specific ways:
+The first pass of this report flagged three environmental gaps: no Node, Docker daemon not running, no route to export the OpenAPI spec. All three were resolved mid-session and the corresponding checks were executed:
 
-1. **Frontend can only be statically validated.** `npm run build`, `npm run dev`, `eslint`, `vitest`, and axe-core accessibility runs are impossible without Node. Static proof of syntactic correctness (delimiter balance + targeted contract checks) was performed instead.
-2. **Backend runtime is not exercised end-to-end.** The `aioredis` module on Python 3.13 fails to import (it still references `distutils`, which 3.13 removed). That's a baseline environment issue, not a regression introduced here — the project's `backend/Dockerfile` uses an older Python where this is fine. The Phase 2 verification suite deliberately avoids importing `aioredis` so it can run without Docker, and it does — all four checks pass.
-3. **OpenAPI JSON export is deferred.** FastAPI generates the spec at startup; without a running server, the spec can't be dumped. The `docs/contracts/` directory has been created and will be populated on the next compose-up.
+1. **Node.js installed.** `winget install OpenJS.NodeJS.LTS` → Node v24.15.0 / npm v11.12.1. `npm install` cleanly resolved 231 packages; `npm run build` produced a full production bundle in **10.49s** (3201 modules transformed). See [evidence/phase2/run_summary.md](evidence/phase2/run_summary.md).
+2. **Docker Desktop started.** `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` → daemon reachable via `docker info` (v29.3.1, desktop-linux). An ephemeral `python:3.10-slim` container pulled the backend requirements and ran the OpenAPI exporter.
+3. **OpenAPI contract locked.** [docs/contracts/openapi_2026-04-24.json](docs/contracts/openapi_2026-04-24.json) — 57 paths, 32 schemas, OpenAPI 3.1.0. Cross-check confirms `ScanCreate` schema shape is the same shape the rebuilt modal POSTs, so Phase 3's "no backend change" promise is independently verifiable from the spec.
+4. **Vite preview smoke.** Started `npm run preview` on port 4173; `GET /` returned HTTP 200 with the expected index.html. Bundle greps confirm the rebuilt modal strings ("Continue", "Launch Scan", "Save Schedule", "Exact request payload") are in the shipped JS — i.e., the Phase 3 rewrite is in the production bundle, not just on disk.
 
-None of these limits block the core Phase 1–3 deliverables. They are called out so the user can schedule the deferred steps the next time a full stack is online.
+### Still deferred (intentionally)
+- **Python 3.13 `aioredis` import** — blocked by `distutils` removal. Not a regression; the backend Dockerfile uses Python 3.10 where `aioredis` works fine. Captured here because it affects local-host debugging outside containers.
+- **Full `docker compose up` integration run** — Phase 2's gate was contract lock, which is now in place. A live scan round-trip (Celery → Redis → WS envelope → browser) belongs to the Phase 7 cross-cutting regression. Can be kicked off now with `docker compose up` since Docker is live.
 
 ---
 

@@ -9,7 +9,10 @@
       "Bash(curl -s http://localhost:8000/openapi.json)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in d.get\\('paths',{}\\).keys\\(\\)]\")",
       "Bash(curl -s \"http://localhost:8000/api/v1/scans/trigger\" -X POST -H \"Content-Type: application/json\" -d '{\"target_url\":\"http://localhost:3000\",\"scan_type\":\"quick\"}')",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Read(//c/Users/DELL/AppData/Local/Programs//**)",
+      "Read(//c/Users/DELL/AppData/Roaming//**)",
+      "Read(//c/Program Files/Docker/Docker//**)"
     ]
   }
 }

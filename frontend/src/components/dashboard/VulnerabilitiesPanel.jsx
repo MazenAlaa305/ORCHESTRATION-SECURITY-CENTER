@@ -24,6 +24,15 @@ const SEV_COLORS_BAR = {
  * VulnerabilitiesPanel Component
  * Display and manage discovered vulnerabilities
  */
+// Phase 6.3: alert-fatigue defaults — high-signal view out of the box.
+// `minSeverity` keeps Info/Low out of the default cut; `hideClosed` hides fixed
+// and false-positive observations. Both can be overridden by the user.
+const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+const DEFAULT_MIN_SEVERITY = 'medium';
+
+// localStorage key for "New since last visit" (Phase 6.3).
+const LAST_SEEN_KEY = 'vulns.lastSeenAt';
+
 const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
     const [vulnerabilities, setVulnerabilities] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -33,6 +42,20 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
     const [search, setSearch] = useState('');
     const [sortField, setSortField] = useState('severity');
     const [sortDir, setSortDir] = useState('desc');
+
+    // Phase 6.3: alert-fatigue toggles.
+    const [minSeverity, setMinSeverity] = useState(DEFAULT_MIN_SEVERITY); // '' | 'low' | 'medium' | 'high' | 'critical'
+    const [hideClosed, setHideClosed]   = useState(true);
+    const [groupDups, setGroupDups]     = useState(true);
+    const [lastSeenAt] = useState(() => {
+        try { return parseInt(localStorage.getItem(LAST_SEEN_KEY) || '0', 10) || 0; }
+        catch { return 0; }
+    });
+
+    // Mark this visit after render so the current session keeps the "new" chip.
+    useEffect(() => {
+        try { localStorage.setItem(LAST_SEEN_KEY, String(Date.now())); } catch { /* no-op */ }
+    }, []);
 
     useEffect(() => {
         fetchVulnerabilities();
@@ -88,11 +111,30 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
         }
     };
 
-    const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+    // Phase 6.3: dedup collapse — group observations by finding_id so a single
+    // row represents "N observations of the same issue".
+    const dedupCounts = vulnerabilities.reduce((acc, v) => {
+        const key = v.finding_id || v.id;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+    const deduped = groupDups
+        ? Object.values(vulnerabilities.reduce((acc, v) => {
+            const key = v.finding_id || v.id;
+            // Keep the most recently created observation as the canonical row.
+            if (!acc[key] || new Date(v.created_at) > new Date(acc[key].created_at)) acc[key] = v;
+            return acc;
+        }, {}))
+        : vulnerabilities;
 
-    const displayed = vulnerabilities
+    const minRank = minSeverity ? SEV_RANK[minSeverity] : -1;
+
+    const displayed = deduped
         .filter(v => {
-            if (filter.severity && (v.severity || '').toLowerCase() !== filter.severity) return false;
+            const sev = (v.severity || 'info').toLowerCase();
+            if (minRank >= 0 && (SEV_RANK[sev] ?? 0) < minRank) return false;
+            if (hideClosed && ['fixed', 'false_positive'].includes(v.status)) return false;
+            if (filter.severity && sev !== filter.severity) return false;
             if (filter.status && (v.status || '') !== filter.status) return false;
             if (search) {
                 const q = search.toLowerCase();
@@ -168,6 +210,35 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                         className="bg-transparent text-white text-xs outline-none placeholder:text-gray-600 w-40 font-mono"
                     />
                 </div>
+                {/* Phase 6.3: minimum-severity threshold (default medium). */}
+                <label className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-black tracking-widest">
+                    Min sev
+                    <select
+                        value={minSeverity}
+                        onChange={(e) => setMinSeverity(e.target.value)}
+                        className="px-2 py-1 bg-black/40 border border-white/10 rounded text-white text-xs"
+                    >
+                        <option value="">All</option>
+                        <option value="low">Low+</option>
+                        <option value="medium">Medium+</option>
+                        <option value="high">High+</option>
+                        <option value="critical">Critical only</option>
+                    </select>
+                </label>
+                {/* Phase 6.3: hide closed/FP observations by default. */}
+                <label className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-black tracking-widest cursor-pointer">
+                    <input type="checkbox" checked={hideClosed}
+                        onChange={(e) => setHideClosed(e.target.checked)}
+                        className="accent-cyber-accent" />
+                    Hide closed
+                </label>
+                {/* Phase 6.3: dedup collapse toggle. */}
+                <label className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-black tracking-widest cursor-pointer">
+                    <input type="checkbox" checked={groupDups}
+                        onChange={(e) => setGroupDups(e.target.checked)}
+                        className="accent-cyber-accent" />
+                    Group duplicates
+                </label>
                 <select
                     value={filter.severity}
                     onChange={(e) => setFilter({ ...filter, severity: e.target.value })}
@@ -212,6 +283,17 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 {displayed.map((vuln) => {
                     const sevKey = (vuln.severity || 'info').toLowerCase();
                     const cveId = vuln.cve_id || vuln.type?.match(/CVE-\d{4}-\d+/)?.[0];
+                    // Phase 6.3 row annotations.
+                    const dupKey      = vuln.finding_id || vuln.id;
+                    const dupCount    = dedupCounts[dupKey] || 1;
+                    const createdMs   = vuln.created_at ? new Date(vuln.created_at).getTime() : 0;
+                    const isNew       = lastSeenAt > 0 && createdMs > lastSeenAt;
+                    // A failed or low-confidence validation should not be rendered
+                    // as a first-tier Critical — surface it as a second-tier warning
+                    // chip so the SOC analyst can triage it separately.
+                    const probeOutcome = vuln.ai_validation_result?.is_valid;
+                    const lowConfidence = (vuln.confidence_score ?? 1) < 0.5;
+                    const unconfirmed   = probeOutcome === false || lowConfidence;
                     return (
                     <div
                         key={vuln.id}
@@ -231,6 +313,30 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                     <h4 className="text-white font-semibold truncate">
                                         {vuln.title || vuln.type || (vuln.host ? `${vuln.type || 'Issue'} — ${vuln.host}${vuln.port ? ':' + vuln.port : ''}` : 'Unknown Vulnerability')}
                                     </h4>
+                                    {isNew && (
+                                        <span
+                                            className="text-[9px] px-1.5 py-0.5 rounded bg-cyber-neon/20 text-cyber-neon border border-cyber-neon/40 font-black uppercase tracking-widest"
+                                            title="First seen since your last visit"
+                                        >
+                                            NEW
+                                        </span>
+                                    )}
+                                    {dupCount > 1 && groupDups && (
+                                        <span
+                                            className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-gray-300 border border-white/10 font-mono"
+                                            title={`${dupCount} observations of the same finding`}
+                                        >
+                                            ×{dupCount}
+                                        </span>
+                                    )}
+                                    {unconfirmed && (
+                                        <span
+                                            className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-400 border border-yellow-500/40 font-black uppercase tracking-widest"
+                                            title="Validation probe did not confirm this finding — triage as lower-tier warning"
+                                        >
+                                            UNCONFIRMED
+                                        </span>
+                                    )}
                                     {cveId && (
                                         <a
                                             href={`https://nvd.nist.gov/vuln/detail/${cveId}`}
