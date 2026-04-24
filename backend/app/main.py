@@ -12,6 +12,7 @@ from app.api.api import api_router
 from app.api.v1.endpoints import lab as lab_endpoints
 
 from app.services.ws_manager import manager
+from app.core.request_id import RequestIdMiddleware, install_request_id_logging
 
 # ── Structured logging ──────────────────────────────────────────────────────
 logging.basicConfig(
@@ -19,6 +20,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
+install_request_id_logging(logging.getLogger())
 logger = logging.getLogger(__name__)
 
 # ── Redis event listener with exponential backoff ───────────────────────────
@@ -146,6 +148,9 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan,
 )
+
+# ── Request-ID middleware (must wrap before CORS so the header is set) ──────
+app.add_middleware(RequestIdMiddleware)
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 if settings.BACKEND_CORS_ORIGINS:

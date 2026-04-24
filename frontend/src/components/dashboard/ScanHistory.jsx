@@ -12,8 +12,10 @@ const ScanHistory = ({ refresh }) => {
     const loadScans = async () => {
         try {
             const res = await scanService.getScans();
-            // Sort by ID desc (newest first)
-            setScans(res.data.sort((a, b) => b.id - a.id));
+            // Server already orders by started_at desc (scans.list_scans).
+            // Previous client-side `b.id - a.id` subtracted UUID strings → NaN
+            // → no-op sort (defect H-002).
+            setScans(res.data || []);
         } catch (error) {
             console.error("Failed to load scans", error);
         }
