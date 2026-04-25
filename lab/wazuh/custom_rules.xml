@@ -1,0 +1,45 @@
+<!--
+  lab/wazuh/custom_rules.xml
+  Mount into the Wazuh manager via docker-compose.lab.yml volume:
+    - ./lab/wazuh/custom_rules.xml:/var/ossec/etc/rules/local_rules.xml:ro
+  Restart the manager after changes; verify with `wazuh-logtest`.
+-->
+<group name="orchestration_lab,">
+  <rule id="100100" level="10">
+    <if_sid>5712</if_sid>
+    <description>Lab: SSH brute force attempt against vulnerable host</description>
+  </rule>
+
+  <rule id="100101" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="event">sqli_detected</field>
+    <description>Lab: SQL injection signature observed</description>
+  </rule>
+
+  <rule id="100102" level="11">
+    <decoded_as>json</decoded_as>
+    <field name="event">xss_detected</field>
+    <description>Lab: Reflected XSS signature observed</description>
+  </rule>
+
+  <rule id="100103" level="9">
+    <decoded_as>json</decoded_as>
+    <field name="port">445</field>
+    <field name="action">null_session</field>
+    <description>Lab: SMB null session — misconfiguration</description>
+  </rule>
+
+  <rule id="100104" level="9">
+    <decoded_as>json</decoded_as>
+    <field name="port">6379</field>
+    <field name="action">unauth_access</field>
+    <description>Lab: Redis unauthenticated access — misconfiguration</description>
+  </rule>
+
+  <rule id="100110" level="13">
+    <decoded_as>json</decoded_as>
+    <field name="source">orchestration_security_center</field>
+    <field name="severity">CRITICAL</field>
+    <description>Orchestration platform forwarded a CRITICAL finding</description>
+  </rule>
+</group>

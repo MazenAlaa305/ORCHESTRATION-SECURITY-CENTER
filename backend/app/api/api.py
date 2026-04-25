@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from .v1.endpoints import scans, reports, network, targets, vulnerabilities, dashboard, openvas, siem, config, audit, findings
-from .v1.endpoints import auth
+from .v1.endpoints import auth, rbac
 from .deps import get_current_user
 
 api_router = APIRouter()
@@ -27,6 +27,9 @@ api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboar
 api_router.include_router(openvas.router, prefix="/openvas", tags=["openvas"], dependencies=_auth)
 api_router.include_router(siem.router, prefix="/siem", tags=["siem"], dependencies=_auth)
 api_router.include_router(audit.router, prefix="", tags=["audit"], dependencies=_auth)
+
+# Phase 3 — RBAC user/role administration (admin-only enforced inside the router)
+api_router.include_router(rbac.router, prefix="/rbac", tags=["rbac"], dependencies=_auth)
 
 
 @api_router.get("/")

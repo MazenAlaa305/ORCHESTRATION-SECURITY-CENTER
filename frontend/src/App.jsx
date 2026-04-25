@@ -1,16 +1,14 @@
 import React from 'react';
 import Dashboard from './pages/Dashboard';
-import LoginPage from './components/LoginPage';
-import { useAuth } from './context/AuthContext';
+import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/ui/ProtectedRoute';
 
 function App() {
-    const { token } = useAuth();
-
-    if (!token) {
-        return <LoginPage />;
-    }
-
-    return <Dashboard />;
+    return (
+        <ProtectedRoute fallback={<LoginPage />}>
+            <Dashboard />
+        </ProtectedRoute>
+    );
 }
 
 export default App;

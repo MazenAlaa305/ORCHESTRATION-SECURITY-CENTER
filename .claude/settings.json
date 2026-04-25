@@ -12,7 +12,9 @@
       "Bash(python -c ' *)",
       "Read(//c/Users/DELL/AppData/Local/Programs//**)",
       "Read(//c/Users/DELL/AppData/Roaming//**)",
-      "Read(//c/Program Files/Docker/Docker//**)"
+      "Read(//c/Program Files/Docker/Docker//**)",
+      "Bash(chmod +x infra/healthcheck.sh)",
+      "Bash(git mv *)"
     ]
   }
 }
