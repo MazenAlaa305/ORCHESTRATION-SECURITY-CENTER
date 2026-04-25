@@ -1,0 +1,487 @@
+{
+  "info": {
+    "name": "Orchestration Security Center API",
+    "description": "Full REST surface for the Orchestration Security Center (FYP 2025–2026). Mirrors the FastAPI router decorators in backend/app/api/v1/.\n\nUsage:\n1. Set environment vars `base_url` (e.g. https://localhost/api/v1) and `admin_email` / `admin_password`.\n2. Run the **Auth → Login** request once — the test script auto-populates `{{token}}`.\n3. Every other request inherits Bearer auth from the collection.\n\nRun in CI with: `newman run postman/OrchestrationSecurityCenter_API.postman_collection.json -e <env>.json`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "8b3a7e2c-orch-sec-2026"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://localhost/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "admin_email", "value": "admin@local" },
+    { "key": "admin_password", "value": "ChangeMe123!" },
+    { "key": "scan_id", "value": "" },
+    { "key": "user_id", "value": "" },
+    { "key": "target_id", "value": "" },
+    { "key": "finding_id", "value": "" },
+    { "key": "report_id", "value": "" },
+    { "key": "asset_id", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-login if token is empty",
+          "if (!pm.collectionVariables.get('token')) {",
+          "  const baseUrl = pm.collectionVariables.get('base_url');",
+          "  pm.sendRequest({",
+          "    url: baseUrl + '/auth/login',",
+          "    method: 'POST',",
+          "    header: { 'Content-Type': 'application/json' },",
+          "    body: { mode: 'raw', raw: JSON.stringify({",
+          "      email: pm.collectionVariables.get('admin_email'),",
+          "      password: pm.collectionVariables.get('admin_password')",
+          "    }) }",
+          "  }, (err, res) => {",
+          "    if (!err && res.code === 200) {",
+          "      const body = res.json();",
+          "      pm.collectionVariables.set('token', body.access_token);",
+          "    }",
+          "  });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('token', body.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}" },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "POST /auth/change-password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"old_password\": \"{{admin_password}}\",\n  \"new_password\": \"NewStrongPass!2026\"\n}" },
+            "url": { "raw": "{{base_url}}/auth/change-password", "host": ["{{base_url}}"], "path": ["auth", "change-password"] }
+          }
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RBAC (admin)",
+      "item": [
+        {
+          "name": "GET /rbac/users",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/rbac/users", "host": ["{{base_url}}"], "path": ["rbac", "users"] }
+          }
+        },
+        {
+          "name": "POST /rbac/users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('user_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"viewer-{{$timestamp}}@local\",\n  \"password\": \"ViewerPass!2026\",\n  \"role\": \"VIEWER\"\n}" },
+            "url": { "raw": "{{base_url}}/rbac/users", "host": ["{{base_url}}"], "path": ["rbac", "users"] }
+          }
+        },
+        {
+          "name": "PATCH /rbac/users/{id}/role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"role\": \"ANALYST\" }" },
+            "url": { "raw": "{{base_url}}/rbac/users/{{user_id}}/role", "host": ["{{base_url}}"], "path": ["rbac", "users", "{{user_id}}", "role"] }
+          }
+        },
+        {
+          "name": "POST /rbac/users/{id}/disable",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/rbac/users/{{user_id}}/disable", "host": ["{{base_url}}"], "path": ["rbac", "users", "{{user_id}}", "disable"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Targets",
+      "item": [
+        {
+          "name": "GET /targets",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/targets/", "host": ["{{base_url}}"], "path": ["targets", ""] }
+          }
+        },
+        {
+          "name": "POST /targets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if ([200,201].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.set('target_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lab Webserver\",\n  \"url\": \"http://lab_webserver:3000\",\n  \"kind\": \"web\"\n}" },
+            "url": { "raw": "{{base_url}}/targets/", "host": ["{{base_url}}"], "path": ["targets", ""] }
+          }
+        },
+        {
+          "name": "GET /targets/{id}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/targets/{{target_id}}", "host": ["{{base_url}}"], "path": ["targets", "{{target_id}}"] }
+          }
+        },
+        {
+          "name": "DELETE /targets/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/targets/{{target_id}}", "host": ["{{base_url}}"], "path": ["targets", "{{target_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Scans",
+      "item": [
+        {
+          "name": "GET /scans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/scans/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["scans", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /scans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if ([200,201].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.set('scan_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"target_url\": \"http://lab_webserver:3000\",\n  \"scan_type\": \"standard\",\n  \"tools\": [\"nmap\", \"nuclei\"]\n}" },
+            "url": { "raw": "{{base_url}}/scans/", "host": ["{{base_url}}"], "path": ["scans", ""] }
+          }
+        },
+        {
+          "name": "GET /scans/{id}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/scans/{{scan_id}}", "host": ["{{base_url}}"], "path": ["scans", "{{scan_id}}"] }
+          }
+        },
+        {
+          "name": "GET /scans/{id}/task-status",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/scans/{{scan_id}}/task-status", "host": ["{{base_url}}"], "path": ["scans", "{{scan_id}}", "task-status"] }
+          }
+        },
+        {
+          "name": "POST /scans/{id}/stop",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/scans/{{scan_id}}/stop", "host": ["{{base_url}}"], "path": ["scans", "{{scan_id}}", "stop"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Findings",
+      "item": [
+        {
+          "name": "GET /findings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const items = body.items || body;",
+                  "if (Array.isArray(items) && items.length) {",
+                  "  pm.collectionVariables.set('finding_id', items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/findings/?severity=CRITICAL",
+              "host": ["{{base_url}}"],
+              "path": ["findings", ""],
+              "query": [{ "key": "severity", "value": "CRITICAL" }]
+            }
+          }
+        },
+        {
+          "name": "GET /findings/{id}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/findings/{{finding_id}}", "host": ["{{base_url}}"], "path": ["findings", "{{finding_id}}"] }
+          }
+        },
+        {
+          "name": "POST /findings/{id}/false-positive",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/findings/{{finding_id}}/false-positive", "host": ["{{base_url}}"], "path": ["findings", "{{finding_id}}", "false-positive"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "GET /reports",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reports/", "host": ["{{base_url}}"], "path": ["reports", ""] }
+          }
+        },
+        {
+          "name": "POST /reports",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if ([200,201].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.set('report_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"scan_id\": \"{{scan_id}}\",\n  \"format\": \"pdf\"\n}" },
+            "url": { "raw": "{{base_url}}/reports/", "host": ["{{base_url}}"], "path": ["reports", ""] }
+          }
+        },
+        {
+          "name": "GET /reports/{id}/download",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reports/{{report_id}}/download", "host": ["{{base_url}}"], "path": ["reports", "{{report_id}}", "download"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Network",
+      "item": [
+        {
+          "name": "GET /network/assets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const items = body.items || body;",
+                  "if (Array.isArray(items) && items.length) {",
+                  "  pm.collectionVariables.set('asset_id', items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/network/assets", "host": ["{{base_url}}"], "path": ["network", "assets"] }
+          }
+        },
+        {
+          "name": "GET /network/assets/{id}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/network/assets/{{asset_id}}", "host": ["{{base_url}}"], "path": ["network", "assets", "{{asset_id}}"] }
+          }
+        },
+        {
+          "name": "GET /network/topology",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/network/topology", "host": ["{{base_url}}"], "path": ["network", "topology"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SIEM",
+      "item": [
+        {
+          "name": "GET /siem/alerts",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/siem/alerts", "host": ["{{base_url}}"], "path": ["siem", "alerts"] }
+          }
+        },
+        {
+          "name": "GET /siem/correlations",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/siem/correlations", "host": ["{{base_url}}"], "path": ["siem", "correlations"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "GET /audit/log",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/audit/log", "host": ["{{base_url}}"], "path": ["audit", "log"] }
+          }
+        },
+        {
+          "name": "GET /audit/verify",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/audit/verify", "host": ["{{base_url}}"], "path": ["audit", "verify"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lab",
+      "item": [
+        {
+          "name": "GET /lab/services",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/lab/services", "host": ["{{base_url}}"], "path": ["lab", "services"] }
+          }
+        },
+        {
+          "name": "POST /lab/scenarios/{name}/run",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/lab/scenarios/sqli/run", "host": ["{{base_url}}"], "path": ["lab", "scenarios", "sqli", "run"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpenVAS (admin)",
+      "item": [
+        {
+          "name": "POST /openvas/tasks",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"target_id\": \"{{target_id}}\",\n  \"profile\": \"full_and_fast\"\n}" },
+            "url": { "raw": "{{base_url}}/openvas/tasks", "host": ["{{base_url}}"], "path": ["openvas", "tasks"] }
+          }
+        },
+        {
+          "name": "GET /openvas/tasks/{id}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/openvas/tasks/{{scan_id}}", "host": ["{{base_url}}"], "path": ["openvas", "tasks", "{{scan_id}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}

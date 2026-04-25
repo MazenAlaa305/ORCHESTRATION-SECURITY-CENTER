@@ -14,7 +14,8 @@
       "Read(//c/Users/DELL/AppData/Roaming//**)",
       "Read(//c/Program Files/Docker/Docker//**)",
       "Bash(chmod +x infra/healthcheck.sh)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(python -c \"import json; json.load\\(open\\('d:/FINAL PROJECT/the-dashboard-project-/postman/OrchestrationSecurityCenter_API.postman_collection.json'\\)\\); print\\('JSON valid'\\)\")"
     ]
   }
 }
