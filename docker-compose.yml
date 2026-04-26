@@ -35,7 +35,7 @@ services:
       - OPENVAS_HOST=openvas
       - OPENVAS_PORT=9390
       - OPENVAS_CONNECTION_TYPE=tls
-      - OPENVAS_ENABLED=false
+      - OPENVAS_ENABLED=true
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - SIEM_ENABLED=false
       - WAZUH_API_URL=https://wazuh:55000
@@ -131,6 +131,10 @@ services:
   celery_worker:
     build: ./backend
     container_name: sme_dashboard_celery
+    user: root
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
     command: celery -A app.core.celery_app worker --loglevel=info --concurrency=1
     deploy:
       resources:
@@ -214,6 +218,7 @@ services:
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
     networks:
+      default:
       lab_network:
         aliases:
           - wazuh.indexer
@@ -242,6 +247,7 @@ services:
     environment:
       - WAZUH_API_START="true"
     networks:
+      - default
       - lab_network
 
   n8n:
