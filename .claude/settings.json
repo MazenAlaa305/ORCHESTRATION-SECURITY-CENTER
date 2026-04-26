@@ -15,7 +15,14 @@
       "Read(//c/Program Files/Docker/Docker//**)",
       "Bash(chmod +x infra/healthcheck.sh)",
       "Bash(git mv *)",
-      "Bash(python -c \"import json; json.load\\(open\\('d:/FINAL PROJECT/the-dashboard-project-/postman/OrchestrationSecurityCenter_API.postman_collection.json'\\)\\); print\\('JSON valid'\\)\")"
+      "Bash(python -c \"import json; json.load\\(open\\('d:/FINAL PROJECT/the-dashboard-project-/postman/OrchestrationSecurityCenter_API.postman_collection.json'\\)\\); print\\('JSON valid'\\)\")",
+      "Bash(python build_presentation.py)",
+      "Bash(ls backend/tests/)",
+      "Bash(ls .github/workflows/)",
+      "Bash(ls infra/)",
+      "Bash(ls lab/scenarios/ lab/wazuh/ lab/kibana/dashboards/)",
+      "Bash(ls tests/e2e/)",
+      "PowerShell(.\\\\start-lite.ps1)"
     ]
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
     X, Target as TargetIcon, Zap, Clock, Network, Shield, Radar, Brain,
@@ -529,7 +530,7 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
     const isLastStep = activeStep === 'review';
     const canAdvance = stepValidity[activeStep];
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-fade-in">
             <div className="glass-card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header */}
@@ -593,7 +594,7 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
                 </div>
             </div>
         </div>
-    );
+    , document.body);
 };
 
 export default ScanConfigModal;

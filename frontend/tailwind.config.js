@@ -14,23 +14,24 @@ export default {
             colors: {
                 cyber: {
                     // Legacy aliases (backward compat)
-                    dark:     "#01050a",
-                    deep:     "#0f1922",
-                    light:    "#1a2332",
+                    dark:     "#10222b",
+                    deep:     "#15303a",
+                    light:    "#1d3a48",
                     accent:   "#00ffff",
-                    vibrant:  "#8b5cf6",
+                    vibrant:  "#4dbdb1",
                     neon:     "#00ffff",
                     danger:   "#ff0055",
                     success:  "#00ff88",
                     warning:  "#ffaa00",
                     // New enhanced tokens
-                    bg:       "#01050a",
-                    surface:  "#0f1922",
+                    bg:       "#10222b",
+                    surface:  "#15303a",
                     safe:     "#00ff88",
                     medium:   "#ffaa00",
                     critical: "#ff0055",
-                    muted:    "#1a2332",
-                    ghost:    "#0a1118",
+                    muted:    "#1d3a48",
+                    ghost:    "#0c1c25",
+                    teal:     "#4dbdb1",
                 }
             },
             backgroundImage: {

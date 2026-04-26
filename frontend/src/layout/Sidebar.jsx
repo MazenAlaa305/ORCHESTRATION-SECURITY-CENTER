@@ -102,8 +102,8 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         <aside
             className={`relative h-screen z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-14' : 'w-52'}`}
             style={{
-                background:     'linear-gradient(180deg, rgba(5,10,18,0.98), rgba(3,7,14,0.99))',
-                borderRight:    '1px solid rgba(0,255,255,0.06)',
+                background:     'linear-gradient(180deg, rgba(18,38,48,0.92), rgba(10,24,32,0.96))',
+                borderRight:    '1px solid rgba(255,255,255,0.05)',
                 backdropFilter: 'blur(24px)',
             }}
         >
@@ -125,7 +125,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                                 className="text-xs font-black tracking-tight text-white uppercase"
                                 style={{ fontFamily: 'Syne, sans-serif' }}
                             >
-                                found <span style={{ color: '#00ffff' }}>404</span>
+                                <span style={{ color: '#00ffff' }}>OSC</span>
                             </h1>
                         </div>
                         <button

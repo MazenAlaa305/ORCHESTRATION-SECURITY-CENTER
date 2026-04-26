@@ -65,6 +65,7 @@ const Dashboard = () => {
     const [activeTab,    setActiveTab]    = useState('overview');
     const [activeSubTab, setActiveSubTab] = useState('overview');
     const [refreshKey,   setRefreshKey]   = useState(0);
+    const [activeScanId, setActiveScanId] = useState(null);
 
     // Sub-tab defaults depend on SIEM flag — SIEM tab is hidden when disabled
     const SUB_TAB_DEFAULTS = {
@@ -91,7 +92,8 @@ const Dashboard = () => {
         queryKey: ['scans', refreshKey],
         // Scans list now returns `{items, total, page, page_size}` (Phase 4).
         queryFn: () => scanService.getScans({ page: 1, page_size: 25 }).then(r => r.data?.items ?? []),
-        staleTime: 30_000,
+        staleTime: 5_000,
+        refetchInterval: 5_000,
     });
 
     const isScanning  = realTime.scanStatus === 'RUNNING'
@@ -122,7 +124,9 @@ const Dashboard = () => {
     }, [isScanning, refetchKpi]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
-    const handleScanStarted = () => {
+    const handleScanStarted = (scan) => {
+        setRefreshKey(k => k + 1);
+        if (scan?.id) setActiveScanId(scan.id);
         setActiveTab('ai-brain');
         setActiveSubTab('ai-console');
     };
@@ -249,7 +253,7 @@ const Dashboard = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="md:col-span-1 flex flex-col gap-4">
                                     <div className="glass-card p-4 h-48 flex items-center justify-center">
-                                        <OpenVasScanButton onScanStarted={() => setRefreshKey(k => k + 1)} />
+                                        <ScanButton onScanStarted={handleScanStarted} isScanning={isScanning} />
                                     </div>
                                     <Scheduler />
                                 </div>
@@ -304,8 +308,7 @@ const Dashboard = () => {
             {activeTab === 'ai-brain' && (
                 <div className="animate-fade-in space-y-4">
                     <Suspense fallback={<PanelLoader />}>
-                        <ScanPipelinePanel logs={realTime.orchestrationLog} isScanning={isScanning} />
-                        <AgentLogViewer scanId={latestScan?.id} />
+                        <AgentLogViewer scanId={activeScanId || latestScan?.id} />
                     </Suspense>
                 </div>
             )}

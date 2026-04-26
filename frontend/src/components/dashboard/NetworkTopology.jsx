@@ -12,6 +12,11 @@ const getNodeColor = (node) => {
     if (node.riskScore >= 50)      return '#ff6a00';
     if (node.riskScore >= 20)      return '#ffaa00';
     if ((node.vulnCount || 0) > 0) return '#ffaa00';
+    // Fallback: colour by criticality when no scan data yet
+    const c = (node.criticality || '').toUpperCase();
+    if (c === 'CRITICAL') return '#ff0055';
+    if (c === 'HIGH')     return '#ff6a00';
+    if (c === 'MEDIUM')   return '#ffaa00';
     return '#00ff88';
 };
 
@@ -300,7 +305,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                     <ForceGraph2D
                         ref={fgRef}
                         graphData={graphData}
-                        backgroundColor="#01050a"
+                        backgroundColor="#0c1c25"
                         nodeCanvasObject={drawNode}
                         nodeCanvasObjectMode={() => 'replace'}
                         nodeLabel={(node) => `
@@ -322,6 +327,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         d3AlphaDecay={0.018}
                         d3VelocityDecay={0.32}
                         cooldownTicks={150}
+                        onEngineStop={() => fgRef.current?.zoomToFit(400, 48)}
                         onNodeClick={handleNodeClick}
                     />
                 </div>

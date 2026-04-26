@@ -96,46 +96,69 @@ def create_scan(scan_in: ScanCreate, db: Session = Depends(get_db)):
 # ── Scan scheduling (Part C) ─────────────────────────────────────────────────
 
 _SCHEDULES: dict[str, dict] = {}
-# Lightweight in-memory schedule store. Persistent scheduling is provided by
-# Celery beat; this endpoint set exposes a simple CRUD surface so the frontend
-# can manage recurring scans without editing beat_schedule at runtime.
+# Schedule store backed by Redis so schedules survive API restarts and are
+# accessible from Celery workers.
+
+def _redis_client():
+    import redis as _redis
+    from app.core.config import settings as _s
+    return _redis.from_url(_s.REDIS_URL, decode_responses=True)
+
+SCHED_KEY = "osc:schedules"
 
 
 @router.post("/schedule",
              dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 def create_schedule(scan_in: ScanCreate):
-    """Create a recurring scan schedule."""
-    import uuid
+    """Create a recurring scan schedule stored in Redis."""
+    import uuid, json
     if not scan_in.schedule:
         raise HTTPException(status_code=400, detail="`schedule` (cron expression) is required")
     sid = str(uuid.uuid4())
-    _SCHEDULES[sid] = {
+    entry = {
         "id": sid,
-        "target_id": scan_in.target_id,
+        "target_id": str(scan_in.target_id) if scan_in.target_id else None,
         "target_url": scan_in.target_url,
-        "scan_type": scan_in.scan_type,
-        "tools": scan_in.tools,
+        "scan_type": scan_in.scan_type or "quick",
         "schedule": scan_in.schedule,
-        "auto_report": scan_in.auto_report,
-        "siem_forward": scan_in.siem_forward,
         "enabled": True,
     }
-    return _SCHEDULES[sid]
+    try:
+        r = _redis_client()
+        r.hset(SCHED_KEY, sid, json.dumps(entry))
+        r.close()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Redis unavailable: {exc}")
+    return entry
 
 
 @router.get("/schedules")
 def list_schedules():
-    """List active scan schedules."""
-    return {"schedules": list(_SCHEDULES.values())}
+    """List active scan schedules from Redis."""
+    import json
+    try:
+        r = _redis_client()
+        raw = r.hgetall(SCHED_KEY)
+        r.close()
+        return {"schedules": [json.loads(v) for v in raw.values()]}
+    except Exception:
+        return {"schedules": []}
 
 
 @router.delete("/schedules/{schedule_id}", status_code=204,
                dependencies=[Depends(require_role(UserRole.ADMIN))])
 def delete_schedule(schedule_id: str):
-    """Cancel a scheduled scan."""
-    if schedule_id not in _SCHEDULES:
-        raise HTTPException(status_code=404, detail="Schedule not found")
-    _SCHEDULES.pop(schedule_id)
+    """Delete a schedule from Redis."""
+    try:
+        r = _redis_client()
+        deleted = r.hdel(SCHED_KEY, schedule_id)
+        r.close()
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
     return None
 
 

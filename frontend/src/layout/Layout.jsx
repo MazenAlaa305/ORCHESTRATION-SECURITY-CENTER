@@ -53,7 +53,7 @@ const TopBar = ({ onQuickScan, isScanning }) => {
     }, []);
 
     return (
-        <div className="h-12 border-b border-white/5 bg-black/30 backdrop-blur-xl px-5 flex items-center gap-4 shrink-0 relative z-10">
+        <div className="h-12 border-b border-white/5 bg-[rgba(15,30,40,0.4)] backdrop-blur-xl px-5 flex items-center gap-4 shrink-0 relative z-10">
             {/* Universal search */}
             <div className="flex items-center gap-2 flex-1 max-w-sm bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 focus-within:border-cyan-400/40 transition-all">
                 <Search className="h-3.5 w-3.5 text-gray-500 shrink-0" />
@@ -106,12 +106,12 @@ const TopBar = ({ onQuickScan, isScanning }) => {
 // ── Main layout ───────────────────────────────────────────────────────────────
 const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) => (
     <div className="min-h-screen bg-cyber-dark text-gray-100 font-sans selection:bg-cyan-400 selection:text-gray-900 flex flex-row overflow-hidden">
-        {/* Ambient background glows */}
+        {/* Ambient background glows — BlurAdmin teal/turquoise palette */}
         <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
-            <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />
-            <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full" />
-            <div className="absolute top-[40%] left-[35%] w-[30%] h-[30%] bg-green-500/4 blur-[100px] rounded-full" />
-            <div className="absolute inset-0 grid-bg opacity-60" />
+            <div className="absolute top-[-15%] right-[-10%] w-[55%] h-[55%] bg-[#4dbdb1]/15 blur-[140px] rounded-full" />
+            <div className="absolute bottom-[-15%] left-[-10%] w-[50%] h-[50%] bg-[#1a4566]/30 blur-[140px] rounded-full" />
+            <div className="absolute top-[35%] left-[40%] w-[35%] h-[35%] bg-[#3a7a8c]/8 blur-[120px] rounded-full" />
+            <div className="absolute inset-0 grid-bg opacity-25" />
         </div>
 
         <Sidebar activeTab={activeTab} onTabChange={onTabChange} />

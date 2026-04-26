@@ -71,8 +71,8 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
         setStepIndex(0);  // queued
 
         try {
-            await scanService.startScan(trimmed, 'quick');
-            if (onScanStarted) onScanStarted();
+            const res = await scanService.startScan(trimmed, 'quick');
+            if (onScanStarted) onScanStarted(res?.data);
         } catch (err) {
             const detail = err?.response?.data?.detail || err.message || 'Unknown error';
             setError(`Scan failed: ${detail}`);

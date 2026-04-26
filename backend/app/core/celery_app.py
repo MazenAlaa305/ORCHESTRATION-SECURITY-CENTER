@@ -19,6 +19,11 @@ celery_app.conf.beat_schedule = {
     # Phase 4.3 — SLA breach detection runs every hour
     "hourly-sla-breach-check": {
         "task": "app.services.scan_tasks.check_sla_breaches",
-        "schedule": crontab(minute=5),  # offset by 5 min from the scan trigger
+        "schedule": crontab(minute=5),
+    },
+    # User-defined scheduled scans — fires every minute, croniter filters which are due
+    "check-due-schedules": {
+        "task": "app.services.scan_tasks.check_due_schedules",
+        "schedule": crontab(minute="*"),
     },
 }

@@ -25,6 +25,40 @@ from sqlalchemy import select
 logger = logging.getLogger(__name__)
 
 
+# ── Agent log writer ──────────────────────────────────────────────────────────
+
+def _write_agent_log(db, scan_id: str, agent_name: str, action: str,
+                     reasoning=None, input_data=None, output_data=None):
+    """Write a tamper-evident AgentLog entry using the sync SQLAlchemy session."""
+    import hashlib, json as _json
+    from app.models.scan import AgentLog
+
+    prev_row = db.query(AgentLog.this_hash).filter(
+        AgentLog.scan_id == scan_id
+    ).order_by(AgentLog.id.desc()).first()
+    prev_hash = prev_row[0] if prev_row and prev_row[0] else "0" * 64
+
+    payload = _json.dumps(
+        {"scan_id": scan_id, "agent_name": agent_name, "action": action, "reasoning": reasoning},
+        sort_keys=True, ensure_ascii=True,
+    )
+    this_hash = hashlib.sha256((prev_hash + payload).encode()).hexdigest()
+
+    entry = AgentLog(
+        scan_id=scan_id,
+        agent_name=agent_name,
+        action=action,
+        reasoning=reasoning,
+        input_data=input_data,
+        output_data=output_data,
+        prev_hash=prev_hash,
+        this_hash=this_hash,
+    )
+    db.add(entry)
+    db.commit()
+    logger.info("[AgentLog] %s | %s | hash=%s", agent_name, action, this_hash[:12])
+
+
 # ── Async helper ─────────────────────────────────────────────────────────────
 
 def _run_async(coro):
@@ -370,6 +404,12 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         # Commit nmap results so the async risk engine session can see them
         db.commit()
 
+        _write_agent_log(
+            db, scan_id, "recon_agent", "Network Reconnaissance Completed",
+            reasoning=f"Nmap discovered {len(seen_hosts)} host(s) with {vuln_count} initial findings on target {clean_target}.",
+            output_data={"hosts_found": len(seen_hosts), "open_services": vuln_count},
+        )
+
         # ── Phase 2: AI Intelligence (Gemini) ─────────────────────────────
         logger.info("[Scan %s] Phase 2: AI Intelligence analysis", scan_id)
         try:
@@ -424,6 +464,13 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         # Commit nuclei findings before risk engine's async session reads them
         db.commit()
 
+        nuclei_count = sum(1 for v in all_vulns if v.get("host") == clean_target)
+        _write_agent_log(
+            db, scan_id, "attack_agent", "Vulnerability Scan Completed",
+            reasoning=f"Nuclei deep scan finished against {clean_target}. {nuclei_count} web vulnerability finding(s) recorded.",
+            output_data={"target": clean_target, "findings": nuclei_count, "total_vulns": len(all_vulns)},
+        )
+
         # ── Phase 4: Risk Engine ───────────────────────────────────────────
         logger.info("[Scan %s] Phase 4: Risk Engine", scan_id)
         try:
@@ -443,6 +490,12 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         except Exception as exc:
             logger.error("[Scan %s] Risk Engine failed: %s", scan_id, exc)
 
+        _write_agent_log(
+            db, scan_id, "validation_agent", "Risk Scoring Completed",
+            reasoning=f"Unified Risk Engine scored all findings for scan {scan_id}. Severity distribution analysed and action items generated.",
+            output_data={"total_vulns": len(all_vulns)},
+        )
+
         # ── Phase 5: Asset Monitor ─────────────────────────────────────────
         try:
             from app.services.asset_monitor import AssetMonitor
@@ -452,6 +505,12 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
 
         # ── Phase 4.2: Finding deduplication ───────────────────────────────
         _run_finding_dedup(scan_id, str(scan.target_id) if scan.target_id else None)
+
+        _write_agent_log(
+            db, scan_id, "reporting_agent", "AI Advisory Report Generated",
+            reasoning=f"Scan pipeline complete. {len(all_vulns)} vulnerability finding(s) across {len(seen_hosts)} host(s). Remediation advice and risk scores are ready for review.",
+            output_data={"hosts": len(seen_hosts), "total_findings": len(all_vulns)},
+        )
 
         # ── Finalise: COMPLETED ────────────────────────────────────────────
         scan.status = ScanStatus.COMPLETED
@@ -541,3 +600,62 @@ def trigger_periodic_scan(target: str = "localhost"):
         logger.error("Failed to trigger periodic scan: %s", exc)
     finally:
         db.close()
+
+
+# ── User-defined schedule runner (checks every minute) ────────────────────────
+
+@celery_app.task
+def check_due_schedules():
+    """
+    Read user-created schedules from Redis and fire any whose cron expression
+    matches the current UTC minute. Runs every minute via Celery beat.
+    """
+    import json, redis as _redis
+    from croniter import croniter
+    from datetime import timezone
+
+    try:
+        r = _redis.from_url(settings.REDIS_URL, decode_responses=True)
+        raw = r.hgetall("osc:schedules")
+        r.close()
+    except Exception as exc:
+        logger.warning("check_due_schedules: Redis read failed: %s", exc)
+        return
+
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+
+    for sid, val in raw.items():
+        try:
+            entry = json.loads(val)
+        except Exception:
+            continue
+
+        if not entry.get("enabled"):
+            continue
+
+        cron_expr = entry.get("schedule", "")
+        try:
+            # croniter.match checks if `now` matches the cron expression
+            if not croniter.match(cron_expr, now):
+                continue
+        except Exception as exc:
+            logger.warning("check_due_schedules: bad cron '%s': %s", cron_expr, exc)
+            continue
+
+        # Fire the scan
+        db = SessionLocal()
+        try:
+            scan = Scan(
+                target_url=entry.get("target_url"),
+                target_id=entry.get("target_id"),
+                scan_type=entry.get("scan_type", "quick"),
+            )
+            db.add(scan)
+            db.commit()
+            db.refresh(scan)
+            run_scan_task.delay(scan_id=scan.id)
+            logger.info("Scheduled scan fired: %s for %s (cron=%s)", scan.id, entry.get("target_url"), cron_expr)
+        except Exception as exc:
+            logger.error("check_due_schedules: failed to fire scan for schedule %s: %s", sid, exc)
+        finally:
+            db.close()
