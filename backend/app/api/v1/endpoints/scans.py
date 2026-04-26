@@ -11,7 +11,7 @@ import asyncio
 from app.core.database import get_db, get_async_db, async_session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, asc, desc
-from app.models.scan import Scan, ScanStatus, Target, ScanAsset
+from app.models.scan import Scan, ScanStatus, Target, ScanAsset, Vulnerability
 from app.schemas.scan import (
     ScanCreate, ScanResponse, ScanDetail,
     AgentLogResponse, ScanListPage,
@@ -283,7 +283,7 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_async_db)):
     _s_res = await db.execute(
         select(Scan)
         .options(
-            selectinload(Scan.vulnerabilities),
+            selectinload(Scan.vulnerabilities).selectinload(Vulnerability.finding),
             selectinload(Scan.assets).selectinload(ScanAsset.services),
             selectinload(Scan.agent_logs),
             selectinload(Scan.actions)

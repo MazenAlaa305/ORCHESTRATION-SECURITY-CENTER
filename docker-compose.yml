@@ -171,6 +171,8 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/sme_cyber_db
       - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - WAZUH_API_URL=https://wazuh:55000
       - WAZUH_API_USER=wazuh
