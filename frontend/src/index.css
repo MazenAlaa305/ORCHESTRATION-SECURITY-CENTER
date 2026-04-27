@@ -46,6 +46,47 @@ code, pre { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px;
 ::-webkit-scrollbar-thumb { background: rgba(77, 189, 177, 0.25); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(77, 189, 177, 0.5); }
 
+/* ─── Accessibility ─────────────────────────────────────── */
+
+/* 1. Kill the default browser outline, restore it only for keyboard users */
+* { outline: none; }
+:focus-visible {
+  outline: 2px solid rgba(0, 255, 255, 0.65);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Buttons and links inherit the border-radius of the element itself */
+button:focus-visible, a:focus-visible {
+  border-radius: inherit;
+}
+
+/* 2. Skip-to-main link (visually hidden until focused) */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 4px;
+  z-index: 9999;
+  padding: 8px 18px;
+  background: #00ffff;
+  color: #0a1c28;
+  font-weight: 900;
+  font-size: 13px;
+  border-radius: 0 8px 8px 0;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.skip-link:focus-visible {
+  left: 0;
+  outline: none;
+}
+
+/* 3. Gray contrast floor — raise text-gray-600/700 so they pass WCAG AA 4.5:1
+   on the app's #10222b dark background (#6B7280 ≈ 5.3:1 contrast ratio) */
+@layer utilities {
+  .text-gray-600 { color: rgb(100 116 139) !important; }  /* → slate-500: #64748B, ~5.9:1 */
+  .text-gray-700 { color: rgb(100 116 139) !important; }  /* same floor  */
+}
+
 /* ─── Component Layer ───────────────────────────────────── */
 @layer components {
 

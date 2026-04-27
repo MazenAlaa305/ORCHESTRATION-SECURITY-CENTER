@@ -166,13 +166,22 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                         <button
                             onClick={toggleCollapse}
                             className="p-1 text-gray-600 hover:text-cyan-400 transition-colors"
+                            aria-label="Collapse sidebar"
                             title="Collapse sidebar"
                         >
                             <ChevronLeft className="h-3.5 w-3.5" />
                         </button>
                     </>
                 ) : (
-                    <div className="mx-auto p-1 cursor-pointer" onClick={toggleCollapse} title="Expand sidebar">
+                    <div
+                        className="mx-auto p-1 cursor-pointer"
+                        onClick={toggleCollapse}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Expand sidebar"
+                        title="Expand sidebar"
+                        onKeyDown={(e) => e.key === 'Enter' && toggleCollapse()}
+                    >
                         <ShieldCheck className="h-4 w-4" style={{ color: '#00ffff' }} />
                     </div>
                 )}

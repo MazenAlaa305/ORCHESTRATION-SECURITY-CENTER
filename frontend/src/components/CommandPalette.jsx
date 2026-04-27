@@ -254,12 +254,18 @@ export default function CommandPalette() {
                     <Search className="h-4 w-4 text-gray-500 shrink-0" />
                     <input
                         ref={inputRef}
+                        id="cmd-input"
+                        role="combobox"
+                        aria-expanded={flatLen > 0}
+                        aria-controls="cmd-listbox"
+                        aria-activedescendant={flatLen > 0 ? `cmd-opt-${activeIdx}` : undefined}
+                        aria-autocomplete="list"
+                        aria-label="Search commands, navigation, findings"
                         value={q}
                         onChange={(e) => { setQ(e.target.value); setActiveIdx(0); }}
                         onKeyDown={onInputKey}
                         placeholder="Search actions, scans, targets, findings…"
                         className="bg-transparent flex-1 text-sm text-white outline-none placeholder:text-gray-600 font-mono"
-                        aria-autocomplete="list"
                     />
                     <span className="text-[9px] text-gray-600 font-mono border border-white/10 rounded px-1.5 py-0.5 shrink-0">
                         {isMac ? '⌘' : 'Ctrl'} K
@@ -274,15 +280,24 @@ export default function CommandPalette() {
                 </div>
 
                 {/* Results */}
-                <div ref={listRef} className="flex-1 overflow-y-auto custom-scrollbar py-2">
+                <div
+                    ref={listRef}
+                    role="listbox"
+                    id="cmd-listbox"
+                    aria-label="Commands"
+                    className="flex-1 overflow-y-auto custom-scrollbar py-2"
+                >
                     {flatLen === 0 ? (
-                        <div className="px-4 py-8 text-center text-gray-500 text-xs">
+                        <div className="px-4 py-8 text-center text-gray-500 text-xs" role="status">
                             No matches for <span className="text-cyan-400 font-mono">"{q}"</span>
                         </div>
                     ) : (
                         sections.map(([sectionName, sectionItems]) => (
                             <div key={sectionName} className="mb-2 last:mb-0">
-                                <div className="px-4 py-1 text-[8px] font-black uppercase tracking-[0.3em] text-gray-600">
+                                <div
+                                    className="px-4 py-1 text-[8px] font-black uppercase tracking-[0.3em] text-gray-500"
+                                    role="presentation"
+                                >
                                     {sectionName}
                                 </div>
                                 {sectionItems.map(item => {
@@ -290,6 +305,9 @@ export default function CommandPalette() {
                                     return (
                                         <button
                                             key={item.id}
+                                            id={`cmd-opt-${item._flatIdx}`}
+                                            role="option"
+                                            aria-selected={isActive}
                                             data-idx={item._flatIdx}
                                             onMouseEnter={() => setActiveIdx(item._flatIdx)}
                                             onClick={() => runItem(item)}

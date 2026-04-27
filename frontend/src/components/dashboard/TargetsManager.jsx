@@ -3,6 +3,7 @@ import { Target, Plus, Trash2, ExternalLink, Shield, Globe, Search, CheckCircle,
 import { targetService, pentesterService } from '../../services/api';
 import EnvironmentWizard from './EnvironmentWizard';
 import ScanConfigModal from './ScanConfigModal';
+import { useEnvStore } from '../../stores/envStore';
 
 const TargetsManager = ({ onScanStarted }) => {
     const [activeTab, setActiveTab] = useState('list'); // list, discover
@@ -17,13 +18,16 @@ const TargetsManager = ({ onScanStarted }) => {
     const [discoveryResult, setDiscoveryResult] = useState(null);
     const [discovering, setDiscovering] = useState(false);
 
+    const { activeEnv } = useEnvStore();
+
     useEffect(() => {
         fetchTargets();
-    }, []);
+    }, [activeEnv]);
 
     const fetchTargets = async () => {
         try {
-            const response = await targetService.list();
+            const params = activeEnv !== 'all' ? { environment_type: activeEnv } : {};
+            const response = await targetService.list(params);
             setTargets(response.data || []);
         } catch (error) {
             console.error('Failed to fetch targets:', error);

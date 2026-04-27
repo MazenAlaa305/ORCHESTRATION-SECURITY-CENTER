@@ -5,8 +5,45 @@ import ShortcutCheatsheet from '../components/ShortcutCheatsheet';
 import QuickScanPopover from '../components/QuickScanPopover';
 import CommandPalette from '../components/CommandPalette';
 import NotificationsBell from '../components/NotificationsBell';
+import { useEnvStore } from '../stores/envStore';
 import { Search } from 'lucide-react';
 import api from '../services/api';
+
+// ── Environment switcher ──────────────────────────────────────────────────────
+const ENVS = [
+    { id: 'all',        label: 'All'  },
+    { id: 'lab',        label: 'Lab'  },
+    { id: 'production', label: 'Prod' },
+];
+
+const EnvSwitcher = () => {
+    const { activeEnv, setActiveEnv } = useEnvStore();
+    return (
+        <div
+            className="flex items-center gap-0.5 rounded-lg p-0.5"
+            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
+            title="Scope filter — restricts Targets view by environment"
+        >
+            {ENVS.map(e => (
+                <button
+                    key={e.id}
+                    onClick={() => setActiveEnv(e.id)}
+                    className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${
+                        activeEnv === e.id
+                            ? 'text-cyan-300'
+                            : 'text-gray-600 hover:text-gray-300'
+                    }`}
+                    style={activeEnv === e.id ? {
+                        background: 'rgba(0,255,255,0.1)',
+                        border: '1px solid rgba(0,255,255,0.2)',
+                    } : undefined}
+                >
+                    {e.label}
+                </button>
+            ))}
+        </div>
+    );
+};
 
 // ── Health pill ───────────────────────────────────────────────────────────────
 const HealthPill = ({ label, healthy }) => (
@@ -72,6 +109,11 @@ const TopBar = ({ onQuickScan, isScanning }) => {
                 <HealthPill label="Workers" healthy={health.workers} />
             </div>
 
+            {/* Environment scope switcher */}
+            <div className="hidden md:block">
+                <EnvSwitcher />
+            </div>
+
             <div className="flex-1" />
 
             {/* Notifications bell */}
@@ -86,6 +128,7 @@ const TopBar = ({ onQuickScan, isScanning }) => {
 // ── Main layout ───────────────────────────────────────────────────────────────
 const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) => (
     <div className="min-h-screen bg-cyber-dark text-gray-100 font-sans selection:bg-cyan-400 selection:text-gray-900 flex flex-row overflow-hidden">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         {/* Ambient background glows — BlurAdmin teal/turquoise palette */}
         <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
             <div className="absolute top-[-15%] right-[-10%] w-[55%] h-[55%] bg-[#4dbdb1]/15 blur-[140px] rounded-full" />
@@ -98,7 +141,7 @@ const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) =
 
         <div className="flex-1 flex flex-col h-screen relative z-10 w-full min-w-0">
             <TopBar onQuickScan={onQuickScan} isScanning={isScanning} />
-            <main className="flex-1 px-8 py-6 pb-20 overflow-y-auto custom-scrollbar w-full">
+            <main id="main-content" className="flex-1 px-8 py-6 pb-20 overflow-y-auto custom-scrollbar w-full">
                 {children}
             </main>
         </div>

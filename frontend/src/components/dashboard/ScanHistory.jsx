@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { scanService } from '../../services/api';
+import { useEnvStore } from '../../stores/envStore';
 import {
     FileText, AlertTriangle, CheckCircle, Clock, Loader, ChevronDown, ChevronRight,
     Search, Calendar, RefreshCw, X as XIcon, Activity,
@@ -128,6 +129,8 @@ const ScanHistory = ({ refresh }) => {
         writeParams({ q, status, profile, from, to, sort, order, page, pageSize, density });
     }, [q, status, profile, from, to, sort, order, page, pageSize, density]);
 
+    const { activeEnv } = useEnvStore();
+
     const fetchPage = useCallback(async () => {
         setLoading(true); setErr(null);
         try {
@@ -139,6 +142,7 @@ const ScanHistory = ({ refresh }) => {
             if (q)       params.target    = q;
             if (from)    params.date_from = new Date(from).toISOString();
             if (to)      params.date_to   = new Date(to + 'T23:59:59').toISOString();
+            if (activeEnv && activeEnv !== 'all') params.environment = activeEnv;
             const res = await scanService.getScans(params);
             setData(res.data || { items: [], total: 0, page: 1, page_size: pageSize });
         } catch (e) {
@@ -148,7 +152,7 @@ const ScanHistory = ({ refresh }) => {
         } finally {
             setLoading(false);
         }
-    }, [q, status, profile, from, to, sort, order, page, pageSize]);
+    }, [q, status, profile, from, to, sort, order, page, pageSize, activeEnv]);
 
     useEffect(() => { fetchPage(); }, [fetchPage, refresh]);
 

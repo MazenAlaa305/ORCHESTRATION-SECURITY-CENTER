@@ -1,4 +1,5 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import Layout from '../layout/Layout';
@@ -62,20 +63,30 @@ const MAIN_TABS = [
 const Dashboard = () => {
     const { state: realTime, dispatch } = useRealTime();
     const { siem_enabled } = useConfig();
-    const [activeTab,    setActiveTab]    = useState('overview');
-    const [activeSubTab, setActiveSubTab] = useState('overview');
+    const { tab: urlTab, subTab: urlSubTab } = useParams();
+    const navigate = useNavigate();
     const [refreshKey,   setRefreshKey]   = useState(0);
     const [activeScanId, setActiveScanId] = useState(null);
 
     // Sub-tab defaults depend on SIEM flag — SIEM tab is hidden when disabled
-    const SUB_TAB_DEFAULTS = {
-        overview:       'overview',
-        operations:     'scanner',
+    const SUB_TAB_DEFAULTS = useMemo(() => ({
+        overview:        'overview',
+        operations:      'scanner',
         'threat-center': siem_enabled ? 'siem' : 'vulnerabilities',
-        'ai-brain':     'ai-console',
-        reports:        'reports',
-        settings:       'settings',
-    };
+        'ai-brain':      'ai-console',
+        reports:         'reports',
+        settings:        'settings',
+    }), [siem_enabled]);
+
+    const VALID_TABS = MAIN_TABS.map(t => t.id);
+    const activeTab    = VALID_TABS.includes(urlTab) ? urlTab : 'overview';
+    const activeSubTab = urlSubTab || SUB_TAB_DEFAULTS[activeTab] || 'overview';
+
+    // Core navigation helper — updates the URL, everything derives from it.
+    const navTo = useCallback((newTab, newSub) => {
+        const resolvedSub = newSub || SUB_TAB_DEFAULTS[newTab] || 'overview';
+        navigate(`/dashboard/${newTab}/${resolvedSub}`);
+    }, [navigate, SUB_TAB_DEFAULTS]);
 
     // ── Server data ──────────────────────────────────────────────────────────
     const { refetch: refetchKpi } = useQuery({
@@ -123,30 +134,31 @@ const Dashboard = () => {
         prevScanning.current = isScanning;
     }, [isScanning, refetchKpi]);
 
-    // Cross-component navigation bus — panels dispatch
+    // Cross-component navigation bus — any panel can call
     // window.dispatchEvent(new CustomEvent('dashboard:navigate', { detail: { tab, sub } }))
     useEffect(() => {
         const handler = (e) => {
-            const { tab, sub } = e.detail || {};
-            if (tab) setActiveTab(tab);
-            setActiveSubTab(sub ?? SUB_TAB_DEFAULTS[tab] ?? 'overview');
+            const { tab: t, sub } = e.detail || {};
+            if (t) navTo(t, sub);
         };
         window.addEventListener('dashboard:navigate', handler);
         return () => window.removeEventListener('dashboard:navigate', handler);
-    }, [siem_enabled]);
+    }, [navTo]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleScanStarted = (scan) => {
         setRefreshKey(k => k + 1);
         if (scan?.id) setActiveScanId(scan.id);
-        setActiveTab('ai-brain');
-        setActiveSubTab('ai-console');
+        navTo('ai-brain', 'ai-console');
     };
 
-    const handleMainTabChange = (tabId) => {
-        setActiveTab(tabId);
-        setActiveSubTab(SUB_TAB_DEFAULTS[tabId] ?? 'overview');
-    };
+    const handleMainTabChange = useCallback((tabId) => {
+        navTo(tabId, SUB_TAB_DEFAULTS[tabId]);
+    }, [navTo, SUB_TAB_DEFAULTS]);
+
+    const handleSubTabChange = useCallback((sub) => {
+        navTo(activeTab, sub);
+    }, [navTo, activeTab]);
 
     // Vuln trend: last 7 scans in chronological order
     const trendData = [...scans].slice(0, 7).reverse().map(s => ({
@@ -258,7 +270,7 @@ const Dashboard = () => {
                             { id: 'lab',     label: 'Lab',     icon: <Server /> },
                         ]}
                         active={activeSubTab}
-                        onChange={setActiveSubTab}
+                        onChange={handleSubTabChange}
                     />
                     <Suspense fallback={<PanelLoader />}>
                         {activeSubTab === 'scanner' && (
@@ -304,7 +316,7 @@ const Dashboard = () => {
                             { id: 'network',         label: 'Topology', icon: <Network /> },
                         ]}
                         active={activeSubTab}
-                        onChange={setActiveSubTab}
+                        onChange={handleSubTabChange}
                     />
                     <Suspense fallback={<PanelLoader />}>
                         {activeSubTab === 'siem'            && <UnifiedInbox />}

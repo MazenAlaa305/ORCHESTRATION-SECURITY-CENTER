@@ -3,6 +3,8 @@ import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, L
 import { vulnerabilityService } from '../../services/api';
 import IncidentDetailDrawer from './IncidentDetailDrawer';
 import { useSavedViews } from '../../hooks/useSavedViews';
+import { useToast } from '../ToastProvider';
+import { useEnvStore } from '../../stores/envStore';
 
 const SEV_BORDER = {
     critical: 'border-l-red-500 shadow-[inset_3px_0_0_rgba(239,68,68,0.5)]',
@@ -123,15 +125,48 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
     const selectAll = () => setSelectedIds(new Set(displayed.map(v => String(vulnKey(v)))));
     const clearSelection = () => setSelectedIds(new Set());
 
+    const { addToast } = useToast();
+    const { activeEnv } = useEnvStore();
+
     const bulkUpdate = async (status) => {
         if (!status || selectedIds.size === 0) return;
+        const ids = [...selectedIds];
         setBulkLoading(true);
         try {
-            await Promise.all([...selectedIds].map(id => vulnerabilityService.update(id, { status })));
+            const { data } = await vulnerabilityService.bulkUpdate(ids, { status });
+            const previous = (data?.updated || []).map(r => ({ id: r.id, status: r.previous_status }));
             clearSelection();
             fetchVulnerabilities();
+
+            // Undo: revert each row to its previous status. 10s window per spec §5.11.
+            const undo = async () => {
+                try {
+                    const groups = previous.reduce((acc, r) => {
+                        if (!r.status) return acc;
+                        (acc[r.status] = acc[r.status] || []).push(r.id);
+                        return acc;
+                    }, {});
+                    await Promise.all(
+                        Object.entries(groups).map(([prevStatus, prevIds]) =>
+                            vulnerabilityService.bulkUpdate(prevIds, { status: prevStatus })
+                        )
+                    );
+                    fetchVulnerabilities();
+                    addToast('Reverted bulk update', { type: 'success' });
+                } catch (e) {
+                    console.error('Undo failed:', e);
+                    addToast('Undo failed', { type: 'error' });
+                }
+            };
+
+            addToast(`${ids.length} finding${ids.length === 1 ? '' : 's'} updated to "${status}"`, {
+                type: 'success',
+                duration: 10000,
+                action: { label: 'Undo', onClick: undo },
+            });
         } catch (err) {
             console.error('Bulk update failed:', err);
+            addToast('Bulk update failed', { type: 'error' });
         } finally {
             setBulkLoading(false);
         }
@@ -171,7 +206,7 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
 
     useEffect(() => {
         fetchVulnerabilities();
-    }, [scanId, refresh, filter]);
+    }, [scanId, refresh, filter, activeEnv]);
 
     const fetchVulnerabilities = async () => {
         setLoading(true);
@@ -180,6 +215,7 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
             if (scanId)           params.scan_id  = scanId;
             if (filter.severity)  params.severity = filter.severity;
             if (filter.status)    params.status   = filter.status;
+            if (activeEnv && activeEnv !== 'all') params.environment = activeEnv;
             const response = await vulnerabilityService.list(params);
             setVulnerabilities(response.data || []);
         } catch (error) {
