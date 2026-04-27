@@ -149,6 +149,7 @@ export const dashboardService = {
     getKpiSnapshot: () => api.get('/dashboard/kpi-snapshot'),
     getActionItems: () => api.get('/dashboard/actions'),
     refreshRiskScores: () => api.post('/dashboard/refresh-risk'),
+    getRiskBreakdown: (scanId) => api.get(`/dashboard/risk/${scanId}`),
 };
 
 export const findingsService = {

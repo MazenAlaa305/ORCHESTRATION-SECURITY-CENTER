@@ -1,16 +1,11 @@
-Sprint 2 — task breakdown
-#	Task	Spec	Effort	Risk
-9	Framework / Dedup / CVSS chips on findings — surface MITRE/OWASP/CVE/dedup data already shipped from the backend on the vulns rows + drawer	§5.15	XS–S	very low (additive, 2 files)
-10	Risk Breakdown drawer — render /dashboard/risk-breakdown so each scan can be "explained"	§5.12	S	low (1 new file + a button on ScanHistory rows)
-11	Saved Views on Vulnerabilities panel — save current filter+sort combo to localStorage, load with one click; sidebar mini-list of pinned views	§5.10	S–M	low–medium (no backend yet — defer the team-shared variant)
-12	Bulk-action toolbar on findings — checkboxes + sticky bar with status / snooze / export-selected	§5.11	M	medium (frontend-only first, optimistic; mark "needs /findings/bulk endpoint" for backend)
-13	Global notifications bell — top-bar bell + dropdown reading from existing WS event stream	§5.13	M	low (chrome-only, no backend changes)
-14	Scope / environment switcher — top-bar pill (Lab / Prod / All) that filters list queries by target.environment_type	§5.14	M	medium (touches multiple list queries; needs careful query-key handling)
-15	React Router + deep links — replace useState routing with react-router-dom v6 routes for tabs, scans, findings, assets	§5.9	L	high (touches Dashboard, sidebar, every Tab consumer; biggest refactor in Sprint 2)
-16	Accessibility & contrast pass — floor body text, raise grays, focus rings, ARIA on modals/drawers	§5.20	M	low (cosmetic-leaning but spans many files)
-I've ordered them by risk-ascending so the smallest, lowest-risk wins land first. Routing (§5.9) is intentionally last because it ripples through every component — and several Sprint-2 tasks before it (chips, drawer, bell) ship cleanly without a router.
+Sprint 2 progress:
 
-Proposed first task: #9 — Framework / Dedup / CVSS chips on findings.
-
-Why first: purely additive, zero risk to existing behavior, ~2 files (VulnerabilitiesPanel.jsx, IncidentDetailDrawer.jsx). The backend already emits control_tags (OWASP/CWE/ISO/NIST/PCI), cve_id, cvss_score, and a dedup count is computable from finding_id groupings (already done in the panel). Today this data is partially shown only inside the drawer — chips bring it onto the row so triage can pivot by framework without opening each.
-What changes: each row gets compact chips for severity, CVE, CVSS, MITRE/OWASP, and ×N hosts when deduped. Chips are clickable to apply as filters
+✅ Task 9 — Framework/CVSS chips
+✅ Task 10 — Risk Breakdown drawer
+✅ Task 11 — Saved Views
+✅ Task 12 — Bulk-action toolbar
+✅ Task 13 — Notifications bell
+⏳ Task 14 — Scope/environment switcher
+⏳ Task 15 — React Router + deep links
+⏳ Task 16 — Accessibility & contrast pass
+Ready for 14 & 15, or one at a time — your call.

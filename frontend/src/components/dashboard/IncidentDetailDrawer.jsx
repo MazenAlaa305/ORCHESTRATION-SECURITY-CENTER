@@ -258,6 +258,7 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange, nav }) => {
                                         iso27001_annex_a: 'ISO 27001',
                                         nist_csf_function: 'NIST CSF',
                                         pci_dss_requirement: 'PCI DSS',
+                                        mitre_attack: 'MITRE ATT&CK',
                                     };
                                     return (
                                         <span key={framework}

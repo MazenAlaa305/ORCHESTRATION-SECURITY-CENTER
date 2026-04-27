@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 import { useAuth } from '../context/AuthContext';
+import { loadSavedViews, VIEWS_CHANGED_EVENT } from '../hooks/useSavedViews';
 
 const NAV_SECTIONS = [
     {
@@ -115,6 +116,14 @@ const Sidebar = ({ activeTab, onTabChange }) => {
     const isConnected  = realTime.isConnected;
     const overdueCount = realTime.kpi?.overdue_findings ?? 0;
 
+    // Pinned views — read from localStorage, re-read when the panel mutates them.
+    const [pinnedViews, setPinnedViews] = useState(loadSavedViews);
+    useEffect(() => {
+        const refresh = () => setPinnedViews(loadSavedViews());
+        window.addEventListener(VIEWS_CHANGED_EVENT, refresh);
+        return () => window.removeEventListener(VIEWS_CHANGED_EVENT, refresh);
+    }, []);
+
     // Persist collapse state
     const toggleCollapse = () => {
         setCollapsed(prev => {
@@ -179,24 +188,47 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                             </p>
                         )}
                         {section.items.map(item => (
-                            <NavItem
-                                key={item.id}
-                                icon={item.id === 'ai-brain'
-                                    ? <Brain className="h-3.5 w-3.5 shrink-0" style={{ color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' }} />
-                                    : { ...item.icon, props: { ...item.icon.props, className: 'h-3.5 w-3.5 shrink-0', style: { color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' } } }
-                                }
-                                label={item.label}
-                                collapsed={collapsed}
-                                active={activeTab === item.id}
-                                onClick={() => onTabChange?.(item.id)}
-                                badge={
-                                    item.id === 'ai-brain' && isScanning
-                                        ? true
-                                        : item.id === 'threat-center' && overdueCount > 0
-                                            ? overdueCount
-                                            : undefined
-                                }
-                            />
+                            <React.Fragment key={item.id}>
+                                <NavItem
+                                    icon={item.id === 'ai-brain'
+                                        ? <Brain className="h-3.5 w-3.5 shrink-0" style={{ color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' }} />
+                                        : { ...item.icon, props: { ...item.icon.props, className: 'h-3.5 w-3.5 shrink-0', style: { color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' } } }
+                                    }
+                                    label={item.label}
+                                    collapsed={collapsed}
+                                    active={activeTab === item.id}
+                                    onClick={() => onTabChange?.(item.id)}
+                                    badge={
+                                        item.id === 'ai-brain' && isScanning
+                                            ? true
+                                            : item.id === 'threat-center' && overdueCount > 0
+                                                ? overdueCount
+                                                : undefined
+                                    }
+                                />
+                                {/* Pinned views sub-list — only under Threat Center, only when expanded */}
+                                {item.id === 'threat-center' && !collapsed && pinnedViews.length > 0 && (
+                                    <div className="ml-3 pl-2 border-l border-white/5 mb-1">
+                                        {pinnedViews.map(v => (
+                                            <button
+                                                key={v.name}
+                                                onClick={() => {
+                                                    onTabChange?.('threat-center');
+                                                    window.dispatchEvent(new CustomEvent('dashboard:navigate',
+                                                        { detail: { tab: 'threat-center', sub: 'vulnerabilities' } }));
+                                                    window.dispatchEvent(new CustomEvent('dashboard:apply-view',
+                                                        { detail: { payload: v.payload } }));
+                                                }}
+                                                className="flex items-center gap-1.5 w-full px-2 py-1 rounded text-left text-[10px] text-gray-500 hover:text-cyan-300 hover:bg-white/5 transition-colors font-mono truncate"
+                                                title={`Load view: ${v.name}`}
+                                            >
+                                                <Bookmark className="h-2.5 w-2.5 shrink-0 opacity-50" />
+                                                <span className="truncate">{v.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </React.Fragment>
                         ))}
                     </div>
                 ))}

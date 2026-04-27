@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, Loader2, Filter, Search, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, Loader2, Filter, Search, ChevronUp, ChevronDown, Bookmark, Trash2, Download, X as XIcon } from 'lucide-react';
 import { vulnerabilityService } from '../../services/api';
 import IncidentDetailDrawer from './IncidentDetailDrawer';
+import { useSavedViews } from '../../hooks/useSavedViews';
 
 const SEV_BORDER = {
     critical: 'border-l-red-500 shadow-[inset_3px_0_0_rgba(239,68,68,0.5)]',
@@ -18,6 +19,16 @@ const SEV_COLORS_BAR = {
     medium: 'bg-yellow-400',
     low: 'bg-blue-400',
     info: 'bg-gray-500',
+};
+
+// Compact labels for framework / compliance tags shown as row chips.
+const FRAMEWORK_LABEL = {
+    owasp_top10:         'OWASP',
+    cwe:                 'CWE',
+    iso27001_annex_a:    'ISO',
+    nist_csf_function:   'NIST',
+    pci_dss_requirement: 'PCI',
+    mitre_attack:        'MITRE',
 };
 
 /**
@@ -49,6 +60,105 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
     const [minSeverity, setMinSeverity] = useState(DEFAULT_MIN_SEVERITY); // '' | 'low' | 'medium' | 'high' | 'critical'
     const [hideClosed, setHideClosed]   = useState(true);
     const [groupDups, setGroupDups]     = useState(true);
+
+    // ── Saved Views ───────────────────────────────────────────────────────
+    const { views: savedViews, save: saveView, remove: removeView } = useSavedViews();
+    const [showViewsMenu, setShowViewsMenu]   = useState(false);
+    const [savingViewName, setSavingViewName] = useState(''); // '' = input hidden
+    const [showSaveInput, setShowSaveInput]   = useState(false);
+    const saveInputRef = useRef(null);
+    const viewsMenuRef = useRef(null);
+
+    const currentViewPayload = () => ({
+        search, filter, sortField, sortDir, minSeverity, hideClosed, groupDups,
+    });
+
+    const applyViewPayload = (payload) => {
+        if (!payload) return;
+        if (payload.search     !== undefined) setSearch(payload.search);
+        if (payload.filter     !== undefined) setFilter(payload.filter);
+        if (payload.sortField  !== undefined) setSortField(payload.sortField);
+        if (payload.sortDir    !== undefined) setSortDir(payload.sortDir);
+        if (payload.minSeverity !== undefined) setMinSeverity(payload.minSeverity);
+        if (payload.hideClosed !== undefined) setHideClosed(payload.hideClosed);
+        if (payload.groupDups  !== undefined) setGroupDups(payload.groupDups);
+    };
+
+    // External trigger: sidebar pinned view click
+    useEffect(() => {
+        const handler = (e) => applyViewPayload(e.detail?.payload);
+        window.addEventListener('dashboard:apply-view', handler);
+        return () => window.removeEventListener('dashboard:apply-view', handler);
+    }, []);
+
+    // Close menus on outside click
+    useEffect(() => {
+        if (!showViewsMenu) return;
+        const handler = (e) => {
+            if (viewsMenuRef.current && !viewsMenuRef.current.contains(e.target)) {
+                setShowViewsMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showViewsMenu]);
+
+    // Focus save input when shown
+    useEffect(() => {
+        if (showSaveInput) saveInputRef.current?.focus();
+    }, [showSaveInput]);
+
+    // ── Bulk selection ────────────────────────────────────────────────────
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [bulkLoading, setBulkLoading] = useState(false);
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const selectAll = () => setSelectedIds(new Set(displayed.map(v => String(vulnKey(v)))));
+    const clearSelection = () => setSelectedIds(new Set());
+
+    const bulkUpdate = async (status) => {
+        if (!status || selectedIds.size === 0) return;
+        setBulkLoading(true);
+        try {
+            await Promise.all([...selectedIds].map(id => vulnerabilityService.update(id, { status })));
+            clearSelection();
+            fetchVulnerabilities();
+        } catch (err) {
+            console.error('Bulk update failed:', err);
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
+    const triggerDownload = (filename, content, mime) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
+    const exportSelected = (format) => {
+        const rows = displayed.filter(v => selectedIds.has(String(vulnKey(v))));
+        if (format === 'csv') {
+            const cols = ['id', 'type', 'severity', 'status', 'url', 'cvss_score', 'confidence_score', 'cve_id'];
+            const lines = [
+                cols.join(','),
+                ...rows.map(v => cols.map(c => JSON.stringify(v[c] ?? '')).join(',')),
+            ];
+            triggerDownload('findings.csv', lines.join('\n'), 'text/csv');
+        } else {
+            triggerDownload('findings.json', JSON.stringify(rows, null, 2), 'application/json');
+        }
+    };
+
     const [lastSeenAt] = useState(() => {
         try { return parseInt(localStorage.getItem(LAST_SEEN_KEY) || '0', 10) || 0; }
         catch { return 0; }
@@ -307,6 +417,113 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                     <option value="fixed">Fixed</option>
                     <option value="false_positive">False Positive</option>
                 </select>
+                {/* ── Saved Views ─────────────────────────────────────── */}
+                <div className="flex items-center gap-1 relative" ref={viewsMenuRef}>
+                    {/* Views dropdown trigger */}
+                    {savedViews.length > 0 && (
+                        <button
+                            onClick={() => { setShowViewsMenu(m => !m); setShowSaveInput(false); }}
+                            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border border-white/10 bg-black/30 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+                            title="Saved views"
+                        >
+                            <Bookmark className="h-3 w-3" />
+                            Views ({savedViews.length})
+                            <ChevronDown className="h-2.5 w-2.5" />
+                        </button>
+                    )}
+
+                    {/* Save current view button */}
+                    {!showSaveInput && (
+                        <button
+                            onClick={() => { setShowSaveInput(true); setShowViewsMenu(false); }}
+                            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border border-dashed border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-400/30 transition-colors"
+                            title="Save current filter as a view"
+                        >
+                            <Bookmark className="h-3 w-3" />
+                            Save view
+                        </button>
+                    )}
+
+                    {/* Inline name input */}
+                    {showSaveInput && (
+                        <div className="flex items-center gap-1">
+                            <input
+                                ref={saveInputRef}
+                                type="text"
+                                placeholder="View name…"
+                                value={savingViewName}
+                                onChange={e => setSavingViewName(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && savingViewName.trim()) {
+                                        saveView(savingViewName.trim(), currentViewPayload());
+                                        setSavingViewName('');
+                                        setShowSaveInput(false);
+                                    }
+                                    if (e.key === 'Escape') {
+                                        setSavingViewName('');
+                                        setShowSaveInput(false);
+                                    }
+                                }}
+                                className="bg-black/40 border border-cyan-400/30 rounded px-2 py-1 text-[11px] text-white outline-none placeholder:text-gray-600 w-28 font-mono"
+                            />
+                            <button
+                                onClick={() => {
+                                    if (savingViewName.trim()) {
+                                        saveView(savingViewName.trim(), currentViewPayload());
+                                    }
+                                    setSavingViewName('');
+                                    setShowSaveInput(false);
+                                }}
+                                className="text-[9px] px-2 py-1 rounded bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 font-black uppercase hover:bg-cyan-400/20 transition-colors"
+                            >
+                                Save
+                            </button>
+                            <button
+                                onClick={() => { setSavingViewName(''); setShowSaveInput(false); }}
+                                className="text-[9px] px-1.5 py-1 rounded text-gray-600 hover:text-white transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Views dropdown menu */}
+                    {showViewsMenu && savedViews.length > 0 && (
+                        <div
+                            className="absolute top-full left-0 mt-1 z-50 min-w-[180px] rounded-lg border border-white/10 shadow-2xl overflow-hidden"
+                            style={{ background: 'linear-gradient(180deg, rgba(15,30,40,0.98), rgba(10,20,28,0.99))' }}
+                        >
+                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-600 px-3 pt-2.5 pb-1">
+                                Pinned Views
+                            </p>
+                            {savedViews.map(v => (
+                                <div
+                                    key={v.name}
+                                    className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 group"
+                                >
+                                    <button
+                                        onClick={() => {
+                                            applyViewPayload(v.payload);
+                                            setShowViewsMenu(false);
+                                        }}
+                                        className="flex-1 text-left text-xs text-gray-300 hover:text-white font-mono truncate"
+                                        title={`Load: ${v.name}`}
+                                    >
+                                        {v.name}
+                                    </button>
+                                    <button
+                                        onClick={() => removeView(v.name)}
+                                        className="shrink-0 p-0.5 rounded text-gray-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Delete view"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 {/* Sort buttons */}
                 <div className="flex items-center gap-1 ml-auto">
                     <span className="text-[9px] text-gray-600 uppercase tracking-widest font-black">Sort:</span>
@@ -324,6 +541,64 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                     {displayed.length}/{vulnerabilities.length} findings
                 </span>
             </div>
+
+            {/* ── Bulk action toolbar ──────────────────────────────────── */}
+            {selectedIds.size > 0 && (
+                <div className="sticky top-0 z-20 flex items-center gap-2 flex-wrap px-4 py-2.5 rounded-xl border border-cyan-400/20 backdrop-blur-md"
+                    style={{ background: 'rgba(0,255,255,0.05)' }}>
+                    <span className="text-xs font-black text-cyan-400 tabular-nums shrink-0">
+                        {selectedIds.size} selected
+                    </span>
+                    <button
+                        onClick={selectAll}
+                        className="text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
+                    >
+                        All ({displayed.length})
+                    </button>
+                    <button
+                        onClick={clearSelection}
+                        className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/10 transition-colors"
+                        title="Clear selection"
+                    >
+                        <XIcon className="h-3 w-3" />
+                    </button>
+
+                    <div className="w-px h-4 bg-white/10 shrink-0" />
+
+                    {/* Status change */}
+                    <select
+                        disabled={bulkLoading}
+                        defaultValue=""
+                        onChange={(e) => { if (e.target.value) { bulkUpdate(e.target.value); e.target.value = ''; } }}
+                        className="px-2 py-1 bg-black/40 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-cyan-400/40 disabled:opacity-50"
+                    >
+                        <option value="" disabled>Change status…</option>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="fixed">Fixed</option>
+                        <option value="false_positive">False Positive</option>
+                    </select>
+
+                    {bulkLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400 shrink-0" />}
+
+                    {/* Export */}
+                    <div className="flex items-center gap-1 ml-auto">
+                        <span className="text-[9px] text-gray-600 uppercase font-black tracking-widest mr-1">Export:</span>
+                        <button
+                            onClick={() => exportSelected('csv')}
+                            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border border-white/10 text-gray-400 hover:text-cyan-300 hover:border-cyan-400/30 transition-colors"
+                        >
+                            <Download className="h-2.5 w-2.5" /> CSV
+                        </button>
+                        <button
+                            onClick={() => exportSelected('json')}
+                            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border border-white/10 text-gray-400 hover:text-cyan-300 hover:border-cyan-400/30 transition-colors"
+                        >
+                            <Download className="h-2.5 w-2.5" /> JSON
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Vulnerabilities List */}
             <div className="space-y-3">
@@ -348,10 +623,29 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                         className={`glass-card-interactive p-5 relative group border-l-4 ${SEV_BORDER[sevKey] || 'border-l-gray-700'} cursor-pointer`}
                     >
                         <div className="flex items-start gap-4">
-                            {/* Severity Badge */}
-                            <div className={`px-2.5 py-1 rounded-md text-[10px] font-black border uppercase tracking-wider shrink-0 ${getSeverityColor(vuln.severity)}`}>
+                            {/* Row checkbox */}
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.has(String(vulnKey(vuln)))}
+                                onChange={() => toggleSelect(String(vulnKey(vuln)))}
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-1 shrink-0 accent-cyan-400 cursor-pointer h-3.5 w-3.5"
+                                title="Select finding"
+                            />
+
+                            {/* Severity Badge — click to filter to this severity */}
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const sev = sevKey;
+                                    setFilter(f => ({ ...f, severity: f.severity === sev ? '' : sev }));
+                                }}
+                                title={filter.severity === sevKey ? 'Clear severity filter' : `Filter to ${sevKey} only`}
+                                className={`px-2.5 py-1 rounded-md text-[10px] font-black border uppercase tracking-wider shrink-0 transition-all hover:brightness-125 ${getSeverityColor(vuln.severity)} ${filter.severity === sevKey ? 'ring-2 ring-cyan-400/40' : ''}`}
+                            >
                                 {vuln.severity?.toUpperCase() || 'INFO'}
-                            </div>
+                            </button>
 
                             {/* Main Content */}
                             <div className="flex-1 min-w-0">
@@ -432,6 +726,20 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                             {vuln.detected_by}
                                         </span>
                                     )}
+
+                                    {/* Framework / compliance chips — sourced from control_tags */}
+                                    {vuln.control_tags && Object.entries(vuln.control_tags)
+                                        .filter(([, v]) => v != null && v !== '')
+                                        .map(([framework, control]) => (
+                                            <span
+                                                key={framework}
+                                                title={`${framework}: ${control}`}
+                                                className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono"
+                                            >
+                                                <span className="font-black opacity-70">{FRAMEWORK_LABEL[framework] || framework.split('_')[0].toUpperCase()}</span>
+                                                <span className="truncate max-w-[80px]">{String(control)}</span>
+                                            </span>
+                                        ))}
                                 </div>
                             </div>
 

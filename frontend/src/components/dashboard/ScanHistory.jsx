@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { scanService } from '../../services/api';
 import {
     FileText, AlertTriangle, CheckCircle, Clock, Loader, ChevronDown, ChevronRight,
-    Search, Calendar, RefreshCw, X as XIcon,
+    Search, Calendar, RefreshCw, X as XIcon, Activity,
 } from 'lucide-react';
+import RiskBreakdownDrawer from './RiskBreakdownDrawer';
 
 // ── Phase 4: History tab — server-side filter/sort/pagination, URL-synced ──
 
@@ -120,6 +121,7 @@ const ScanHistory = ({ refresh }) => {
     const [err, setErr] = useState(null);
     const [expandedId, setExpandedId] = useState(null);
     const [generatingId, setGeneratingId] = useState(null);
+    const [explainScanId, setExplainScanId] = useState(null);
 
     // Sync URL whenever a tracked piece of state changes.
     useEffect(() => {
@@ -350,16 +352,26 @@ const ScanHistory = ({ refresh }) => {
                                             {formatDuration(scan.started_at, scan.completed_at)}
                                         </td>
                                         <td className={rowPadding} onClick={(e) => e.stopPropagation()}>
-                                            <button
-                                                className="text-purple-400 hover:text-purple-300 inline-flex items-center gap-1 text-xs uppercase font-bold disabled:opacity-40"
-                                                disabled={generatingId === scan.id || String(scan.status).toLowerCase() !== 'completed'}
-                                                onClick={() => handleGenerateAndDownload(scan.id)}
-                                                title={String(scan.status).toLowerCase() === 'completed' ? 'Generate & download PDF report' : 'Report available after scan completes'}
-                                            >
-                                                {generatingId === scan.id
-                                                    ? <><Loader className="h-3 w-3 animate-spin" /> Generating…</>
-                                                    : <><FileText className="h-3 w-3" /> Report</>}
-                                            </button>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    className="text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 text-xs uppercase font-bold disabled:opacity-40"
+                                                    disabled={String(scan.status).toLowerCase() !== 'completed'}
+                                                    onClick={() => setExplainScanId(scan.id)}
+                                                    title={String(scan.status).toLowerCase() === 'completed' ? 'Explain how this score was calculated' : 'Available after scan completes'}
+                                                >
+                                                    <Activity className="h-3 w-3" /> Explain
+                                                </button>
+                                                <button
+                                                    className="text-purple-400 hover:text-purple-300 inline-flex items-center gap-1 text-xs uppercase font-bold disabled:opacity-40"
+                                                    disabled={generatingId === scan.id || String(scan.status).toLowerCase() !== 'completed'}
+                                                    onClick={() => handleGenerateAndDownload(scan.id)}
+                                                    title={String(scan.status).toLowerCase() === 'completed' ? 'Generate & download PDF report' : 'Report available after scan completes'}
+                                                >
+                                                    {generatingId === scan.id
+                                                        ? <><Loader className="h-3 w-3 animate-spin" /> Generating…</>
+                                                        : <><FileText className="h-3 w-3" /> Report</>}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     {isOpen && (
@@ -404,6 +416,12 @@ const ScanHistory = ({ refresh }) => {
                     >Next</button>
                 </div>
             </div>
+
+            {/* Risk-breakdown drawer — opens via row "Explain" button */}
+            <RiskBreakdownDrawer
+                scanId={explainScanId}
+                onClose={() => setExplainScanId(null)}
+            />
         </div>
     );
 };

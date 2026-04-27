@@ -4,6 +4,7 @@ import LiveConsole from '../components/dashboard/LiveConsole';
 import ShortcutCheatsheet from '../components/ShortcutCheatsheet';
 import QuickScanPopover from '../components/QuickScanPopover';
 import CommandPalette from '../components/CommandPalette';
+import NotificationsBell from '../components/NotificationsBell';
 import { Search } from 'lucide-react';
 import api from '../services/api';
 
@@ -72,6 +73,9 @@ const TopBar = ({ onQuickScan, isScanning }) => {
             </div>
 
             <div className="flex-1" />
+
+            {/* Notifications bell */}
+            <NotificationsBell />
 
             {/* Quick scan — confirmation popover, runs scan on Run, opens full config on Configure */}
             <QuickScanPopover isScanning={isScanning} onScanStarted={onQuickScan} />
