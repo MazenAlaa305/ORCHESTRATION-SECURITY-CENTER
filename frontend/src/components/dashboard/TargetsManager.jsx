@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, Trash2, ExternalLink, Shield, Globe, Search, CheckCircle, Loader2 } from 'lucide-react';
+import { Target, Plus, Trash2, ExternalLink, Shield, Globe, Search, CheckCircle, Loader2, Zap } from 'lucide-react';
 import { targetService, pentesterService } from '../../services/api';
 import EnvironmentWizard from './EnvironmentWizard';
+import ScanConfigModal from './ScanConfigModal';
 
 const TargetsManager = ({ onScanStarted }) => {
     const [activeTab, setActiveTab] = useState('list'); // list, discover
@@ -9,6 +10,7 @@ const TargetsManager = ({ onScanStarted }) => {
     const [targets, setTargets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(null);
+    const [scanConfigTarget, setScanConfigTarget] = useState(null);
 
     // Discovery
     const [discoveryDomain, setDiscoveryDomain] = useState('');
@@ -230,29 +232,66 @@ const TargetsManager = ({ onScanStarted }) => {
                                     </span>
                                 )}
                             </div>
-                            <button
-                                onClick={() => handleStartAIScan(target.id)}
-                                disabled={scanning === target.id}
-                                className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600 text-white rounded-lg text-sm disabled:opacity-50 min-w-[100px] justify-center"
-                            >
-                                {scanning === target.id ? (
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        <Shield className="h-4 w-4" />
-                                        <span>AI Scan</span>
-                                    </>
-                                )}
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => setScanConfigTarget(target)}
+                                    className="flex items-center gap-1 px-3 py-1 bg-cyan-400 hover:bg-sky-300 text-gray-900 rounded-lg text-sm font-bold min-w-[88px] justify-center transition-colors"
+                                    title="Configure and launch a scan against this target"
+                                >
+                                    <Zap className="h-4 w-4" />
+                                    <span>Scan…</span>
+                                </button>
+                                <button
+                                    onClick={() => handleStartAIScan(target.id)}
+                                    disabled={scanning === target.id}
+                                    className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-purple-500/80 to-cyan-500/80 hover:from-purple-600 hover:to-cyan-600 text-white rounded-lg text-xs disabled:opacity-50 justify-center"
+                                    title="One-click AI-validated scan with default settings"
+                                >
+                                    {scanning === target.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Shield className="h-3.5 w-3.5" />
+                                            <span>AI</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
 
+            {/* Pre-scoped scan modal — opens when a row's "Scan…" button is clicked */}
+            <ScanConfigModal
+                open={!!scanConfigTarget}
+                onClose={() => setScanConfigTarget(null)}
+                onStarted={(scan) => {
+                    setScanConfigTarget(null);
+                    onScanStarted?.(scan);
+                }}
+                prefilledTarget={scanConfigTarget}
+            />
+
             {targets.length === 0 && activeTab === 'list' && (
                 <div className="bg-cyber-light p-12 rounded-xl border border-gray-700 text-center">
                     <Target className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400">No targets configured. Add a target or use Discovery to find assets.</p>
+                    <p className="text-gray-300 font-semibold mb-1">No targets configured</p>
+                    <p className="text-gray-500 text-sm mb-4">Add a target manually, or use Discovery to find assets on a domain.</p>
+                    <div className="flex items-center justify-center gap-2">
+                        <button
+                            onClick={() => setShowWizard(true)}
+                            className="px-4 py-2 rounded-lg bg-cyan-400 text-gray-900 text-xs font-black uppercase tracking-wider hover:bg-sky-300 transition-colors flex items-center gap-1.5"
+                        >
+                            <Plus className="h-3.5 w-3.5" /> Add target
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('discover')}
+                            className="px-4 py-2 rounded-lg border border-cyan-400/30 text-cyan-400 text-xs font-black uppercase tracking-wider hover:bg-cyan-400/10 transition-colors flex items-center gap-1.5"
+                        >
+                            <Search className="h-3.5 w-3.5" /> Discover assets
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

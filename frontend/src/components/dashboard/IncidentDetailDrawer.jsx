@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     X, Shield, AlertTriangle, CheckCircle, XCircle, ExternalLink,
     Code, Brain, RefreshCw, Loader2, ChevronDown, ChevronUp,
+    ChevronLeft, ChevronRight,
     Copy, Check, ShieldX, Zap
 } from 'lucide-react';
 import { vulnerabilityService, findingsService } from '../../services/api';
@@ -21,8 +22,12 @@ const SEV_CONFIG = {
  *
  * @param {object} vuln — vulnerability object from the API
  * @param {function} onClose — close handler
+ * @param {function} onStatusChange — fired after status edits
+ * @param {{position?: number, total?: number, onPrev?: function, onNext?: function}} nav
+ *        Optional navigation context. When provided, renders a Prev/Next pager
+ *        in the header and binds J/K + ArrowDown/ArrowUp keys.
  */
-const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
+const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange, nav }) => {
     const [poc, setPoc] = useState(null);
     const [pocLoading, setPocLoading] = useState(false);
     const [pocExpanded, setPocExpanded] = useState(true);
@@ -44,12 +49,23 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
             .finally(() => setPocLoading(false));
     }, [vuln?.id]);
 
-    // Close on Escape
+    // Keyboard: Esc closes; J / ArrowDown → next; K / ArrowUp → previous.
+    // Skips when the user is typing in an input/textarea/contenteditable.
     useEffect(() => {
-        const handler = (e) => { if (e.key === 'Escape') onClose?.(); };
+        const handler = (e) => {
+            const t = e.target;
+            const isTyping = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+            if (e.key === 'Escape') { onClose?.(); return; }
+            if (isTyping) return;
+            if (e.key === 'j' || e.key === 'ArrowDown') {
+                if (nav?.onNext) { e.preventDefault(); nav.onNext(); }
+            } else if (e.key === 'k' || e.key === 'ArrowUp') {
+                if (nav?.onPrev) { e.preventDefault(); nav.onPrev(); }
+            }
+        };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [onClose]);
+    }, [onClose, nav]);
 
     const handleRevalidate = async () => {
         setIsRevalidating(true);
@@ -131,12 +147,40 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
                                 </p>
                             )}
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors shrink-0"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                            {nav && typeof nav.position === 'number' && typeof nav.total === 'number' && nav.total > 0 && (
+                                <div className="flex items-center gap-0.5 mr-1">
+                                    <button
+                                        onClick={() => nav.onPrev?.()}
+                                        disabled={!nav.onPrev || nav.position <= 1}
+                                        className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        title="Previous (K / ↑)"
+                                        aria-label="Previous finding"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <span className="text-[10px] font-mono text-gray-400 px-1 tabular-nums">
+                                        {nav.position} / {nav.total}
+                                    </span>
+                                    <button
+                                        onClick={() => nav.onNext?.()}
+                                        disabled={!nav.onNext || nav.position >= nav.total}
+                                        className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        title="Next (J / ↓)"
+                                        aria-label="Next finding"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                onClick={onClose}
+                                className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                aria-label="Close"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Action Message */}

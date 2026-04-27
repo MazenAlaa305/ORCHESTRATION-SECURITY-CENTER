@@ -59,10 +59,18 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
                     }
                 </span>
             )}
-            {badge && (
+            {/* Boolean badge → pulsing dot. Numeric badge handled inline below. */}
+            {badge === true && (
                 <span
                     className="absolute -top-1 -right-1 h-2 w-2 rounded-full animate-pulse"
                     style={{ background: '#00ffff', boxShadow: '0 0 6px #00ffff' }}
+                />
+            )}
+            {/* Collapsed numeric badge — small dot with no count to avoid overlap */}
+            {collapsed && typeof badge === 'number' && badge > 0 && (
+                <span
+                    className="absolute -top-1 -right-1 h-2 w-2 rounded-full animate-pulse"
+                    style={{ background: '#ff0055', boxShadow: '0 0 6px #ff0055' }}
                 />
             )}
         </div>
@@ -70,10 +78,27 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
         {/* Label */}
         {!collapsed && (
             <span
-                className="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis transition-colors"
+                className="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis transition-colors flex-1"
                 style={{ color: active ? '#00ffff' : 'rgba(148,163,184,0.6)' }}
             >
                 {label}
+            </span>
+        )}
+
+        {/* Expanded numeric badge — count pill on the right */}
+        {!collapsed && typeof badge === 'number' && badge > 0 && (
+            <span
+                className="text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none"
+                style={{
+                    background: 'rgba(255,0,85,0.15)',
+                    border: '1px solid rgba(255,0,85,0.3)',
+                    color: '#ff4d7d',
+                    minWidth: '16px',
+                    textAlign: 'center',
+                }}
+                title={`${badge} SLA overdue`}
+            >
+                {badge > 99 ? '99+' : badge}
             </span>
         )}
     </div>
@@ -88,6 +113,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
 
     const isScanning   = realTime.scanStatus === 'RUNNING';
     const isConnected  = realTime.isConnected;
+    const overdueCount = realTime.kpi?.overdue_findings ?? 0;
 
     // Persist collapse state
     const toggleCollapse = () => {
@@ -163,7 +189,13 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                                 collapsed={collapsed}
                                 active={activeTab === item.id}
                                 onClick={() => onTabChange?.(item.id)}
-                                badge={item.id === 'ai-brain' && isScanning}
+                                badge={
+                                    item.id === 'ai-brain' && isScanning
+                                        ? true
+                                        : item.id === 'threat-center' && overdueCount > 0
+                                            ? overdueCount
+                                            : undefined
+                                }
                             />
                         ))}
                     </div>

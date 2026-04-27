@@ -47,12 +47,12 @@ const PanelLoader = () => (
 
 // ── Main tab definitions ──────────────────────────────────────────────────────
 const MAIN_TABS = [
-    { id: 'overview',      label: 'Center',  icon: <LayoutDashboard /> },
-    { id: 'operations',    label: 'Ops',     icon: <ScanIcon /> },
-    { id: 'threat-center', label: 'Threats', icon: <Activity /> },
-    { id: 'ai-brain',      label: 'AI',      icon: <Brain /> },
-    { id: 'reports',       label: 'Docs',    icon: <FileText /> },
-    { id: 'settings',      label: 'Config',  icon: <Settings /> },
+    { id: 'overview',      label: 'Command Center', icon: <LayoutDashboard /> },
+    { id: 'operations',    label: 'Operations',     icon: <ScanIcon /> },
+    { id: 'threat-center', label: 'Threat Center',  icon: <Activity /> },
+    { id: 'ai-brain',      label: 'AI Brain',       icon: <Brain /> },
+    { id: 'reports',       label: 'Reports',        icon: <FileText /> },
+    { id: 'settings',      label: 'Settings',       icon: <Settings /> },
 ];
 
 // SUB_TAB_DEFAULTS are computed at render time (see Dashboard component)
@@ -122,6 +122,18 @@ const Dashboard = () => {
         }
         prevScanning.current = isScanning;
     }, [isScanning, refetchKpi]);
+
+    // Cross-component navigation bus — panels dispatch
+    // window.dispatchEvent(new CustomEvent('dashboard:navigate', { detail: { tab, sub } }))
+    useEffect(() => {
+        const handler = (e) => {
+            const { tab, sub } = e.detail || {};
+            if (tab) setActiveTab(tab);
+            setActiveSubTab(sub ?? SUB_TAB_DEFAULTS[tab] ?? 'overview');
+        };
+        window.addEventListener('dashboard:navigate', handler);
+        return () => window.removeEventListener('dashboard:navigate', handler);
+    }, [siem_enabled]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleScanStarted = (scan) => {

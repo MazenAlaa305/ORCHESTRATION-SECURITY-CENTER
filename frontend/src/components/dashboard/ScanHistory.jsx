@@ -277,8 +277,32 @@ const ScanHistory = ({ refresh }) => {
                             <tr><td colSpan={7} className={`${rowPadding} text-center text-red-400`}>{err}</td></tr>
                         )}
                         {!loading && !err && data.items.length === 0 && (
-                            <tr><td colSpan={7} className={`${rowPadding} text-center text-gray-500`}>
-                                {hasFilters ? 'No scans match the current filters.' : 'No scans found. Start a scan to see results.'}
+                            <tr><td colSpan={7} className={`${rowPadding} text-center py-10`}>
+                                {hasFilters ? (
+                                    <div className="flex flex-col items-center gap-3">
+                                        <p className="text-gray-400">No scans match the current filters.</p>
+                                        <button
+                                            onClick={() => { resetFilters?.(); }}
+                                            className="px-3 py-1.5 rounded-lg border border-cyan-400/30 text-cyan-400 text-[10px] font-black uppercase tracking-wider hover:bg-cyan-400/10 transition-colors"
+                                        >
+                                            Clear filters
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-3">
+                                        <p className="text-gray-300 font-semibold">No scans yet</p>
+                                        <p className="text-gray-500 text-xs max-w-sm">
+                                            Run your first scan and the history table will fill with timing, severity, and risk-score breakdowns.
+                                        </p>
+                                        <button
+                                            onClick={() => window.dispatchEvent(new CustomEvent('dashboard:navigate',
+                                                { detail: { tab: 'operations', sub: 'scanner' } }))}
+                                            className="px-3 py-1.5 rounded-lg bg-cyan-400 text-gray-900 text-[10px] font-black uppercase tracking-wider hover:bg-sky-300 transition-colors"
+                                        >
+                                            Start your first scan
+                                        </button>
+                                    </div>
+                                )}
                             </td></tr>
                         )}
                         {data.items.map((scan) => {

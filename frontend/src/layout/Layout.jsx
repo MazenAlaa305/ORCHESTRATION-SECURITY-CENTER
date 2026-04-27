@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import LiveConsole from '../components/dashboard/LiveConsole';
-import { Search, Zap, X } from 'lucide-react';
+import ShortcutCheatsheet from '../components/ShortcutCheatsheet';
+import QuickScanPopover from '../components/QuickScanPopover';
+import CommandPalette from '../components/CommandPalette';
+import { Search } from 'lucide-react';
 import api from '../services/api';
 
 // ── Health pill ───────────────────────────────────────────────────────────────
@@ -17,9 +20,10 @@ const HealthPill = ({ label, healthy }) => (
 );
 
 // ── Top command bar ───────────────────────────────────────────────────────────
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || '');
+
 const TopBar = ({ onQuickScan, isScanning }) => {
     const [health, setHealth] = useState({ api: true, redis: true, workers: true });
-    const [search, setSearch] = useState('');
 
     const checkHealth = useCallback(async () => {
         try {
@@ -40,41 +44,25 @@ const TopBar = ({ onQuickScan, isScanning }) => {
         return () => clearInterval(interval);
     }, [checkHealth]);
 
-    // Global keyboard shortcut: ⌘K / Ctrl+K focuses search
-    useEffect(() => {
-        const handler = (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                document.getElementById('universal-search')?.focus();
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
+    const openPalette = () => window.dispatchEvent(new CustomEvent('dashboard:open-palette'));
 
     return (
         <div className="h-12 border-b border-white/5 bg-[rgba(15,30,40,0.4)] backdrop-blur-xl px-5 flex items-center gap-4 shrink-0 relative z-10">
-            {/* Universal search */}
-            <div className="flex items-center gap-2 flex-1 max-w-sm bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 focus-within:border-cyan-400/40 transition-all">
+            {/* Command palette trigger — opens the real ⌘K palette */}
+            <button
+                type="button"
+                onClick={openPalette}
+                className="flex items-center gap-2 flex-1 max-w-sm bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 hover:border-cyan-400/40 transition-all text-left"
+                title="Open command palette"
+            >
                 <Search className="h-3.5 w-3.5 text-gray-500 shrink-0" />
-                <input
-                    id="universal-search"
-                    type="text"
-                    placeholder="Search IPs, assets, CVEs..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="bg-transparent text-white text-xs outline-none placeholder:text-gray-600 w-full font-mono"
-                />
-                {search ? (
-                    <button onClick={() => setSearch('')} className="text-gray-600 hover:text-white transition-colors">
-                        <X className="h-3 w-3" />
-                    </button>
-                ) : (
-                    <span className="text-[9px] text-gray-700 font-mono border border-white/10 rounded px-1 shrink-0">
-                        ⌘K
-                    </span>
-                )}
-            </div>
+                <span className="text-xs text-gray-500 font-mono flex-1 truncate">
+                    Search or jump to…
+                </span>
+                <span className="text-[9px] text-gray-500 font-mono border border-white/10 rounded px-1 shrink-0">
+                    {isMac ? '⌘' : 'Ctrl'} K
+                </span>
+            </button>
 
             {/* Health pills */}
             <div className="hidden md:flex items-center gap-2">
@@ -85,20 +73,8 @@ const TopBar = ({ onQuickScan, isScanning }) => {
 
             <div className="flex-1" />
 
-            {/* Quick scan button */}
-            <button
-                id="quick-scan-btn"
-                onClick={onQuickScan}
-                disabled={isScanning}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 ${
-                    isScanning
-                        ? 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 cursor-not-allowed'
-                        : 'bg-cyan-400 text-gray-900 hover:bg-sky-300 shadow-[0_0_12px_rgba(0,255,255,0.3)] hover:shadow-[0_0_20px_rgba(0,255,255,0.5)]'
-                }`}
-            >
-                <Zap className="h-3.5 w-3.5" />
-                {isScanning ? 'Scanning...' : 'Quick Scan'}
-            </button>
+            {/* Quick scan — confirmation popover, runs scan on Run, opens full config on Configure */}
+            <QuickScanPopover isScanning={isScanning} onScanStarted={onQuickScan} />
         </div>
     );
 };
@@ -124,6 +100,8 @@ const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) =
         </div>
 
         <LiveConsole />
+        <ShortcutCheatsheet />
+        <CommandPalette />
     </div>
 );
 

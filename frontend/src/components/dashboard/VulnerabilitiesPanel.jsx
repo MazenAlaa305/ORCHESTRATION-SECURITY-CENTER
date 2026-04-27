@@ -36,8 +36,10 @@ const LAST_SEEN_KEY = 'vulns.lastSeenAt';
 const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
     const [vulnerabilities, setVulnerabilities] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedVuln, setSelectedVuln] = useState(null);
-    const [showDrawer, setShowDrawer] = useState(false);
+    // Selection is tracked by id so that filter / sort changes don't break the
+    // open drawer or the shareable URL hash. The visible vuln + index are
+    // derived from `displayed` further down.
+    const [selectedFindingId, setSelectedFindingId] = useState(null);
     const [filter, setFilter] = useState({ severity: '', status: '' });
     const [search, setSearch] = useState('');
     const [sortField, setSortField] = useState('severity');
@@ -77,10 +79,14 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
         }
     };
 
+    const vulnKey = (v) => v?.id ?? v?.finding_id ?? null;
+
     const handleOpenDrawer = (vuln) => {
-        setSelectedVuln(vuln);
-        setShowDrawer(true);
+        const k = vulnKey(vuln);
+        if (k != null) setSelectedFindingId(k);
     };
+
+    const handleCloseDrawer = () => setSelectedFindingId(null);
 
     const toggleSort = (field) => {
         if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -149,6 +155,47 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
             else { av = a.type || ''; bv = b.type || ''; return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av); }
             return sortDir === 'asc' ? av - bv : bv - av;
         });
+
+    // ── Selection derived from id + displayed list ─────────────────────────
+    const selectedIndex = selectedFindingId == null
+        ? -1
+        : displayed.findIndex(v => String(vulnKey(v)) === String(selectedFindingId));
+    const selectedVuln = selectedIndex >= 0 ? displayed[selectedIndex] : null;
+
+    const navigateRel = (delta) => {
+        if (!displayed.length) return;
+        const next = selectedIndex < 0
+            ? (delta > 0 ? 0 : displayed.length - 1)
+            : Math.max(0, Math.min(displayed.length - 1, selectedIndex + delta));
+        const k = vulnKey(displayed[next]);
+        if (k != null) setSelectedFindingId(k);
+    };
+
+    // ── URL hash sync — open finding survives a refresh / is shareable ─────
+    // Format: #finding=<id>
+    useEffect(() => {
+        if (selectedFindingId == null) {
+            if (window.location.hash.startsWith('#finding=')) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+            return;
+        }
+        const desired = `#finding=${encodeURIComponent(String(selectedFindingId))}`;
+        if (window.location.hash !== desired) {
+            history.replaceState(null, '', window.location.pathname + window.location.search + desired);
+        }
+    }, [selectedFindingId]);
+
+    // Read hash on mount + react to back/forward navigation.
+    useEffect(() => {
+        const apply = () => {
+            const m = window.location.hash.match(/^#finding=(.+)$/);
+            if (m) setSelectedFindingId(decodeURIComponent(m[1]));
+        };
+        apply();
+        window.addEventListener('hashchange', apply);
+        return () => window.removeEventListener('hashchange', apply);
+    }, []);
 
     if (loading) {
         return (
@@ -422,19 +469,55 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 })}
             </div>
 
-            {vulnerabilities.length === 0 && (
-                <div className="bg-cyber-light p-12 rounded-xl border border-gray-700 text-center">
-                    <Shield className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <p className="text-gray-400">No vulnerabilities found matching your criteria.</p>
-                </div>
-            )}
+            {vulnerabilities.length === 0 && (() => {
+                // Only count user-explicit filters; default toggles don't trip the "clear" CTA.
+                const hasActiveFilter = !!(search || filter.severity || filter.status);
+                return (
+                    <div className="bg-cyber-light p-12 rounded-xl border border-gray-700 text-center">
+                        <Shield className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                        {hasActiveFilter ? (
+                            <>
+                                <p className="text-gray-300 font-semibold mb-1">No matches for the current filters</p>
+                                <p className="text-gray-500 text-sm mb-4">Try clearing filters or widening the severity range.</p>
+                                <button
+                                    onClick={() => {
+                                        setSearch('');
+                                        setFilter({ severity: '', status: '' });
+                                    }}
+                                    className="px-4 py-2 rounded-lg bg-cyan-400 text-gray-900 text-xs font-black uppercase tracking-wider hover:bg-sky-300 transition-colors"
+                                >
+                                    Clear filters
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-gray-300 font-semibold mb-1">No vulnerabilities yet</p>
+                                <p className="text-gray-500 text-sm mb-4">Run your first scan to populate this view.</p>
+                                <button
+                                    onClick={() => window.dispatchEvent(new CustomEvent('dashboard:navigate',
+                                        { detail: { tab: 'operations', sub: 'scanner' } }))}
+                                    className="px-4 py-2 rounded-lg bg-cyan-400 text-gray-900 text-xs font-black uppercase tracking-wider hover:bg-sky-300 transition-colors"
+                                >
+                                    Configure first scan
+                                </button>
+                            </>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* Full Incident Detail Drawer */}
-            {showDrawer && selectedVuln && (
+            {selectedVuln && (
                 <IncidentDetailDrawer
                     vuln={selectedVuln}
-                    onClose={() => { setShowDrawer(false); setSelectedVuln(null); }}
+                    onClose={handleCloseDrawer}
                     onStatusChange={fetchVulnerabilities}
+                    nav={{
+                        position: selectedIndex + 1,
+                        total: displayed.length,
+                        onPrev: selectedIndex > 0 ? () => navigateRel(-1) : undefined,
+                        onNext: selectedIndex < displayed.length - 1 ? () => navigateRel(1) : undefined,
+                    }}
                 />
             )}
         </div>

@@ -197,6 +197,16 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
         }
     }, [open]);
 
+    // Sync prefilledTarget when the caller switches between targets (e.g. row "Scan…" buttons)
+    useEffect(() => {
+        if (!open) return;
+        if (prefilledTarget?.id) {
+            setTargetMode('existing');
+            setSelectedTargetId(prefilledTarget.id);
+            setTargetUrl(prefilledTarget.base_url || '');
+        }
+    }, [open, prefilledTarget?.id]);
+
     if (!open) return null;
 
     // ── Handlers ─────────────────────────────────────────────────────────────
