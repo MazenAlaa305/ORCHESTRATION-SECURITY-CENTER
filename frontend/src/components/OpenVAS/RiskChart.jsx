@@ -14,10 +14,10 @@ const RiskChart = ({ data }) => {
     ];
 
     const chartData = data ? [
-        { name: 'Critical', value: data.CRITICAL || 0, color: '#FF0055' },
-        { name: 'High', value: data.HIGH || 0, color: '#FF9900' },
-        { name: 'Medium', value: data.MEDIUM || 0, color: '#FFFF00' },
-        { name: 'Low', value: data.LOW || 0, color: '#00CCFF' },
+        { name: 'Critical', value: (data.CRITICAL || data.critical || 0), color: '#FF0055' },
+        { name: 'High', value: (data.HIGH || data.high || 0), color: '#FF9900' },
+        { name: 'Medium', value: (data.MEDIUM || data.medium || 0), color: '#FFFF00' },
+        { name: 'Low', value: (data.LOW || data.low || 0), color: '#00CCFF' },
     ] : defaultData;
 
     // Filter out zero values for better visual if needed, or keep them

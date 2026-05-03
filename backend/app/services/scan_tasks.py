@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService, Target
+from app.models.scan import Scan, Vulnerability, ScanStatus, ScanAsset, AssetService, Target, SeverityLevel, VulnStatus
 from app.services.nmap_wrapper import NmapWrapper
 from app.services.event_publisher import publisher
 from sqlalchemy import select
@@ -224,7 +224,8 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
             scan.configuration = {}
         db.commit()
 
-        # ── Resolve target host ──────────────────────────────────────────────
+        # Notify frontend: scanning banner activates, orchestration log clears
+        publisher.publish_sync("SCAN_STARTED", {"scan_id": scan_id})
         raw_target = (scan.target.base_url if scan.target else None) or scan.target_url
         if not raw_target:
             raise ValueError(f"No valid target URL for scan {scan_id}")
@@ -255,10 +256,17 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         results: list = []
         if run_nmap:
             logger.info("[Scan %s] Phase 1: Nmap → %s", scan_id, clean_target)
+            publisher.publish_sync("LOG_STREAM", {
+                "agent": "recon_agent",
+                "level": "info",
+                "message": f"[RECON] Starting Nmap reconnaissance on {clean_target}…",
+                "scan_id": scan_id,
+            })
             scanner = NmapWrapper()
             results = scanner.scan_target(clean_target, scan.scan_type)
         else:
             logger.info("[Scan %s] Phase 1: Nmap skipped (disabled)", scan_id)
+
 
         seen_hosts: set[str] = set()
         all_vulns: list[dict] = []
@@ -404,6 +412,14 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         # Commit nmap results so the async risk engine session can see them
         db.commit()
 
+        # Publish recon phase log to Orchestration Feed
+        publisher.publish_sync("LOG_STREAM", {
+            "agent": "recon_agent",
+            "level": "info",
+            "message": f"[RECON] Nmap scan completed on {clean_target} — {len(seen_hosts)} host(s), {vuln_count} service(s) found",
+            "scan_id": scan_id,
+        })
+
         _write_agent_log(
             db, scan_id, "recon_agent", "Network Reconnaissance Completed",
             reasoning=f"Nmap discovered {len(seen_hosts)} host(s) with {vuln_count} initial findings on target {clean_target}.",
@@ -412,6 +428,12 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
 
         # ── Phase 2: AI Intelligence (Gemini) ─────────────────────────────
         logger.info("[Scan %s] Phase 2: AI Intelligence analysis", scan_id)
+        publisher.publish_sync("LOG_STREAM", {
+            "agent": "intelligence_agent",
+            "level": "info",
+            "message": f"[INTELLIGENCE] Running AI advisory analysis on {len(results)} host(s)…",
+            "scan_id": scan_id,
+        })
         try:
             from app.services.intelligence_agent import IntelligenceAgent
 
@@ -426,6 +448,12 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
             _run_async(_ai_analysis())
         except Exception as exc:
             logger.warning("[Scan %s] Intelligence analysis skipped: %s", scan_id, exc)
+            publisher.publish_sync("LOG_STREAM", {
+                "agent": "intelligence_agent",
+                "level": "warning",
+                "message": f"[INTELLIGENCE] AI advisory skipped (no valid API key or network error)",
+                "scan_id": scan_id,
+            })
 
         # ── Phase 3: Nuclei deep scan ──────────────────────────────────────
         # Use the full URL (raw_target) so Nuclei scans the correct port,
@@ -449,7 +477,7 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
                         cve_id=finding.get("cve_id", ""),
                         proof_of_concept=str(finding.get("evidence", "")),
                         remediation="Refer to CVE mitigation guidance.",
-                        status="OPEN",
+                        status="open",
                     ))
                     vuln_count += 1
                     all_vulns.append({
@@ -465,6 +493,12 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         db.commit()
 
         nuclei_count = sum(1 for v in all_vulns if v.get("host") == clean_target)
+        publisher.publish_sync("LOG_STREAM", {
+            "agent": "attack_agent",
+            "level": "info",
+            "message": f"[NUCLEI] Scan complete on {nuclei_target} — {nuclei_count} web vulnerability finding(s) recorded",
+            "scan_id": scan_id,
+        })
         _write_agent_log(
             db, scan_id, "attack_agent", "Vulnerability Scan Completed",
             reasoning=f"Nuclei deep scan finished against {clean_target}. {nuclei_count} web vulnerability finding(s) recorded.",
@@ -473,6 +507,12 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
 
         # ── Phase 4: Risk Engine ───────────────────────────────────────────
         logger.info("[Scan %s] Phase 4: Risk Engine", scan_id)
+        publisher.publish_sync("LOG_STREAM", {
+            "agent": "validation_agent",
+            "level": "info",
+            "message": f"[RISK] Running Unified Risk Engine — scoring {len(all_vulns)} finding(s)…",
+            "scan_id": scan_id,
+        })
         try:
             from app.services.unified_risk_engine import UnifiedRiskEngine
 
@@ -522,13 +562,38 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         db.commit()
         db.refresh(scan)
 
-        thoughts = scan.agent_thoughts or {}
-        _run_async(publisher.publish("RISK_UPDATE", {
+        # Count ALL open vulnerabilities across every scan so the WebSocket
+        # update reflects cumulative risk, not just this scan's findings.
+        counts = {
+            "critical": db.query(Vulnerability).filter(Vulnerability.severity == SeverityLevel.CRITICAL, Vulnerability.status == VulnStatus.OPEN).count(),
+            "high":     db.query(Vulnerability).filter(Vulnerability.severity == SeverityLevel.HIGH,     Vulnerability.status == VulnStatus.OPEN).count(),
+            "medium":   db.query(Vulnerability).filter(Vulnerability.severity == SeverityLevel.MEDIUM,   Vulnerability.status == VulnStatus.OPEN).count(),
+            "low":      db.query(Vulnerability).filter(Vulnerability.severity == SeverityLevel.LOW,      Vulnerability.status == VulnStatus.OPEN).count(),
+            "info":     db.query(Vulnerability).filter(Vulnerability.severity == SeverityLevel.INFO,     Vulnerability.status == VulnStatus.OPEN).count(),
+        }
+
+        from app.models.scan import NetworkAsset as _NA
+        total_assets = db.query(_NA).count()
+
+        # Health derived from cumulative open vulns — mirrors kpi-snapshot formula.
+        _c, _h, _m, _l = counts["critical"], counts["high"], counts["medium"], counts["low"]
+        _risk = (
+            min(_c, 5)  / 5.0  * 60 +
+            min(_h, 10) / 10.0 * 25 +
+            min(_m, 20) / 20.0 * 10 +
+            min(_l, 30) / 30.0 *  5
+        )
+        cumulative_health = round(max(0.0, 100.0 - _risk), 2)
+
+        publisher.publish_sync("SCAN_STATUS", {"scan_id": scan.id, "status": "COMPLETED"})
+        publisher.publish_sync("RISK_UPDATE", {
             "scan_id": scan.id,
             "overall_score": round(scan.risk_score or 0.0, 2),
-            "health_score": round(float(thoughts.get("health_score", 100.0 - (scan.risk_score or 0))), 2),
-            "vuln_count": vuln_count,
-        }))
+            "health_score": cumulative_health,
+            "vuln_count": sum(counts.values()),
+            "counts": counts,
+            "total_assets": total_assets,
+        })
         logger.info("[Scan %s] Completed — %d vulnerabilities found.", scan_id, vuln_count)
 
     except Exception as exc:

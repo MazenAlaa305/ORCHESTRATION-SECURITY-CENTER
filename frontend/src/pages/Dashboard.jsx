@@ -13,7 +13,7 @@ import ActionCenter from '../components/dashboard/ActionCenter';
 import SubTabBar from '../components/ui/SubTabBar';
 import Tabs from '../components/ui/Tabs';
 
-import { scanService, dashboardService, vulnerabilityService } from '../services/api';
+import { scanService, dashboardService } from '../services/api';
 import { useRealTime } from '../context/RealTimeContext';
 import { useConfig } from '../context/ConfigContext';
 
@@ -114,15 +114,6 @@ const Dashboard = () => {
         s.configuration?.openvas_task_id || s.scan_type === 'openvas'
     ) ?? null;
 
-    // Fetch vulnerabilities for the latest scan (ScanSummary doesn't include them)
-    const { data: latestScanVulns = [] } = useQuery({
-        queryKey: ['latest-scan-vulns', latestScan?.id],
-        queryFn: () => latestScan?.id
-            ? vulnerabilityService.list({ scan_id: latestScan.id }).then(r => r.data || [])
-            : Promise.resolve([]),
-        enabled: !!latestScan?.id,
-        staleTime: 30_000,
-    });
 
     // Refetch KPI when a scan just finished
     const prevScanning = React.useRef(false);
@@ -144,6 +135,13 @@ const Dashboard = () => {
         window.addEventListener('dashboard:navigate', handler);
         return () => window.removeEventListener('dashboard:navigate', handler);
     }, [navTo]);
+
+    // KPI refresh bus — any panel can trigger: window.dispatchEvent(new CustomEvent('dashboard:refresh-kpi'))
+    useEffect(() => {
+        const handler = () => { setRefreshKey(k => k + 1); refetchKpi(); };
+        window.addEventListener('dashboard:refresh-kpi', handler);
+        return () => window.removeEventListener('dashboard:refresh-kpi', handler);
+    }, [refetchKpi]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleScanStarted = (scan) => {
@@ -172,6 +170,7 @@ const Dashboard = () => {
         { name: 'High',     value: realTime.kpi.counts.high,     severity: 'high'     },
         { name: 'Medium',   value: realTime.kpi.counts.medium,   severity: 'medium'   },
         { name: 'Low',      value: realTime.kpi.counts.low,      severity: 'low'      },
+        { name: 'Info',     value: realTime.kpi.counts.info,     severity: 'info'     },
     ];
 
     return (
@@ -282,13 +281,12 @@ const Dashboard = () => {
                                     <Scheduler />
                                 </div>
                                 <div className="md:col-span-2 flex flex-col gap-4">
-                                    <RiskChart data={
-                                        latestScanVulns.reduce((acc, v) => {
-                                            const sev = (v.severity || 'LOW').toUpperCase();
-                                            acc[sev] = (acc[sev] || 0) + 1;
-                                            return acc;
-                                        }, {})
-                                    } />
+                                    <RiskChart data={{
+                                        CRITICAL: realTime.kpi.counts.critical || 0,
+                                        HIGH:     realTime.kpi.counts.high     || 0,
+                                        MEDIUM:   realTime.kpi.counts.medium   || 0,
+                                        LOW:      realTime.kpi.counts.low      || 0,
+                                    }} />
                                     <VulnerabilitiesList
                                         taskId={latestOpenVASScan?.configuration?.openvas_task_id}
                                         scanId={latestOpenVASScan?.id}
@@ -320,7 +318,7 @@ const Dashboard = () => {
                     />
                     <Suspense fallback={<PanelLoader />}>
                         {activeSubTab === 'siem'            && <UnifiedInbox />}
-                        {activeSubTab === 'vulnerabilities' && <VulnerabilitiesPanel refresh={refreshKey} />}
+                        {activeSubTab === 'vulnerabilities' && <VulnerabilitiesPanel refresh={refreshKey} scanId={latestScan?.id} />}
                         {activeSubTab === 'network'         && <NetworkTopology refresh={refreshKey} />}
                     </Suspense>
                 </div>

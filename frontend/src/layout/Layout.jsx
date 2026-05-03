@@ -8,6 +8,7 @@ import NotificationsBell from '../components/NotificationsBell';
 import { useEnvStore } from '../stores/envStore';
 import { Search } from 'lucide-react';
 import api from '../services/api';
+import useGlobalShortcuts from '../hooks/useGlobalShortcuts';
 
 // ── Environment switcher ──────────────────────────────────────────────────────
 const ENVS = [
@@ -126,7 +127,9 @@ const TopBar = ({ onQuickScan, isScanning }) => {
 };
 
 // ── Main layout ───────────────────────────────────────────────────────────────
-const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) => (
+const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) => {
+    useGlobalShortcuts();
+    return (
     <div className="min-h-screen bg-cyber-dark text-gray-100 font-sans selection:bg-cyan-400 selection:text-gray-900 flex flex-row overflow-hidden">
         <a href="#main-content" className="skip-link">Skip to main content</a>
         {/* Ambient background glows — BlurAdmin teal/turquoise palette */}
@@ -150,6 +153,7 @@ const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) =
         <ShortcutCheatsheet />
         <CommandPalette />
     </div>
-);
+    );
+};
 
 export default Layout;

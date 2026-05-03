@@ -22,6 +22,7 @@ const TOOL_TOGGLES = [
 const HEALTH_STYLES = {
     connected:      { icon: CheckCircle,    color: 'text-green-400',  bg: 'bg-green-500/10',  border: 'border-green-500/30', label: 'CONNECTED' },
     configured:     { icon: CheckCircle,    color: 'text-green-400',  bg: 'bg-green-500/10',  border: 'border-green-500/30', label: 'CONFIGURED' },
+    starting:       { icon: AlertTriangle,  color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30',label: 'STARTING' },
     unreachable:    { icon: XCircle,        color: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/30',   label: 'UNREACHABLE' },
     not_configured: { icon: AlertTriangle,  color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30',label: 'NOT CONFIGURED' },
     disabled:       { icon: XCircle,        color: 'text-gray-400',   bg: 'bg-gray-500/10',   border: 'border-gray-500/30',  label: 'DISABLED' },

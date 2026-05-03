@@ -139,6 +139,12 @@ class Scan(Base):
     #   recon_done | attack_done | validated | risk_scored | reported
     # Used by run_full_scan to skip phases already completed on a Celery retry.
 
+    # ── Phase 5: Environment context (inherited from target, set at scan creation) ─
+    # No Python-level default: SQLAlchemy omits the column from INSERT when not
+    # explicitly set, so this is safe even before the migration has been applied.
+    environment_type = Column(String(32), nullable=True)
+    # One of: lab | development | staging | production
+
     # Relationships
     target = relationship("Target", back_populates="scans")
     vulnerabilities = relationship("Vulnerability", back_populates="scan", cascade="all, delete-orphan")

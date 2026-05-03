@@ -7,6 +7,7 @@ const SEV_COLORS = {
     HIGH:     '#ff6a00',
     MEDIUM:   '#ffaa00',
     LOW:      '#00ffff',
+    INFO:     '#888888',
 };
 
 function useCountUp(target, duration = 900) {
@@ -102,8 +103,9 @@ const StatCards = ({ latestScan, isScanning }) => {
     const riskScore   = realTime.kpi.overall_score ?? latestScan?.risk_score ?? 0;
     const healthScore = Math.round(realTime.kpi.health_score ?? (100 - riskScore));
 
-    // Vulnerability count — sum live KPI counts
-    const { critical = 0, high = 0, medium = 0, low = 0 } = realTime.kpi.counts;
+    // Vulnerability count — exclude INFO (informational) to match the risk chart
+    const counts = realTime.kpi.counts || {};
+    const { critical = 0, high = 0, medium = 0, low = 0, info = 0 } = counts;
     const vulnCount = critical + high + medium + low;
 
     // Assets — prefer live KPI
@@ -119,6 +121,7 @@ const StatCards = ({ latestScan, isScanning }) => {
             { pct: (high     / vulnCount) * 100, c: SEV_COLORS.HIGH     },
             { pct: (medium   / vulnCount) * 100, c: SEV_COLORS.MEDIUM   },
             { pct: (low      / vulnCount) * 100, c: SEV_COLORS.LOW      },
+            { pct: (info     / vulnCount) * 100, c: SEV_COLORS.INFO     },
           ]
         : undefined;
 

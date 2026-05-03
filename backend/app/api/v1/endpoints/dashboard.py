@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from ....core.database import get_db
-from ....models.scan import Scan, Vulnerability, NetworkAsset, ActionItem, SeverityLevel, Finding, FindingStatus
+from ....models.scan import Scan, Vulnerability, NetworkAsset, ActionItem, SeverityLevel, Finding, FindingStatus, ScanStatus, VulnStatus
 from ....services.unified_risk_engine import UnifiedRiskEngine
 from datetime import date
 from app.api.deps import require_role
@@ -94,38 +94,49 @@ def get_risk_overview(db: Session = Depends(get_db)):
 def get_kpi_snapshot(db: Session = Depends(get_db)):
     """
     Comprehensive KPI snapshot for real-time dashboard initialisation.
-    Called once on page load; live updates arrive via WebSocket RISK_UPDATE events.
+    Shows stats only for the latest scan to avoid displaying stale/seed data before first run.
     """
     latest_scan = (
         db.query(Scan)
+        .filter(Scan.status == ScanStatus.COMPLETED)
         .order_by(Scan.started_at.desc())
         .first()
     )
 
-    counts = {
-        "critical": db.query(Vulnerability).filter(
-            Vulnerability.severity == SeverityLevel.CRITICAL
-        ).count(),
-        "high": db.query(Vulnerability).filter(
-            Vulnerability.severity == SeverityLevel.HIGH
-        ).count(),
-        "medium": db.query(Vulnerability).filter(
-            Vulnerability.severity == SeverityLevel.MEDIUM
-        ).count(),
-        "low": db.query(Vulnerability).filter(
-            Vulnerability.severity == SeverityLevel.LOW
-        ).count(),
-    }
-
-    assets_count = db.query(NetworkAsset).count()
+    # Initialise zeros
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
     overall_score = 0.0
     health_score = 100.0
+    assets_count = db.query(NetworkAsset).count()
+    last_scan_id = None
 
     if latest_scan:
+        last_scan_id = latest_scan.id
         overall_score = round(latest_scan.risk_score or 0.0, 2)
-        # Null-safe dict access — agent_thoughts may be None or missing 'health_score'
-        thoughts = latest_scan.agent_thoughts or {}
-        health_score = round(float(thoughts.get("health_score", 100.0 - overall_score)), 2)
+
+        # Count ALL open vulnerabilities across every scan so a clean
+        # scan on a different target does not reset the board to zero.
+        for severity in [SeverityLevel.CRITICAL, SeverityLevel.HIGH, SeverityLevel.MEDIUM, SeverityLevel.LOW, SeverityLevel.INFO]:
+            counts[severity.value] = (
+                db.query(Vulnerability)
+                .filter(
+                    Vulnerability.severity == severity,
+                    Vulnerability.status == VulnStatus.OPEN,
+                )
+                .count()
+            )
+
+    # Derive health from cumulative open vuln counts.
+    # Each severity is capped so a handful of real findings never push
+    # the score to 0 — e.g. 3 criticals yield ~36 penalty points, not 60.
+    c, h, m, l = counts["critical"], counts["high"], counts["medium"], counts["low"]
+    risk = (
+        min(c, 5)  / 5.0  * 60 +   # criticals: saturates at 5  → max 60 pts
+        min(h, 10) / 10.0 * 25 +   # highs:     saturates at 10 → max 25 pts
+        min(m, 20) / 20.0 * 10 +   # mediums:   saturates at 20 → max 10 pts
+        min(l, 30) / 30.0 *  5     # lows:      saturates at 30 → max  5 pts
+    )
+    health_score = round(max(0.0, 100.0 - risk), 2)
 
     # Phase 4.3 — count OPEN findings whose due_date has passed
     try:
@@ -142,7 +153,7 @@ def get_kpi_snapshot(db: Session = Depends(get_db)):
         "health_score": health_score,
         "counts": counts,
         "total_assets": assets_count,
-        "last_scan_id": latest_scan.id if latest_scan else None,
+        "last_scan_id": last_scan_id,
         "overdue_findings": overdue,
     }
 

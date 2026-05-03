@@ -123,6 +123,11 @@ async def get_integration_health():
     ]
     await asyncio.gather(*tasks, return_exceptions=True)
 
+    # If SIEM is disabled, override any lingering values to show correct status
+    if not settings.SIEM_ENABLED:
+        results["elasticsearch"] = {"status": "disabled", "detail": "SIEM_ENABLED=false (Lite Mode)"}
+        results["wazuh"] = {"status": "disabled", "detail": "SIEM_ENABLED=false (Lite Mode)"}
+
     # Redis
     try:
         import aioredis
@@ -155,6 +160,11 @@ async def get_integration_health():
             writer.close()
             await writer.wait_closed()
             results["openvas"] = {"status": "connected", "detail": f"TCP {settings.OPENVAS_HOST}:{settings.OPENVAS_PORT} OK"}
+        except ConnectionRefusedError:
+            # Port exists but process not yet listening — container is still
+            # restoring the GVM database (pg_restore). This is normal on first
+            # start and resolves automatically after a few minutes.
+            results["openvas"] = {"status": "starting", "detail": "GVM initialising — database restore in progress"}
         except Exception as exc:
             results["openvas"] = {"status": "unreachable", "detail": str(exc)[:120]}
 

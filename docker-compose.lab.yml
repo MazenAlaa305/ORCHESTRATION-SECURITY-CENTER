@@ -143,7 +143,7 @@ services:
       - "3143:3143"   # IMAP
       - "8082:8080"   # Web admin
     environment:
-      - GREENMAIL_OPTS=-Dgreenmail.setup.test.all -Dgreenmail.users=admin:admin123,user:password,hr:hr2024
+      - GREENMAIL_OPTS=-Dgreenmail.smtp.hostname=0.0.0.0 -Dgreenmail.smtp.port=3025 -Dgreenmail.pop3.hostname=0.0.0.0 -Dgreenmail.pop3.port=3110 -Dgreenmail.imap.hostname=0.0.0.0 -Dgreenmail.imap.port=3143 -Dgreenmail.users=admin:admin123,user:password,hr:hr2024
     networks:
       corp:
         ipv4_address: 10.10.20.20

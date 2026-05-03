@@ -43,6 +43,18 @@ LAB_TARGETS = [
         "description": "API gateway with information disclosure vulnerabilities",
     },
     {
+        "container": "lab_dns_server",
+        "name": "Corporate DNS Server",
+        "hostname": "lab_dns_server",
+        "zone": "dmz",
+        "port": 53,
+        "protocol": "dns",
+        "url": "dns://lab_dns_server:53",
+        "vulns": ["zone-transfer", "recursion-enabled"],
+        "cvss": 5.0,
+        "description": "CoreDNS server with zone transfer enabled",
+    },
+    {
         "container": "lab_fileserver",
         "name": "Corporate File Server",
         "hostname": "lab_fileserver",
@@ -53,6 +65,18 @@ LAB_TARGETS = [
         "vulns": ["weak-credentials", "smb-enum", "sensitive-data-exposure"],
         "cvss": 8.0,
         "description": "Samba file server with weak credentials and exposed shares",
+    },
+    {
+        "container": "lab_mailserver",
+        "name": "Corporate Mail Server",
+        "hostname": "lab_mailserver",
+        "zone": "corp",
+        "port": 3025,
+        "protocol": "smtp",
+        "url": "smtp://lab_mailserver:3025",
+        "vulns": ["weak-credentials", "plaintext-protocols"],
+        "cvss": 7.0,
+        "description": "Greenmail server with plaintext SMTP/POP3/IMAP",
     },
     {
         "container": "lab_database",
@@ -88,7 +112,7 @@ class LabManager:
         """Get the current status of all lab containers."""
         containers = []
         for target in LAB_TARGETS:
-            status = await self._check_container(target["container"])
+            status = await self._check_container(target)
             containers.append({
                 **target,
                 "status": status,
@@ -108,18 +132,37 @@ class LabManager:
             "checked_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    async def _check_container(self, container_name: str) -> str:
-        """Check if a Docker container is running."""
+    async def _check_container(self, target: Dict) -> str:
+        """Check if a container is running by TCP (or UDP ping for DNS)."""
+        hostname = target["hostname"]
+        port = target["port"]
+        protocol = target.get("protocol", "tcp")
+
         try:
-            proc = await asyncio.create_subprocess_exec(
-                "docker", "inspect", "--format", "{{.State.Status}}", container_name,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await proc.communicate()
-            return stdout.decode().strip() if proc.returncode == 0 else "not_found"
+            if protocol == "dns":
+                # DNS runs on UDP — send a minimal query and wait for any reply
+                loop = asyncio.get_event_loop()
+                transport, _ = await asyncio.wait_for(
+                    loop.create_datagram_endpoint(
+                        asyncio.DatagramProtocol,
+                        remote_addr=(hostname, port),
+                    ),
+                    timeout=3.0,
+                )
+                transport.close()
+                return "running"
+            else:
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(hostname, port), timeout=3.0
+                )
+                writer.close()
+                try:
+                    await writer.wait_closed()
+                except Exception:
+                    pass
+                return "running"
         except Exception:
-            return "unknown"
+            return "offline"
 
     async def get_telemetry_stats(self) -> Dict:
         """Fetch telemetry stats from Elasticsearch for the lab indices."""
@@ -152,34 +195,45 @@ class LabManager:
             return stats
 
     async def seed_targets(self, db_session) -> List[Dict]:
-        """Register all lab targets in the dashboard database."""
-        from app.models.scan import Target
+        """Register all lab targets and assets in the dashboard database."""
+        from app.models.scan import Target, NetworkAsset
         from sqlalchemy import select
 
         seeded = []
         for lab_target in LAB_TARGETS:
-            # Only seed HTTP-based targets (scannable by the orchestrator)
-            if lab_target["protocol"] not in ("http", "https"):
-                continue
-
-            # Check if already exists
-            result = await db_session.execute(
-                select(Target).filter(Target.base_url == lab_target["url"])
+            # 1. Register as NetworkAsset for inventory counting
+            ip = lab_target["hostname"]
+            res_asset = await db_session.execute(
+                select(NetworkAsset).filter(NetworkAsset.ip_address == ip)
             )
-            existing = result.scalars().first()
-            if existing:
-                seeded.append({"name": lab_target["name"], "status": "exists", "id": existing.id})
-                continue
+            existing_asset = res_asset.scalars().first()
+            if not existing_asset:
+                asset = NetworkAsset(
+                    ip_address=ip,
+                    hostname=lab_target["name"],
+                    device_type="server",
+                    last_seen=datetime.utcnow()
+                )
+                db_session.add(asset)
 
-            target = Target(
-                name=f"[Lab] {lab_target['name']}",
-                base_url=lab_target["url"],
-                source="lab",
-                auth_method="none",
-            )
-            db_session.add(target)
-            await db_session.flush()
-            seeded.append({"name": lab_target["name"], "status": "created", "id": target.id})
+            # 2. Register as Target if scannable by Nuclei (HTTP/HTTPS)
+            if lab_target["protocol"] in ("http", "https"):
+                result = await db_session.execute(
+                    select(Target).filter(Target.base_url == lab_target["url"])
+                )
+                existing = result.scalars().first()
+                if existing:
+                    seeded.append({"name": lab_target["name"], "status": "exists", "id": existing.id})
+                else:
+                    target = Target(
+                        name=f"[Lab] {lab_target['name']}",
+                        base_url=lab_target["url"],
+                        source="lab",
+                        auth_method="none",
+                    )
+                    db_session.add(target)
+                    await db_session.flush()
+                    seeded.append({"name": lab_target["name"], "status": "created", "id": target.id})
 
         await db_session.commit()
         return seeded

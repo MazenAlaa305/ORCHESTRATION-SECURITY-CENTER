@@ -35,18 +35,19 @@ services:
       - OPENVAS_HOST=openvas
       - OPENVAS_PORT=9390
       - OPENVAS_CONNECTION_TYPE=tls
-      - OPENVAS_ENABLED=true
+      - OPENVAS_ENABLED=false
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - SIEM_ENABLED=false
+      - SIEM_ENABLED=${SIEM_ENABLED:-false}
       - WAZUH_API_URL=https://wazuh:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
-      - SOAR_ENABLED=false
+      - SOAR_ENABLED=${SOAR_ENABLED:-false}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - default
+      - lab_network
     depends_on:
       db:
         condition: service_healthy
@@ -151,12 +152,12 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - SIEM_ENABLED=false
+      - SIEM_ENABLED=${SIEM_ENABLED:-false}
       - WAZUH_API_URL=https://wazuh:55000
       - WAZUH_API_USER=wazuh
       - WAZUH_API_PASSWORD=wazuh
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/
-      - SOAR_ENABLED=false
+      - SOAR_ENABLED=${SOAR_ENABLED:-false}
     networks:
       - default
       - lab_network
@@ -199,6 +200,7 @@ services:
       - "9390:9390"
     volumes:
       - gvm_data:/var/lib/openvas
+      - ./infra/openvas/sync.sh:/scripts/sync.sh:ro
     entrypoint: [ "/bin/sh", "-c", "chown -R gvm:gvm /var/lib/openvas && rm -f /var/lib/openvas/feed-update.lock && find /var/lib -name postmaster.pid -delete && /scripts/start.sh" ]
     networks:
       - default

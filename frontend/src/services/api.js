@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'https://localhost/api/v1';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -166,6 +166,9 @@ export const labService = {
 
     // Seed lab targets into dashboard database
     seedTargets: () => api.post('/lab/seed'),
+
+    // Seed 10 realistic demo vulnerabilities (idempotent)
+    seedVulnerabilities: () => api.post('/lab/seed-vulns'),
 
     // Get recent lab events from Elasticsearch
     getEvents: (limit = 50, category = null) =>

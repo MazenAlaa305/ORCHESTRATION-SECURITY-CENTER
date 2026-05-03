@@ -7,7 +7,7 @@ const initialState = {
     kpi: {
         overall_score: 0,
         health_score: 100,
-        counts: { critical: 0, high: 0, medium: 0, low: 0 },
+        counts: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
         total_assets: 0,
         last_scan_id: null,
     },
@@ -34,6 +34,8 @@ function reducer(state, action) {
                     overall_score: action.payload.overall_score ?? state.kpi.overall_score,
                     health_score: action.payload.health_score ?? state.kpi.health_score,
                     last_scan_id: action.payload.scan_id ?? state.kpi.last_scan_id,
+                    counts: action.payload.counts ?? state.kpi.counts,
+                    total_assets: action.payload.total_assets ?? state.kpi.total_assets,
                 },
             };
 

@@ -1,5 +1,12 @@
 $base_url = "http://localhost:8000/api/v1"
-$headers = @{"Content-Type" = "application/json"}
+$loginBody = @{ email="admin@local"; password="Admin#159" } | ConvertTo-Json
+$loginRes = Invoke-RestMethod -Uri "$base_url/auth/login" -Method POST -Body $loginBody -ContentType "application/json"
+$token = $loginRes.access_token
+
+$headers = @{
+    "Content-Type" = "application/json"
+    "Authorization" = "Bearer $token"
+}
 
 Write-Host "Fetching targets..."
 $res = Invoke-RestMethod -Uri "$base_url/targets/" -Method GET -Headers $headers

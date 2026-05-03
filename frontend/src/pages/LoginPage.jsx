@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Shield, Lock, User, Loader2, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
@@ -8,6 +9,7 @@ export default function LoginPage() {
     const [error, setError]       = useState('');
     const [loading, setLoading]   = useState(false);
     const { login } = useAuth();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -26,6 +28,7 @@ export default function LoginPage() {
                 if (data.force_password_change) {
                     alert('You must change your password on first login. Please update it in your profile settings.');
                 }
+                navigate('/dashboard/overview');
             } else {
                 setError(data.detail || data.message || 'Authentication failed');
             }

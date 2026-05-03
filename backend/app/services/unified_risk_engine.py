@@ -222,6 +222,7 @@ class UnifiedRiskEngine:
         """
         Deterministic task generation.
         Translates raw findings into ActionItem records.
+        Optimized to use fewer DB queries for high-volume scans.
         """
         _s_res = await self.db.execute(
             select(Scan)
@@ -236,6 +237,12 @@ class UnifiedRiskEngine:
         if not scan:
             return []
 
+        # Pre-fetch existing action titles for this scan to avoid N+1 queries
+        _e_res = await self.db.execute(
+            select(ActionItem.title).filter(ActionItem.scan_id == scan_id)
+        )
+        existing_titles = set(_e_res.scalars().all())
+        
         new_actions = []
         
         # 1. Create actions from HIGH/CRITICAL vulnerabilities
@@ -244,16 +251,7 @@ class UnifiedRiskEngine:
                 title = vuln.title or f"Fix {vuln.type or 'Vulnerability'}"
                 description = vuln.description or f"Critical security issue detected on {vuln.url or 'target'}."
                 
-                # Deduplicate
-                _e_res = await self.db.execute(
-                    select(ActionItem).filter(
-                        ActionItem.scan_id == scan_id,
-                        ActionItem.title == title
-                    )
-                )
-                existing = _e_res.scalars().first()
-                
-                if not existing:
+                if title not in existing_titles:
                     action = ActionItem(
                         scan_id=scan_id,
                         title=title,
@@ -265,11 +263,12 @@ class UnifiedRiskEngine:
                     )
                     self.db.add(action)
                     new_actions.append(action)
+                    existing_titles.add(title)
 
         # 2. Create actions for dangerously open ports
+        ports_map = UnifiedRiskEngine.HIGH_RISK_PORTS
         for asset in scan.assets:
             for service in asset.services:
-                ports_map = UnifiedRiskEngine.HIGH_RISK_PORTS
                 if isinstance(ports_map, dict) and service.port in ports_map:
                     port_data = ports_map[service.port]
                     if isinstance(port_data, tuple) and len(port_data) >= 1:
@@ -277,26 +276,19 @@ class UnifiedRiskEngine:
                         title = f"Secure {name} service on {asset.ip_address}"
                         description = f"The {name} service (Port {service.port}) is exposed. SMEs should restrict this or use a VPN."
                     
-                    _e_res = await self.db.execute(
-                        select(ActionItem).filter(
-                            ActionItem.scan_id == scan_id,
-                            ActionItem.title == title
-                        )
-                    )
-                    existing = _e_res.scalars().first()
-                    
-                    if not existing:
-                        action = ActionItem(
-                            scan_id=scan_id,
-                            title=title,
-                            description=description,
-                            priority="HIGH",
-                            status="OPEN",
-                            type="CONFIGURATION",
-                            created_at=datetime.utcnow()
-                        )
-                        self.db.add(action)
-                        new_actions.append(action)
+                        if title not in existing_titles:
+                            action = ActionItem(
+                                scan_id=scan_id,
+                                title=title,
+                                description=description,
+                                priority="HIGH",
+                                status="OPEN",
+                                type="CONFIGURATION",
+                                created_at=datetime.utcnow()
+                            )
+                            self.db.add(action)
+                            new_actions.append(action)
+                            existing_titles.add(title)
 
         await self.db.commit()
         return new_actions

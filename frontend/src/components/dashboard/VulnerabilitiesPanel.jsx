@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bug, AlertTriangle, Shield, CheckCircle, XCircle, ExternalLink, Code, Loader2, Filter, Search, ChevronUp, ChevronDown, Bookmark, Trash2, Download, X as XIcon } from 'lucide-react';
-import { vulnerabilityService } from '../../services/api';
+import { vulnerabilityService, labService, dashboardService } from '../../services/api';
+import { useRealTime } from '../../context/RealTimeContext';
 import IncidentDetailDrawer from './IncidentDetailDrawer';
 import { useSavedViews } from '../../hooks/useSavedViews';
 import { useToast } from '../ToastProvider';
@@ -41,7 +42,7 @@ const FRAMEWORK_LABEL = {
 // `minSeverity` keeps Info/Low out of the default cut; `hideClosed` hides fixed
 // and false-positive observations. Both can be overridden by the user.
 const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
-const DEFAULT_MIN_SEVERITY = 'medium';
+const DEFAULT_MIN_SEVERITY = 'info';
 
 // localStorage key for "New since last visit" (Phase 6.3).
 const LAST_SEEN_KEY = 'vulns.lastSeenAt';
@@ -127,6 +128,27 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
 
     const { addToast } = useToast();
     const { activeEnv } = useEnvStore();
+    const { dispatch: rtDispatch } = useRealTime();
+
+    // Seed demo vulns then re-fetch both the vuln list and the KPI counts.
+    const [seeding, setSeeding] = useState(false);
+    const seedAndRefresh = async () => {
+        setSeeding(true);
+        try {
+            await labService.seedVulnerabilities();
+            await fetchVulnerabilities();
+            // Refresh KPI counts so StatCards shows the new totals immediately.
+            const { data: kpi } = await dashboardService.getKpiSnapshot();
+            rtDispatch({ type: 'INIT_SNAPSHOT', payload: kpi });
+            window.dispatchEvent(new CustomEvent('dashboard:refresh-kpi'));
+            addToast('Demo vulnerabilities seeded successfully!', { type: 'success' });
+        } catch (err) {
+            console.error('Seed failed:', err);
+            addToast('Seeding failed — check the backend logs.', { type: 'error' });
+        } finally {
+            setSeeding(false);
+        }
+    };
 
     const bulkUpdate = async (status) => {
         if (!status || selectedIds.size === 0) return;
@@ -813,6 +835,30 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 })}
             </div>
 
+            {/* All findings hidden by active filters (vulns exist but none pass the filter) */}
+            {vulnerabilities.length > 0 && displayed.length === 0 && (
+                <div className="bg-cyber-light p-12 rounded-xl border border-gray-700 text-center">
+                    <Filter className="h-12 w-12 text-cyan-500/40 mx-auto mb-4" />
+                    <p className="text-gray-300 font-semibold mb-1">No findings match the active filters</p>
+                    <p className="text-gray-500 text-sm mb-4">
+                        {hideClosed
+                            ? 'Some findings may be hidden by "Hide closed" — try toggling it off, or clear all filters.'
+                            : 'Try widening the severity range or clearing the filters below.'}
+                    </p>
+                    <button
+                        onClick={() => {
+                            setSearch('');
+                            setFilter({ severity: '', status: '' });
+                            setMinSeverity('info');
+                            setHideClosed(false);
+                        }}
+                        className="px-4 py-2 rounded-lg bg-cyan-400 text-gray-900 text-xs font-black uppercase tracking-wider hover:bg-sky-300 transition-colors"
+                    >
+                        Reset all filters
+                    </button>
+                </div>
+            )}
+
             {vulnerabilities.length === 0 && (() => {
                 // Only count user-explicit filters; default toggles don't trip the "clear" CTA.
                 const hasActiveFilter = !!(search || filter.severity || filter.status);
@@ -836,14 +882,24 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                         ) : (
                             <>
                                 <p className="text-gray-300 font-semibold mb-1">No vulnerabilities yet</p>
-                                <p className="text-gray-500 text-sm mb-4">Run your first scan to populate this view.</p>
-                                <button
-                                    onClick={() => window.dispatchEvent(new CustomEvent('dashboard:navigate',
-                                        { detail: { tab: 'operations', sub: 'scanner' } }))}
-                                    className="px-4 py-2 rounded-lg bg-cyan-400 text-gray-900 text-xs font-black uppercase tracking-wider hover:bg-sky-300 transition-colors"
-                                >
-                                    Configure first scan
-                                </button>
+                                <p className="text-gray-500 text-sm mb-4">Run your first scan or seed demo lab findings.</p>
+                                <div className="flex gap-2 justify-center flex-wrap">
+                                    <button
+                                        onClick={() => window.dispatchEvent(new CustomEvent('dashboard:navigate',
+                                            { detail: { tab: 'operations', sub: 'scanner' } }))}
+                                        className="px-4 py-2 rounded-lg bg-cyan-400 text-gray-900 text-xs font-black uppercase tracking-wider hover:bg-sky-300 transition-colors"
+                                    >
+                                        Configure first scan
+                                    </button>
+                                    <button
+                                        onClick={seedAndRefresh}
+                                        disabled={seeding}
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 border border-cyan-400/30 text-cyan-400 text-xs font-black uppercase tracking-wider hover:bg-cyan-400/10 transition-colors disabled:opacity-50"
+                                    >
+                                        {seeding && <Loader2 className="h-3 w-3 animate-spin" />}
+                                        Seed lab demo data
+                                    </button>
+                                </div>
                             </>
                         )}
                     </div>

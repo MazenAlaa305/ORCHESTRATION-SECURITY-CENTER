@@ -15,13 +15,11 @@ const SECTIONS = [
         ],
     },
     {
-        title: 'Lists & Tables',
+        title: 'Quick Scan Popover',
         items: [
-            { keys: ['J'],          desc: 'Move focus to next row' },
-            { keys: ['K'],          desc: 'Move focus to previous row' },
-            { keys: ['Enter'],      desc: 'Open the focused row' },
-            { keys: ['X'],          desc: 'Toggle row selection (bulk actions)' },
-            { keys: [MOD, 'A'],     desc: 'Select all visible rows' },
+            { keys: ['Enter'], desc: 'Run scan' },
+            { keys: ['C'],     desc: 'Open full scan configuration' },
+            { keys: ['Esc'],   desc: 'Cancel' },
         ],
     },
     {
@@ -164,7 +162,7 @@ export default function ShortcutCheatsheet() {
                 {/* Footer */}
                 <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between">
                     <p className="text-[10px] text-gray-600">
-                        Some shortcuts ship with upcoming releases — palette and row navigation are in active rollout.
+                        Press <Kbd>G</Kbd> then any letter within ~1 s to navigate. Shortcuts ignore your input fields.
                     </p>
                     <span className="flex items-center gap-1.5 text-[10px] text-gray-500">
                         Close

@@ -15,8 +15,11 @@ class EventPublisher:
     """
     Bridges Celery workers → WebSocket clients via Redis Pub/Sub.
 
-    Usage (from Celery tasks or agent services):
+    Usage (from FastAPI routes):
         await publisher.publish("RISK_UPDATE", {"scan_id": ..., "overall_score": ...})
+
+    Usage (from Celery tasks — avoids event loop conflicts):
+        publisher.publish_sync("SCAN_PROGRESS", {...})
     """
 
     def __init__(self) -> None:
@@ -35,7 +38,7 @@ class EventPublisher:
 
     async def publish(self, event_type: str, payload: dict) -> None:
         """
-        Publish a typed event to all connected WebSocket clients.
+        Async publish — safe from FastAPI / async contexts only.
 
         If Redis is unavailable the error is logged as a warning — it must
         never raise so callers don't need try/except boilerplate.
@@ -53,6 +56,33 @@ class EventPublisher:
         except Exception as exc:
             logger.warning("EventPublisher: Failed to publish '%s': %s", event_type, exc)
             self._redis = None  # force reconnect on next call
+
+    def publish_sync(self, event_type: str, payload: dict) -> None:
+        """
+        Synchronous Redis publish — MUST be used from Celery tasks.
+
+        Celery workers cannot use the async publisher safely because each
+        _run_async() call creates a fresh event loop, which invalidates any
+        cached async Redis connection from a previous call, causing silent
+        publish failures (Orchestration Log shows 0 events).
+
+        This method uses the synchronous redis-py client which has no event
+        loop dependency, guaranteeing reliable delivery from workers.
+        """
+        try:
+            import redis as _redis_sync
+            r = _redis_sync.from_url(
+                settings.REDIS_URL,
+                socket_connect_timeout=3,
+                socket_timeout=3,
+                decode_responses=True,
+            )
+            message = json.dumps({"type": event_type, "payload": payload})
+            r.publish(WS_EVENT_CHANNEL, message)
+            r.close()
+            logger.debug("EventPublisher.publish_sync: sent '%s'", event_type)
+        except Exception as exc:
+            logger.warning("EventPublisher.publish_sync: failed for '%s': %s", event_type, exc)
 
 
 # Singleton used across the entire application

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { scanService, vulnerabilityService } from '../../services/api';
 import { FileText, Loader, Download, CheckCircle, AlertTriangle, RefreshCw, Shield, Hash } from 'lucide-react';
+import { useRealTime } from '../../context/RealTimeContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -12,6 +13,7 @@ const SeverityBadge = ({ count, label, color }) => (
 );
 
 const Reports = ({ refresh }) => {
+    const { state: realTime } = useRealTime();
     const [scans, setScans] = useState([]);
     const [selectedScan, setSelectedScan] = useState(null);
     const [reportMeta, setReportMeta] = useState(null);
@@ -45,13 +47,16 @@ const Reports = ({ refresh }) => {
 
     const [scanVulns, setScanVulns] = useState([]);
 
-    // Fetch vulnerabilities when a scan is selected (ScanSummary doesn't include them)
+    // Fetch ALL open vulnerabilities (cumulative across all scans) so the
+    // summary is never empty just because the selected scan found nothing.
     useEffect(() => {
-        if (!selectedScan?.id) { setScanVulns([]); return; }
-        vulnerabilityService.list({ scan_id: selectedScan.id })
-            .then(res => setScanVulns(res.data || []))
+        vulnerabilityService.list({ status: 'open', page_size: 500 })
+            .then(res => {
+                const items = res.data?.items ?? res.data ?? [];
+                setScanVulns(Array.isArray(items) ? items : []);
+            })
             .catch(() => setScanVulns([]));
-    }, [selectedScan?.id]);
+    }, [refresh]);
 
     const selectScan = (scan) => {
         setSelectedScan(scan);
@@ -121,10 +126,11 @@ const Reports = ({ refresh }) => {
     }
 
     const vulns = scanVulns;
-    const critical = vulns.filter(v => String(v.severity).toLowerCase() === 'critical').length;
-    const high     = vulns.filter(v => String(v.severity).toLowerCase() === 'high').length;
-    const medium   = vulns.filter(v => String(v.severity).toLowerCase() === 'medium').length;
-    const low      = vulns.filter(v => String(v.severity).toLowerCase() === 'low').length;
+    // Use live KPI counts (cumulative open vulns) for the summary badges.
+    const critical = realTime.kpi.counts.critical ?? 0;
+    const high     = realTime.kpi.counts.high     ?? 0;
+    const medium   = realTime.kpi.counts.medium   ?? 0;
+    const low      = realTime.kpi.counts.low      ?? 0;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
