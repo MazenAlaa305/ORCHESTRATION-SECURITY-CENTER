@@ -1,64 +1,98 @@
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+
+const SEVERITIES = [
+    { key: ['CRITICAL', 'critical'], label: 'Critical', color: '#ff0055', bg: 'rgba(255,0,85,0.12)',  border: 'rgba(255,0,85,0.3)'  },
+    { key: ['HIGH',     'high'    ], label: 'High',     color: '#ff6a00', bg: 'rgba(255,106,0,0.12)', border: 'rgba(255,106,0,0.3)' },
+    { key: ['MEDIUM',   'medium'  ], label: 'Medium',   color: '#ffaa00', bg: 'rgba(255,170,0,0.12)', border: 'rgba(255,170,0,0.3)' },
+    { key: ['LOW',      'low'     ], label: 'Low',      color: '#00ccff', bg: 'rgba(0,204,255,0.10)', border: 'rgba(0,204,255,0.28)' },
+];
 
 const RiskChart = ({ data }) => {
-    // data example: { 'CRITICAL': 2, 'HIGH': 5, 'MEDIUM': 10, 'LOW': 20 }
-    // Convert to array for Recharts
+    const counts = SEVERITIES.map((s) => ({
+        ...s,
+        value: s.key.reduce((acc, k) => acc + (data?.[k] || 0), 0),
+    }));
 
-    // Fallback data if no data provided
-    const defaultData = [
-        { name: 'Critical', value: 0, color: '#FF0055' }, // Cyber Red
-        { name: 'High', value: 0, color: '#FF9900' },     // Orange
-        { name: 'Medium', value: 0, color: '#FFFF00' },   // Yellow
-        { name: 'Low', value: 0, color: '#00CCFF' },      // Cyber Blue
-    ];
-
-    const chartData = data ? [
-        { name: 'Critical', value: (data.CRITICAL || data.critical || 0), color: '#FF0055' },
-        { name: 'High', value: (data.HIGH || data.high || 0), color: '#FF9900' },
-        { name: 'Medium', value: (data.MEDIUM || data.medium || 0), color: '#FFFF00' },
-        { name: 'Low', value: (data.LOW || data.low || 0), color: '#00CCFF' },
-    ] : defaultData;
-
-    // Filter out zero values for better visual if needed, or keep them
-    const activeData = chartData.filter(d => d.value > 0);
-    const displayData = activeData.length > 0 ? activeData : [{ name: 'Safe', value: 1, color: '#00FF99' }];
+    const total = counts.reduce((acc, s) => acc + s.value, 0);
 
     return (
         <div className="glass-card p-6 h-full flex flex-col">
-            <h3 className="text-gray-400 text-xs uppercase tracking-[0.2em] mb-4 font-bold">Vulnerability Risk Distribution</h3>
-            <div className="flex-grow min-h-[250px] relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={displayData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
-                            dataKey="value"
-                        >
-                            {displayData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(0,0,0,0.5)" />
-                            ))}
-                        </Pie>
-                        <Tooltip
-                            contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.9)', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
-                            itemStyle={{ color: '#fff' }}
-                        />
-                        <Legend verticalAlign="bottom" height={36} />
-                    </PieChart>
-                </ResponsiveContainer>
-
-                {/* Center Text */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-center">
-                        <span className="text-2xl font-black text-white">{activeData.reduce((acc, curr) => acc + curr.value, 0)}</span>
-                        <p className="text-[10px] text-gray-400 uppercase">Issues</p>
-                    </div>
-                </div>
+            <div className="flex items-center justify-between mb-5">
+                <h3 className="text-gray-400 text-xs uppercase tracking-[0.2em] font-bold">
+                    Vulnerability Risk Distribution
+                </h3>
+                <span className="text-xs font-black text-white">
+                    {total} <span className="text-gray-500 font-normal">total</span>
+                </span>
             </div>
+
+            <div className="flex flex-col gap-3 flex-grow justify-center">
+                {counts.map(({ label, color, border, value }) => {
+                    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                    return (
+                        <div key={label}>
+                            {/* Label row */}
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2">
+                                    <span
+                                        className="w-2 h-2 rounded-full flex-shrink-0"
+                                        style={{ background: color, boxShadow: `0 0 6px ${color}` }}
+                                    />
+                                    <span className="text-[11px] font-semibold uppercase tracking-wider"
+                                        style={{ color }}>
+                                        {label}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-gray-500">{pct}%</span>
+                                    <span
+                                        className="text-xs font-black min-w-[24px] text-right"
+                                        style={{ color: value > 0 ? color : '#374151' }}
+                                    >
+                                        {value}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Bar track */}
+                            <div
+                                className="w-full h-2 rounded-full overflow-hidden"
+                                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${border}` }}
+                            >
+                                <div
+                                    className="h-full rounded-full transition-all duration-1000"
+                                    style={{
+                                        width: `${pct}%`,
+                                        background: `linear-gradient(90deg, ${color}88, ${color})`,
+                                        boxShadow: value > 0 ? `0 0 8px ${color}66` : 'none',
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Bottom summary pills */}
+            {total === 0 ? (
+                <div className="mt-5 flex items-center justify-center gap-2 text-xs text-emerald-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 6px #00ff88' }} />
+                    No vulnerabilities detected
+                </div>
+            ) : (
+                <div className="mt-5 flex flex-wrap gap-2 justify-center">
+                    {counts.filter(s => s.value > 0).map(({ label, color, bg, border, value }) => (
+                        <span
+                            key={label}
+                            className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                            style={{ background: bg, border: `1px solid ${border}`, color }}
+                        >
+                            {value} {label}
+                        </span>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from app.core.database import get_db
-from app.models.scan import NetworkAsset, ScanAsset, AssetService, Vulnerability
+from app.models.scan import NetworkAsset, ScanAsset, AssetService, Vulnerability, SeverityLevel
 
 router = APIRouter()
 
@@ -23,6 +23,8 @@ class NetworkAssetResponse(BaseModel):
     open_ports: Optional[str] = None
     criticality: Optional[str] = "MEDIUM"
     risk_score: float = 0.0
+    vuln_count: int = 0
+    info_count: int = 0
 
     class Config:
         from_attributes = True
@@ -30,10 +32,46 @@ class NetworkAssetResponse(BaseModel):
 
 @router.get("/assets", response_model=List[NetworkAssetResponse])
 def get_network_inventory(status: Optional[str] = None, db: Session = Depends(get_db)):
+    from sqlalchemy import func
     query = db.query(NetworkAsset)
     if status:
         query = query.filter(NetworkAsset.status == status)
-    return query.order_by(NetworkAsset.last_seen.desc()).all()
+    assets = query.order_by(NetworkAsset.last_seen.desc()).all()
+
+    # Bulk-fetch vuln counts per IP — two queries, no N+1
+    non_info_counts = dict(
+        db.query(Vulnerability.host, func.count(Vulnerability.id))
+        .filter(Vulnerability.severity != SeverityLevel.INFO)
+        .group_by(Vulnerability.host)
+        .all()
+    )
+    info_counts = dict(
+        db.query(Vulnerability.host, func.count(Vulnerability.id))
+        .filter(Vulnerability.severity == SeverityLevel.INFO)
+        .group_by(Vulnerability.host)
+        .all()
+    )
+
+    result = []
+    for a in assets:
+        d = {
+            "id": a.id,
+            "ip_address": a.ip_address,
+            "mac_address": a.mac_address,
+            "hostname": a.hostname,
+            "os_name": a.os_name,
+            "device_type": a.device_type,
+            "status": a.status,
+            "first_seen": a.first_seen,
+            "last_seen": a.last_seen,
+            "open_ports": a.open_ports,
+            "criticality": str(a.criticality.value if hasattr(a.criticality, "value") else a.criticality) if a.criticality else "MEDIUM",
+            "risk_score": a.risk_score or 0.0,
+            "vuln_count": non_info_counts.get(a.ip_address, 0),
+            "info_count": info_counts.get(a.ip_address, 0),
+        }
+        result.append(d)
+    return result
 
 
 @router.get("/assets/new", response_model=List[NetworkAssetResponse])
@@ -92,10 +130,13 @@ def get_asset_detail(asset_id: int, db: Session = Depends(get_db)):
             for r in rows
         ]
 
-    # Vulnerabilities linked to this IP
+    # Vulnerabilities linked to this IP — exclude INFO (not actionable)
     vulns = (
         db.query(Vulnerability)
-        .filter(Vulnerability.host == asset.ip_address)
+        .filter(
+            Vulnerability.host == asset.ip_address,
+            Vulnerability.severity != SeverityLevel.INFO,
+        )
         .order_by(Vulnerability.severity)
         .limit(50)
         .all()
@@ -113,6 +154,16 @@ def get_asset_detail(asset_id: int, db: Session = Depends(get_db)):
         }
         for v in vulns
     ]
+
+    # Count INFO findings separately (informational, not actionable)
+    info_count = (
+        db.query(Vulnerability)
+        .filter(
+            Vulnerability.host == asset.ip_address,
+            Vulnerability.severity == SeverityLevel.INFO,
+        )
+        .count()
+    )
 
     return {
         "id": asset.id,
@@ -133,6 +184,7 @@ def get_asset_detail(asset_id: int, db: Session = Depends(get_db)):
         "services": services,
         "vulnerabilities": vuln_list,
         "vuln_count": len(vuln_list),
+        "info_count": info_count,
     }
 
 

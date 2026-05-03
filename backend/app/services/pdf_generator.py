@@ -236,24 +236,41 @@ def _cover_page(scan_data: dict, styles: dict, report_id: str) -> list:
     elements.append(tbl)
     elements.append(Spacer(1, 0.8 * inch))
 
-    # Risk grade badge
-    badge = Table(
-        [[Paragraph(f"<font size=48 color='{grade_color.hexval()}'><b>{grade}</b></font>",
-                    styles["body"]),
-          Paragraph(f"<b>Overall Risk Grade</b><br/>"
-                    f"<font size=9 color='#6b7280'>Composite score: {risk_score:.1f} / 100</font>",
-                    styles["body"])]],
-        colWidths=[1.5 * inch, 4.0 * inch]
+    # ── Risk grade badge — two-column: colored grade cell | score details ──
+    grade_bg = colors.HexColor(
+        "#1a0a0a" if grade in ("F", "D") else
+        "#0a1020" if grade == "C" else
+        "#0a1a10"
     )
+    _, _, narrative = _risk_grade(risk_score)
+
+    grade_cell = Paragraph(
+        f"<font size=52 color='#ffffff'><b>{grade}</b></font>",
+        ParagraphStyle("gc", alignment=TA_CENTER, leading=60),
+    )
+    detail_cell = Paragraph(
+        f"<font size=13 color='#ffffff'><b>Overall Risk Grade</b></font><br/>"
+        f"<font size=10 color='{grade_color.hexval()}'>{narrative}</font><br/><br/>"
+        f"<font size=10 color='#9ca3af'>Composite Score</font>  "
+        f"<font size=16 color='#ffffff'><b>{risk_score:.1f}</b></font>"
+        f"<font size=10 color='#6b7280'> / 100</font>",
+        ParagraphStyle("dc", leading=18),
+    )
+
+    badge = Table([[grade_cell, detail_cell]], colWidths=[1.4 * inch, 4.6 * inch])
     badge.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), grade_color),
+        ("BACKGROUND", (1, 0), (1, 0), grade_bg),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN", (0, 0), (0, 0), "CENTER"),
+        ("LEFTPADDING", (0, 0), (0, 0), 10),
+        ("RIGHTPADDING", (0, 0), (0, 0), 10),
+        ("TOPPADDING", (0, 0), (-1, -1), 20),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 20),
+        ("LEFTPADDING", (1, 0), (1, 0), 20),
+        ("RIGHTPADDING", (1, 0), (1, 0), 16),
+        ("LINEAFTER", (0, 0), (0, 0), 3, grade_color),
         ("BOX", (0, 0), (-1, -1), 1.5, grade_color),
-        ("BACKGROUND", (0, 0), (-1, -1), SOFT_BG),
-        ("LEFTPADDING", (0, 0), (-1, -1), 16),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 16),
-        ("TOPPADDING", (0, 0), (-1, -1), 16),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 16),
     ]))
     elements.append(badge)
     elements.append(Spacer(1, 1.2 * inch))
@@ -356,7 +373,7 @@ def _business_impact(scan_data: dict, sev_counts: dict, styles: dict) -> list:
         Paragraph("2. Business Impact Analysis", styles["h1"]),
         Paragraph(
             "This section translates the technical findings into business-level risks "
-            "to support budget prioritisation and executive decision-making. Each impact "
+            "to support budget prioritization and executive decision-making. Each impact "
             "dimension is rated based on the severity distribution and the nature of the "
             "affected target.",
             styles["body"],
@@ -377,7 +394,7 @@ def _business_impact(scan_data: dict, sev_counts: dict, styles: dict) -> list:
 
     dimensions = [
         ("Data Confidentiality",
-         "Risk of unauthorised disclosure of customer records, credentials, or "
+         "Risk of unauthorized disclosure of customer records, credentials, or "
          "intellectual property if findings are exploited.",
          _rate(1.0)),
         ("Service Availability",
@@ -446,7 +463,7 @@ def _vuln_categorization(vulns: list[dict], sev_counts: dict, styles: dict) -> l
     elements = [
         Paragraph("3. Vulnerability Categorization (CVSS v3.1)", styles["h1"]),
         Paragraph(
-            "Findings are categorised using the Common Vulnerability Scoring System "
+            "Findings are categorized using the Common Vulnerability Scoring System "
             "(CVSS) v3.1 qualitative ratings. The table below shows the distribution "
             "across the five rating bands.",
             styles["body"],
@@ -592,7 +609,10 @@ def _technical_findings(vulns: list[dict], styles: dict) -> list:
         if v.get("cvss_vector"):
             detail_rows.append(["CVSS Vector", _safe(v.get("cvss_vector"), 100)])
         if v.get("cve_id"):
-            detail_rows.append(["CVE", _safe(v.get("cve_id"))])
+            cve_id   = _safe(v["cve_id"])
+            nvd_url  = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
+            detail_rows.append(["CVE ID", f'<link href="{nvd_url}" color="#4338ca"><u>{cve_id}</u></link>  '
+                                           f'<font size="8" color="#6b7280">(NVD ↗)</font>'])
         if v.get("template_id"):
             detail_rows.append(["Detector", _safe(v.get("template_id"))])
         if v.get("parameter"):
@@ -604,6 +624,7 @@ def _technical_findings(vulns: list[dict], styles: dict) -> list:
             detail_rows.append(["AI Confidence", f"{float(v['confidence']) * 100:.0f}%"])
 
         # Convert value cells to Paragraphs for wrapping
+        # CVE row already contains rich markup — pass it as-is; others need _safe escaping
         detail_data = [[Paragraph(f"<b>{k}</b>", styles["body_tight"]),
                         Paragraph(val, styles["body_tight"])]
                        for k, val in detail_rows]

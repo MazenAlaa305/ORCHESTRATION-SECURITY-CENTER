@@ -318,7 +318,7 @@ const Dashboard = () => {
                     />
                     <Suspense fallback={<PanelLoader />}>
                         {activeSubTab === 'siem'            && <UnifiedInbox />}
-                        {activeSubTab === 'vulnerabilities' && <VulnerabilitiesPanel refresh={refreshKey} scanId={latestScan?.id} />}
+                        {activeSubTab === 'vulnerabilities' && <VulnerabilitiesPanel refresh={refreshKey} />}
                         {activeSubTab === 'network'         && <NetworkTopology refresh={refreshKey} />}
                     </Suspense>
                 </div>

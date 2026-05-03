@@ -103,10 +103,9 @@ const StatCards = ({ latestScan, isScanning }) => {
     const riskScore   = realTime.kpi.overall_score ?? latestScan?.risk_score ?? 0;
     const healthScore = Math.round(realTime.kpi.health_score ?? (100 - riskScore));
 
-    // Vulnerability count — exclude INFO (informational) to match the risk chart
     const counts = realTime.kpi.counts || {};
     const { critical = 0, high = 0, medium = 0, low = 0, info = 0 } = counts;
-    const vulnCount = critical + high + medium + low;
+    const vulnCount = critical + high + medium + low; // INFO excluded — not actionable vulnerabilities
 
     // Assets — prefer live KPI
     const assetCount = realTime.kpi.total_assets ?? latestScan?.assets?.length ?? 0;

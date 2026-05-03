@@ -31,12 +31,18 @@ def _severity_str(value) -> str:
     return str(raw).lower()
 
 
-def _findings_for_scan(scan: Scan) -> list[dict]:
-    """Build the canonical findings list used for hashing and the PDF."""
-    findings = []
-    for v in scan.vulnerabilities or []:
-        findings.append({
-            "id": str(v.finding_id or v.id),
+def _findings_for_scan(scan: Scan, db=None) -> list[dict]:
+    """Build the canonical findings list used for hashing — same source as the PDF."""
+    from app.models.scan import Vulnerability, VulnStatus
+    # Use all open vulns (matches the PDF content) so the hash is consistent
+    source = (
+        db.query(Vulnerability).filter(Vulnerability.status == VulnStatus.OPEN).all()
+        if db is not None
+        else (scan.vulnerabilities or [])
+    )
+    return [
+        {
+            "id": str(getattr(v, "finding_id", None) or v.id),
             "type": v.type or "unknown",
             "severity": _severity_str(v.severity),
             "url": v.url or v.host or "",
@@ -44,58 +50,100 @@ def _findings_for_scan(scan: Scan) -> list[dict]:
             "cvss_score": v.cvss_score if v.cvss_score is not None else 0.0,
             "cvss_vector": v.cvss_vector or "",
             "status": _severity_str(v.status),
-        })
-    return findings
+        }
+        for v in source
+    ]
 
 
-def _build_scan_data(scan: Scan) -> dict:
-    """Assemble the rich data dict consumed by the PDF generator."""
-    # Resolve target name safely — scan.target may be None for legacy scans.
+def _vuln_to_dict(v) -> dict:
+    return {
+        "id": str(v.id),
+        "title": v.title or v.type or v.template_id or "Vulnerability",
+        "type": v.type or "unknown",
+        "severity": _severity_str(v.severity),
+        "cvss_score": v.cvss_score if v.cvss_score is not None else 0.0,
+        "cvss_vector": v.cvss_vector or "",
+        "url": v.url or "",
+        "host": v.host or "",
+        "port": v.port,
+        "service": v.service or "",
+        "parameter": v.parameter or "",
+        "description": v.simplified_description or v.description or "",
+        "remediation": v.remediation_steps or v.remediation or "",
+        "cve_id": v.cve_id or "",
+        "template_id": v.template_id or "",
+        "detected_by": v.detected_by or "",
+        "confidence": v.confidence_score if v.confidence_score is not None else None,
+    }
+
+
+def _build_scan_data(scan: Scan, db=None) -> dict:
+    """Assemble report data from real-time DB state — same source as the dashboard KPI."""
+    from app.models.scan import Vulnerability, VulnStatus, NetworkAsset, ActionItem
+
+    # Resolve target name
     target_name = "unknown_target"
     if scan.target is not None and scan.target.base_url:
         target_name = scan.target.base_url
     elif scan.target_url:
         target_name = scan.target_url
 
-    vulns = []
-    for v in scan.vulnerabilities or []:
-        vulns.append({
-            "id": str(v.id),
-            "title": v.title or v.type or v.template_id or "Vulnerability",
-            "type": v.type or "unknown",
-            "severity": _severity_str(v.severity),
-            "cvss_score": v.cvss_score if v.cvss_score is not None else 0.0,
-            "cvss_vector": v.cvss_vector or "",
-            "url": v.url or "",
-            "host": v.host or "",
-            "port": v.port,
-            "service": v.service or "",
-            "parameter": v.parameter or "",
-            "description": v.simplified_description or v.description or "",
-            "remediation": v.remediation_steps or v.remediation or "",
-            "cve_id": v.cve_id or "",
-            "template_id": v.template_id or "",
-            "detected_by": v.detected_by or "",
-            "confidence": v.confidence_score if v.confidence_score is not None else None,
-        })
+    # ── Vulnerabilities — always ALL open vulns (same as dashboard KPI) ──────
+    if db is not None:
+        all_open = (
+            db.query(Vulnerability)
+            .filter(Vulnerability.status == VulnStatus.OPEN)
+            .order_by(Vulnerability.severity)
+            .all()
+        )
+        vulns = [_vuln_to_dict(v) for v in all_open]
+    else:
+        vulns = [_vuln_to_dict(v) for v in (scan.vulnerabilities or [])]
 
-    assets = []
-    for a in scan.assets or []:
-        assets.append({
-            "ip": a.ip_address,
-            "hostname": a.hostname,
-            "device_type": a.device_type,
-            "os": a.os_name,
-        })
+    # ── Assets — all network assets (same count as dashboard) ───────────────
+    if db is not None:
+        net_assets = db.query(NetworkAsset).all()
+        assets = [
+            {
+                "ip": a.ip_address,
+                "hostname": a.hostname or a.ip_address,
+                "device_type": a.device_type or "unknown",
+                "os": a.os_name or "",
+            }
+            for a in net_assets
+        ]
+    else:
+        assets = [
+            {"ip": a.ip_address, "hostname": a.hostname,
+             "device_type": a.device_type, "os": a.os_name}
+            for a in (scan.assets or [])
+        ]
 
-    actions = []
-    for a in scan.actions or []:
-        actions.append({
+    # ── Actions ──────────────────────────────────────────────────────────────
+    actions = [
+        {
             "title": a.title or "",
             "description": a.description or "",
             "priority": (a.priority or "LOW").upper(),
             "type": a.type or "",
-        })
+        }
+        for a in (scan.actions or [])
+    ]
+
+    # ── Risk score — exact same formula as dashboard KPI ────────────────────
+    sev_map = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for v in vulns:
+        sev = v["severity"]
+        if sev in sev_map:
+            sev_map[sev] += 1
+    c, h, m, l = sev_map["critical"], sev_map["high"], sev_map["medium"], sev_map["low"]
+    risk_score = round(
+        min(c, 5)  / 5.0  * 60 +
+        min(h, 10) / 10.0 * 25 +
+        min(m, 20) / 20.0 * 10 +
+        min(l, 30) / 30.0 *  5,
+        2,
+    )
 
     return {
         "scan_id": str(scan.id),
@@ -103,7 +151,7 @@ def _build_scan_data(scan: Scan) -> dict:
         "scan_type": scan.scan_type or "full",
         "completed_at": scan.completed_at or scan.end_time,
         "started_at": scan.started_at or scan.start_time,
-        "risk_score": float(scan.risk_score or 0.0),
+        "risk_score": risk_score,
         "risk_breakdown": scan.risk_breakdown or {},
         "assets": assets,
         "actions": actions,
@@ -119,9 +167,9 @@ def generate_report(scan_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Scan not found")
 
     try:
-        findings = _findings_for_scan(scan)
+        findings = _findings_for_scan(scan, db=db)
         fhash = canonical_findings_hash(findings)
-        scan_data = _build_scan_data(scan)
+        scan_data = _build_scan_data(scan, db=db)
 
         from app.services.pdf_generator import PDFReportGenerator  # lazy — avoids loading reportlab at startup
         report_id = str(uuid.uuid4())

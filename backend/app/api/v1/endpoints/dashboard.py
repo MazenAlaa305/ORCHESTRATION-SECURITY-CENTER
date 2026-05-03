@@ -5,9 +5,8 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from ....core.database import get_db
-from ....models.scan import Scan, Vulnerability, NetworkAsset, ActionItem, SeverityLevel, Finding, FindingStatus, ScanStatus, VulnStatus
+from ....models.scan import Scan, Vulnerability, NetworkAsset, ActionItem, SeverityLevel, ScanStatus, VulnStatus
 from ....services.unified_risk_engine import UnifiedRiskEngine
-from datetime import date
 from app.api.deps import require_role
 from app.models.user import UserRole
 
@@ -138,13 +137,29 @@ def get_kpi_snapshot(db: Session = Depends(get_db)):
     )
     health_score = round(max(0.0, 100.0 - risk), 2)
 
-    # Phase 4.3 — count OPEN findings whose due_date has passed
+    # SLA overdue — count OPEN vulnerabilities past their SLA window
+    # Uses the vulnerabilities table directly (findings table is sparsely populated).
+    # SLA windows: CRITICAL=7d, HIGH=30d, MEDIUM=90d, LOW=180d
+    _SLA_WINDOWS = {
+        SeverityLevel.CRITICAL: 7,
+        SeverityLevel.HIGH:     30,
+        SeverityLevel.MEDIUM:   90,
+        SeverityLevel.LOW:      180,
+    }
     try:
-        overdue = (
-            db.query(Finding)
-            .filter(Finding.status == FindingStatus.OPEN, Finding.due_date < date.today())
-            .count()
-        )
+        from datetime import timedelta
+        overdue = 0
+        for sev, days in _SLA_WINDOWS.items():
+            cutoff = datetime.utcnow() - timedelta(days=days)
+            overdue += (
+                db.query(Vulnerability)
+                .filter(
+                    Vulnerability.severity == sev,
+                    Vulnerability.status == VulnStatus.OPEN,
+                    Vulnerability.created_at < cutoff,
+                )
+                .count()
+            )
     except Exception:
         overdue = 0
 

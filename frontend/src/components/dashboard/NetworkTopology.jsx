@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { ZoomIn, ZoomOut, RefreshCw, Move } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, RefreshCw, Move } from 'lucide-react';
 import AssetDetailPanel from './AssetDetailPanel';
 import TopologyLegend from './TopologyLegend';
 import { networkService } from '../../services/api';
@@ -31,17 +31,6 @@ const ICON_MAP = {
     database: '◉',
 };
 
-// ─── Rounded rectangle path helper ───────────────────────
-function roundedRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x - w + r, y - h);
-    ctx.arcTo(x + w, y - h, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x - w, y + h, r);
-    ctx.arcTo(x - w, y + h, x - w, y - h, r);
-    ctx.arcTo(x - w, y - h, x + w, y - h, r);
-    ctx.closePath();
-}
-
 // ─── Component ────────────────────────────────────────────
 const NetworkTopology = ({ refresh, compact = false }) => {
     const [graphData, setGraphData]     = useState({ nodes: [], links: [] });
@@ -64,40 +53,38 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     };
 
     const transformDataToGraph = (assets) => {
-        setGraphData(prev => {
-            const oldNodes = new Map((prev.nodes || []).map(n => [n.id, n]));
-            const nodes  = [];
-            const links  = [];
+        const nodes = [];
+        const links = [];
 
-            const createNode = (data) => {
-                const old = oldNodes.get(data.id);
-                return old
-                    ? { ...old, ...data, x: old.x, y: old.y, vx: old.vx, vy: old.vy, fx: old.fx, fy: old.fy }
-                    : data;
-            };
+        // Hub fixed at centre
+        nodes.push({ id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0, fx:0, fy:0 });
 
-            // Central hub
-            nodes.push(createNode({ id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0 }));
-
-            if (Array.isArray(assets)) {
-                assets.forEach(asset => {
-                    const vulns = Math.floor((asset.risk_score || 0) / 10);
-                    nodes.push(createNode({
-                        id:         asset.id || asset.ip_address,
-                        name:       asset.hostname || asset.ip_address,
-                        ip:         asset.ip_address,
-                        group:      determineGroup(asset),
-                        vulnCount:  vulns,
-                        val:        10 + ((asset.risk_score || 0) / 5),
-                        riskScore:  asset.risk_score || 0,
-                        criticality:asset.criticality || 'MEDIUM',
-                        details:    asset,
-                    }));
-                    links.push({ source: 'hub', target: asset.id || asset.ip_address, value: 2 });
+        if (Array.isArray(assets)) {
+            const count  = assets.length;
+            const radius = 180;
+            assets.forEach((asset, i) => {
+                // Evenly spaced around a circle — same angle every load
+                const angle = (2 * Math.PI * i) / count - Math.PI / 2;
+                const fx    = Math.cos(angle) * radius;
+                const fy    = Math.sin(angle) * radius;
+                nodes.push({
+                    id:          asset.id || asset.ip_address,
+                    name:        asset.hostname || asset.ip_address,
+                    ip:          asset.ip_address,
+                    group:       determineGroup(asset),
+                    vulnCount:   asset.vuln_count  || 0,
+                    infoCount:   asset.info_count  || 0,
+                    val:         10,
+                    riskScore:   asset.risk_score  || 0,
+                    criticality: asset.criticality || 'MEDIUM',
+                    details:     asset,
+                    fx, fy,   // pinned — never moves
+                    x: fx, y: fy,
                 });
-            }
-            return { nodes, links };
-        });
+                links.push({ source: 'hub', target: asset.id || asset.ip_address, value: 2 });
+            });
+        }
+        setGraphData({ nodes, links });
     };
 
     const determineGroup = (asset) => {
@@ -124,7 +111,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 const { data: detail } = await networkService.getAssetDetail(node.id);
                 setSelectedNode(prev =>
                     prev && prev.id === node.id
-                        ? { ...prev, details: detail, vulnCount: detail.vuln_count || 0 }
+                        ? { ...prev, details: detail, vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0 }
                         : prev
                 );
             } catch (err) {
@@ -137,93 +124,102 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         }
     }, []);
 
-    // ─── Canvas node renderer ─────────────────────────────
+    // ─── Canvas node renderer — circle style ──────────────
     const drawNode = useCallback((node, ctx, globalScale) => {
         if (node.x === undefined || node.y === undefined) return;
 
         const color  = getNodeColor(node);
-        const size   = (node.val || 10) * 0.85;
-        const half   = size;
-        const r      = size * 0.3;
+        const radius = (node.val || 10) * 0.9;
         const isHub  = node.id === 'hub';
         const isRisk = node.riskScore > 50;
         const isCrit = node.riskScore > 75;
         const t      = Date.now() / 800;
 
-        // 1. Outer glow
+        // 1. Glow shadow
         ctx.shadowColor = color;
-        ctx.shadowBlur  = isCrit ? 28 : isRisk ? 18 : (isHub ? 16 : 10);
+        ctx.shadowBlur  = isCrit ? 32 : isRisk ? 22 : isHub ? 20 : 12;
 
-        // 2. Hub: concentric rings design; others: rounded rect
         if (isHub) {
-            // Outer ring
+            // ── Hub: large circle with two concentric rings + pulsing core ──
+            // Outer decorative ring
             ctx.beginPath();
-            ctx.arc(node.x, node.y, half * 1.35, 0, 2 * Math.PI);
-            ctx.strokeStyle = `${color}30`;
-            ctx.lineWidth   = 2 / globalScale;
+            ctx.arc(node.x, node.y, radius * 1.6, 0, 2 * Math.PI);
+            ctx.strokeStyle = `${color}22`;
+            ctx.lineWidth   = 1.5 / globalScale;
             ctx.stroke();
 
-            // Main rounded rect
-            roundedRect(ctx, node.x, node.y, half, half, r);
-            const bg = ctx.createLinearGradient(node.x - half, node.y - half, node.x + half, node.y + half);
-            bg.addColorStop(0, 'rgba(0,30,38,0.95)');
-            bg.addColorStop(1, 'rgba(0,18,24,0.98)');
+            // Mid ring
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius * 1.2, 0, 2 * Math.PI);
+            ctx.strokeStyle = `${color}40`;
+            ctx.lineWidth   = 1 / globalScale;
+            ctx.stroke();
+
+            // Main filled circle
+            const bg = ctx.createRadialGradient(node.x, node.y - radius * 0.3, 0, node.x, node.y, radius);
+            bg.addColorStop(0, 'rgba(0,45,55,0.98)');
+            bg.addColorStop(1, 'rgba(0,20,28,0.99)');
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
             ctx.fillStyle   = bg;
             ctx.fill();
             ctx.strokeStyle = color;
             ctx.lineWidth   = 2.5 / globalScale;
             ctx.stroke();
 
-            // Inner pulsing circle
+            // Pulsing inner ring
             const pulse = (Math.sin(t * 1.8) + 1) / 2;
             ctx.beginPath();
-            ctx.arc(node.x, node.y, half * 0.45, 0, 2 * Math.PI);
-            ctx.strokeStyle = `${color}${Math.floor((0.4 + pulse * 0.4) * 255).toString(16).padStart(2,'0')}`;
-            ctx.lineWidth   = 2 / globalScale;
+            ctx.arc(node.x, node.y, radius * (0.48 + pulse * 0.08), 0, 2 * Math.PI);
+            ctx.strokeStyle = `${color}${Math.floor((0.35 + pulse * 0.45) * 255).toString(16).padStart(2, '0')}`;
+            ctx.lineWidth   = 1.5 / globalScale;
             ctx.stroke();
 
-            // Inner dot
+            // Solid center dot
             ctx.beginPath();
-            ctx.arc(node.x, node.y, half * 0.22, 0, 2 * Math.PI);
+            ctx.arc(node.x, node.y, radius * 0.22, 0, 2 * Math.PI);
             ctx.fillStyle = color;
             ctx.fill();
+
         } else {
-            // -- Pulsing danger ring (high/critical)
+            // ── Regular node: circle with optional pulse ring ──
+
+            // Pulsing danger ring for risky nodes
             if (isRisk) {
                 const pulse = (Math.sin(t) + 1) / 2;
                 ctx.beginPath();
-                ctx.arc(node.x, node.y, half * (1.25 + pulse * 0.35), 0, 2 * Math.PI);
-                const alpha = isCrit ? (0.2 + pulse * 0.3) : (0.1 + pulse * 0.18);
-                ctx.strokeStyle = `${color}${Math.floor(alpha * 255).toString(16).padStart(2,'0')}`;
+                ctx.arc(node.x, node.y, radius * (1.3 + pulse * 0.3), 0, 2 * Math.PI);
+                const alpha = isCrit ? (0.25 + pulse * 0.3) : (0.1 + pulse * 0.2);
+                ctx.strokeStyle = `${color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
                 ctx.lineWidth   = (isCrit ? 2 : 1.5) / globalScale;
                 ctx.stroke();
             }
 
-            // Rounded square shape
-            roundedRect(ctx, node.x, node.y, half, half, r);
-            const bg = ctx.createLinearGradient(node.x - half, node.y - half, node.x + half, node.y + half);
-            bg.addColorStop(0, 'rgba(15,25,34,0.92)');
-            bg.addColorStop(1, 'rgba(8,14,20,0.97)');
+            // Main filled circle
+            const bg = ctx.createRadialGradient(node.x, node.y - radius * 0.25, 0, node.x, node.y, radius);
+            bg.addColorStop(0, 'rgba(20,32,44,0.95)');
+            bg.addColorStop(1, 'rgba(8,14,22,0.98)');
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
             ctx.fillStyle   = bg;
             ctx.fill();
             ctx.strokeStyle = color;
             ctx.lineWidth   = (isCrit ? 2.5 : isRisk ? 2 : 1.8) / globalScale;
             ctx.stroke();
 
-            // Inner shine line (top)
-            const innerR = r * 0.8;
+            // Thin inner highlight arc (top-left quarter)
             ctx.beginPath();
-            ctx.moveTo(node.x - half + innerR, node.y - half + 1/globalScale);
-            ctx.lineTo(node.x + half - innerR, node.y - half + 1/globalScale);
-            ctx.strokeStyle = `${color}22`;
-            ctx.lineWidth   = 1 / globalScale;
+            ctx.arc(node.x, node.y, radius * 0.75, -Math.PI * 0.85, -Math.PI * 0.15);
+            ctx.strokeStyle = `${color}30`;
+            ctx.lineWidth   = 1.5 / globalScale;
             ctx.stroke();
 
-            // Icon
+            // Icon glyph
             const icon = ICON_MAP[node.group] || ICON_MAP.desktop;
-            ctx.font          = `bold ${size * 0.78}px JetBrains Mono`;
+            ctx.shadowBlur    = 0;
+            ctx.font          = `bold ${radius * 0.9}px JetBrains Mono`;
             ctx.fillStyle     = color;
-            ctx.globalAlpha   = isRisk ? 1 : 0.85;
+            ctx.globalAlpha   = isRisk ? 1 : 0.88;
             ctx.textAlign     = 'center';
             ctx.textBaseline  = 'middle';
             ctx.fillText(icon, node.x, node.y);
@@ -232,29 +228,27 @@ const NetworkTopology = ({ refresh, compact = false }) => {
 
         ctx.shadowBlur = 0;
 
-        // 3. Label
-        if (globalScale > 1.4 || selectedNode?.id === node.id) {
-            const label    = node.name || '';
-            const fontSize = 9 / globalScale;
-            ctx.font          = `600 ${fontSize}px Outfit, sans-serif`;
-            ctx.textAlign     = 'center';
-            ctx.textBaseline  = 'top';
+        // 2. Label — always visible (small), brighter when selected/zoomed
+        const label    = node.name || '';
+        const fontSize = Math.max(8, 9 / globalScale);
+        ctx.font          = `600 ${fontSize}px Outfit, sans-serif`;
+        ctx.textAlign     = 'center';
+        ctx.textBaseline  = 'top';
 
-            const textW    = ctx.measureText(label).width + 10;
-            const labelY   = node.y + half + 10 / globalScale;
+        const textW  = ctx.measureText(label).width + 10;
+        const labelY = node.y + radius + 6 / globalScale;
 
-            // Label background pill
-            ctx.fillStyle   = 'rgba(2,9,15,0.8)';
-            ctx.strokeStyle = `${color}55`;
-            ctx.lineWidth   = 0.8 / globalScale;
-            ctx.beginPath();
-            ctx.roundRect(node.x - textW / 2, labelY - 2 / globalScale, textW, fontSize + 4 / globalScale, 4 / globalScale);
-            ctx.fill();
-            ctx.stroke();
+        // Pill background
+        ctx.fillStyle   = 'rgba(2,9,15,0.82)';
+        ctx.strokeStyle = `${color}44`;
+        ctx.lineWidth   = 0.7 / globalScale;
+        ctx.beginPath();
+        ctx.roundRect(node.x - textW / 2, labelY - 2 / globalScale, textW, fontSize + 4 / globalScale, 4 / globalScale);
+        ctx.fill();
+        ctx.stroke();
 
-            ctx.fillStyle = 'rgba(255,255,255,0.78)';
-            ctx.fillText(label, node.x, labelY);
-        }
+        ctx.fillStyle = selectedNode?.id === node.id ? '#ffffff' : 'rgba(255,255,255,0.72)';
+        ctx.fillText(label, node.x, labelY);
     }, [selectedNode]);
 
     if (loading) return (
@@ -278,11 +272,21 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" style={{ boxShadow:'0 0 6px #00ffff' }} />
                         <span className="text-[10px] font-black text-white uppercase tracking-[0.25em]">Live Network Topology</span>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => fgRef.current?.zoomToFit(400)}
+                    <div className="flex gap-1">
+                        <button onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 1.4, 300)}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
-                            title="Zoom to Fit">
+                            title="Zoom In">
+                            <ZoomIn className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => fgRef.current?.zoom(fgRef.current.zoom() / 1.4, 300)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
+                            title="Zoom Out">
                             <ZoomOut className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => fgRef.current?.zoomToFit(400, 48)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
+                            title="Fit All / Center">
+                            <Maximize2 className="h-3.5 w-3.5" />
                         </button>
                         <button onClick={fetchData}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
@@ -308,13 +312,49 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         backgroundColor="#0c1c25"
                         nodeCanvasObject={drawNode}
                         nodeCanvasObjectMode={() => 'replace'}
-                        nodeLabel={(node) => `
-                            <div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.2);border-radius:10px;font-family:Outfit,sans-serif;min-width:180px">
-                                <div style="font-size:11px;font-weight:800;color:#00ffff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">${node.name}</div>
-                                <div style="font-size:10px;color:rgba(255,255,255,0.5);font-family:'JetBrains Mono',monospace">${node.ip || 'INTERNAL'}</div>
-                                <div style="margin-top:8px;font-size:10px;color:${getNodeColor(node)}">Risk: ${node.riskScore || 0}%</div>
-                            </div>
-                        `}
+                        nodeLabel={(node) => {
+                            if (node.id === 'hub') return `
+                                <div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.2);border-radius:10px;font-family:Outfit,sans-serif">
+                                    <div style="font-size:11px;font-weight:800;color:#00ffff;text-transform:uppercase;letter-spacing:.08em">Gateway Hub</div>
+                                    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Central network node</div>
+                                </div>`;
+
+                            // Derive effective risk from riskScore OR criticality
+                            const crit = (node.criticality || '').toUpperCase();
+                            const critRisk = crit === 'CRITICAL' ? 90 : crit === 'HIGH' ? 70 : crit === 'MEDIUM' ? 40 : crit === 'LOW' ? 15 : 0;
+                            const effectiveRisk = node.riskScore > 0 ? node.riskScore : critRisk;
+                            const label       = effectiveRisk >= 75 ? 'CRITICAL' : effectiveRisk >= 50 ? 'HIGH' : effectiveRisk >= 20 ? 'MEDIUM' : effectiveRisk > 0 ? 'LOW' : 'NONE';
+                            const riskColor   = effectiveRisk >= 75 ? '#ff0055' : effectiveRisk >= 50 ? '#ff6a00' : effectiveRisk >= 20 ? '#ffaa00' : effectiveRisk > 0 ? '#00ccff' : '#00ff88';
+                            const vulns     = node.vulnCount || 0;
+                            const infoVulns = node.infoCount || 0;
+
+                            const riskBar = `
+                                <div style="margin-top:2px;height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden">
+                                    <div style="height:100%;width:${effectiveRisk}%;background:${riskColor};border-radius:2px;transition:width .4s"></div>
+                                </div>`;
+
+                            const vulnLine = vulns > 0
+                                ? `<div style="margin-top:8px;font-size:10px;color:${riskColor}">⚠ ${vulns} vulnerabilit${vulns === 1 ? 'y' : 'ies'} detected</div>`
+                                : '';
+                            const infoLine = infoVulns > 0
+                                ? `<div style="margin-top:${vulns > 0 ? 4 : 8}px;font-size:10px;color:#666">ℹ ${infoVulns} info finding${infoVulns === 1 ? '' : 's'}</div>`
+                                : '';
+
+                            return `
+                            <div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${riskColor}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:200px">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                                    <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.06em">${node.name}</div>
+                                    <div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${riskColor}22;border:1px solid ${riskColor}66;color:${riskColor}">${label}</div>
+                                </div>
+                                <div style="font-size:10px;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;margin-bottom:8px">${node.ip || 'INTERNAL'}</div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                                    <span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk Score</span>
+                                    <span style="font-size:11px;font-weight:800;color:${riskColor}">${effectiveRisk}%</span>
+                                </div>
+                                ${riskBar}
+                                ${vulnLine}${infoLine}
+                            </div>`;
+                        }}
                         linkColor={() => 'rgba(0,255,255,0.18)'}
                         linkWidth={1.2}
                         linkDirectionalParticles={3}
@@ -326,8 +366,8 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         linkDirectionalParticleSpeed={0.005}
                         d3AlphaDecay={0.018}
                         d3VelocityDecay={0.32}
-                        cooldownTicks={150}
-                        onEngineStop={() => fgRef.current?.zoomToFit(400, 48)}
+                        cooldownTicks={1}
+                        onEngineStop={() => setTimeout(() => fgRef.current?.zoomToFit(300, 60), 100)}
                         onNodeClick={handleNodeClick}
                     />
                 </div>
