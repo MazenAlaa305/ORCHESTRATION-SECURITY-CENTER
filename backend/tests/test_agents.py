@@ -42,21 +42,24 @@ def test_finding_dedup_fingerprint_is_deterministic():
         vuln_type="sqli",
         url="http://x.test/login",
         parameter="email",
-        match_sig="sqli-error-based",
+        template_id="sqli-error-based",
+        description=None,
     )
     b = fingerprint(
         target_id="t1",
         vuln_type="sqli",
         url="http://x.test/login",
         parameter="email",
-        match_sig="sqli-error-based",
+        template_id="sqli-error-based",
+        description=None,
     )
     c = fingerprint(
         target_id="t1",
         vuln_type="xss",
         url="http://x.test/login",
         parameter="email",
-        match_sig="xss-reflected",
+        template_id="xss-reflected",
+        description=None,
     )
     assert a == b
     assert a != c
@@ -65,6 +68,6 @@ def test_finding_dedup_fingerprint_is_deterministic():
 def test_finding_dedup_normalises_url():
     """Query string + fragment must not affect the fingerprint."""
     from app.services.finding_dedup import fingerprint
-    a = fingerprint("t", "x", "http://h/p?ignored=1", None, "sig")
-    b = fingerprint("t", "x", "http://h/p#frag", None, "sig")
+    a = fingerprint("t", "x", "http://h/p?ignored=1", None, "sig", None)
+    b = fingerprint("t", "x", "http://h/p#frag", None, "sig", None)
     assert a == b

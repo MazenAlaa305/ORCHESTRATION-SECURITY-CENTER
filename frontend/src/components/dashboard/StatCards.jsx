@@ -128,8 +128,10 @@ const StatCards = ({ latestScan, isScanning }) => {
     else if (latestScan?.status === 'completed')   { engineStatus = 'OK';   engineColor = '#00ff88'; }
     else if (latestScan?.status === 'failed')      { engineStatus = 'FAIL'; engineColor = '#ff0055'; }
 
+    const slaColor = overdueCount > 0 ? '#ff0055' : '#00ff88';
+
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-fade-in">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 animate-fade-in">
             <KPICard
                 title="Security Health"
                 value={healthScore}
@@ -141,18 +143,20 @@ const StatCards = ({ latestScan, isScanning }) => {
             <KPICard
                 title="Vulnerabilities"
                 value={vulnCount}
-                sub={overdueCount > 0 ? `Found · ${overdueCount} Overdue` : "Found"}
+                sub="Found"
                 icon={<Bug />}
                 color={vulnCount === 0 ? '#00ff88' : vulnCount > 5 ? '#ff0055' : '#ffaa00'}
                 bar={vulnCount > 0 ? 100 : 0}
                 barSegments={sevSegments}
-                badge={overdueCount > 0 ? (
-                    <span className="flex items-center gap-0.5 text-[7px] font-bold px-1 py-0.5 rounded"
-                          style={{ background: '#ff005520', color: '#ff0055' }}>
-                        <AlertTriangle className="h-2 w-2" />
-                        {overdueCount} SLA
-                    </span>
-                ) : null}
+            />
+            <KPICard
+                title="SLA Overdue"
+                value={overdueCount}
+                sub={overdueCount > 0 ? 'Needs attention' : 'All on track'}
+                icon={<AlertTriangle />}
+                color={slaColor}
+                bar={overdueCount > 0 ? 100 : 0}
+                pulse={overdueCount > 0}
             />
             <KPICard
                 title="Assets"

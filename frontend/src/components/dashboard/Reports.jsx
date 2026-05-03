@@ -105,8 +105,17 @@ const Reports = ({ refresh }) => {
         return (
             <div className="text-center py-16 bg-cyber-light rounded-xl border border-gray-700">
                 <FileText className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">No Completed Scans</h3>
-                <p className="text-gray-400">Run a scan and wait for it to complete — then come back here to generate a report.</p>
+                <h3 className="text-xl font-bold text-white mb-2">No completed scans yet</h3>
+                <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                    Run a scan and wait for it to complete — then come back here to generate a PDF for execs, technical staff, or compliance.
+                </p>
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('dashboard:navigate',
+                        { detail: { tab: 'operations', sub: 'scanner' } }))}
+                    className="px-4 py-2 rounded-lg bg-cyan-400 text-gray-900 text-xs font-black uppercase tracking-wider hover:bg-sky-300 transition-colors"
+                >
+                    Run your first scan
+                </button>
             </div>
         );
     }

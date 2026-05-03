@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from pydantic import BaseModel
 from app.core.database import get_db, get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.scan import Vulnerability, VulnStatus
+from app.models.scan import Vulnerability, VulnStatus, Scan
 from app.schemas.scan import VulnerabilityResponse, VulnerabilityUpdate, ScanResponse
 from app.services.agent_orchestrator import AgentOrchestrator
 from app.api.deps import require_role
@@ -18,6 +19,7 @@ def list_vulnerabilities(
     severity: Optional[str] = None,
     status: Optional[str] = None,
     host: Optional[str] = None,
+    environment: Optional[str] = Query(None, description="Filter by parent scan's environment_type (lab/production/staging/development)"),
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
@@ -25,7 +27,7 @@ def list_vulnerabilities(
     List vulnerabilities with optional filtering.
     """
     query = db.query(Vulnerability)
-    
+
     if scan_id:
         query = query.filter(Vulnerability.scan_id == scan_id)
     if severity:
@@ -34,8 +36,64 @@ def list_vulnerabilities(
         query = query.filter(Vulnerability.status == status)
     if host:
         query = query.filter(Vulnerability.host == host)
-        
+    if environment and environment != "all":
+        # Vulns inherit environment from their parent scan
+        query = query.join(Scan, Scan.id == Vulnerability.scan_id).filter(
+            Scan.environment_type == environment
+        )
+
     return query.limit(limit).all()
+
+class BulkUpdateRequest(BaseModel):
+    ids: List[str]
+    status: Optional[VulnStatus] = None
+    remediation: Optional[str] = None
+
+
+class BulkUpdateItem(BaseModel):
+    id: str
+    previous_status: Optional[str] = None
+    previous_remediation: Optional[str] = None
+
+
+class BulkUpdateResponse(BaseModel):
+    updated: List[BulkUpdateItem]
+    not_found: List[str]
+
+
+@router.patch("/bulk", response_model=BulkUpdateResponse,
+              dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
+def bulk_update_vulnerabilities(payload: BulkUpdateRequest, db: Session = Depends(get_db)):
+    """
+    Atomically update many vulnerabilities at once. Returns each row's prior
+    state so the client can render an Undo affordance.
+    """
+    if not payload.ids:
+        raise HTTPException(status_code=400, detail="ids must be a non-empty list")
+    if payload.status is None and payload.remediation is None:
+        raise HTTPException(status_code=400, detail="At least one of 'status' or 'remediation' is required")
+
+    rows = db.query(Vulnerability).filter(Vulnerability.id.in_(payload.ids)).all()
+    found_ids = {r.id for r in rows}
+    not_found = [i for i in payload.ids if i not in found_ids]
+
+    updated: List[BulkUpdateItem] = []
+    for row in rows:
+        prev_status = row.status.value if hasattr(row.status, "value") else row.status
+        prev_remediation = row.remediation
+        if payload.status is not None:
+            row.status = payload.status
+        if payload.remediation is not None:
+            row.remediation = payload.remediation
+        updated.append(BulkUpdateItem(
+            id=row.id,
+            previous_status=prev_status,
+            previous_remediation=prev_remediation,
+        ))
+
+    db.commit()
+    return BulkUpdateResponse(updated=updated, not_found=not_found)
+
 
 @router.get("/{vuln_id}", response_model=VulnerabilityResponse)
 def get_vulnerability(vuln_id: str, db: Session = Depends(get_db)):

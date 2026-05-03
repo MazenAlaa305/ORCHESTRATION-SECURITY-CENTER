@@ -11,7 +11,7 @@ import asyncio
 from app.core.database import get_db, get_async_db, async_session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, asc, desc
-from app.models.scan import Scan, ScanStatus, Target, ScanAsset
+from app.models.scan import Scan, ScanStatus, Target, ScanAsset, Vulnerability
 from app.schemas.scan import (
     ScanCreate, ScanResponse, ScanDetail,
     AgentLogResponse, ScanListPage,
@@ -228,6 +228,7 @@ def list_scans(
     target: Optional[str] = Query(None, description="Substring match on target_url"),
     date_from: Optional[datetime] = Query(None, description="Inclusive lower bound on started_at (ISO 8601)"),
     date_to: Optional[datetime] = Query(None, description="Inclusive upper bound on started_at (ISO 8601)"),
+    environment: Optional[str] = Query(None, description="Filter by environment_type (lab/production/staging/development); 'all' disables the filter"),
     sort: str = Query("started_at", description="Sort column: started_at | duration | risk_score"),
     order: str = Query("desc", description="asc | desc"),
     db: Session = Depends(get_db),
@@ -251,6 +252,8 @@ def list_scans(
         query = query.filter(Scan.started_at >= date_from)
     if date_to:
         query = query.filter(Scan.started_at <= date_to)
+    if environment and environment != "all":
+        query = query.filter(Scan.environment_type == environment)
 
     total = query.with_entities(func.count(Scan.id)).scalar() or 0
 
@@ -283,7 +286,7 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_async_db)):
     _s_res = await db.execute(
         select(Scan)
         .options(
-            selectinload(Scan.vulnerabilities),
+            selectinload(Scan.vulnerabilities).selectinload(Vulnerability.finding),
             selectinload(Scan.assets).selectinload(ScanAsset.services),
             selectinload(Scan.agent_logs),
             selectinload(Scan.actions)

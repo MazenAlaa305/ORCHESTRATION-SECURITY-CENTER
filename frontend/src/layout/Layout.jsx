@@ -1,8 +1,49 @@
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import LiveConsole from '../components/dashboard/LiveConsole';
-import { Search, Zap, X } from 'lucide-react';
+import ShortcutCheatsheet from '../components/ShortcutCheatsheet';
+import QuickScanPopover from '../components/QuickScanPopover';
+import CommandPalette from '../components/CommandPalette';
+import NotificationsBell from '../components/NotificationsBell';
+import { useEnvStore } from '../stores/envStore';
+import { Search } from 'lucide-react';
 import api from '../services/api';
+
+// ── Environment switcher ──────────────────────────────────────────────────────
+const ENVS = [
+    { id: 'all',        label: 'All'  },
+    { id: 'lab',        label: 'Lab'  },
+    { id: 'production', label: 'Prod' },
+];
+
+const EnvSwitcher = () => {
+    const { activeEnv, setActiveEnv } = useEnvStore();
+    return (
+        <div
+            className="flex items-center gap-0.5 rounded-lg p-0.5"
+            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
+            title="Scope filter — restricts Targets view by environment"
+        >
+            {ENVS.map(e => (
+                <button
+                    key={e.id}
+                    onClick={() => setActiveEnv(e.id)}
+                    className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${
+                        activeEnv === e.id
+                            ? 'text-cyan-300'
+                            : 'text-gray-600 hover:text-gray-300'
+                    }`}
+                    style={activeEnv === e.id ? {
+                        background: 'rgba(0,255,255,0.1)',
+                        border: '1px solid rgba(0,255,255,0.2)',
+                    } : undefined}
+                >
+                    {e.label}
+                </button>
+            ))}
+        </div>
+    );
+};
 
 // ── Health pill ───────────────────────────────────────────────────────────────
 const HealthPill = ({ label, healthy }) => (
@@ -17,9 +58,10 @@ const HealthPill = ({ label, healthy }) => (
 );
 
 // ── Top command bar ───────────────────────────────────────────────────────────
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || '');
+
 const TopBar = ({ onQuickScan, isScanning }) => {
     const [health, setHealth] = useState({ api: true, redis: true, workers: true });
-    const [search, setSearch] = useState('');
 
     const checkHealth = useCallback(async () => {
         try {
@@ -40,41 +82,25 @@ const TopBar = ({ onQuickScan, isScanning }) => {
         return () => clearInterval(interval);
     }, [checkHealth]);
 
-    // Global keyboard shortcut: ⌘K / Ctrl+K focuses search
-    useEffect(() => {
-        const handler = (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                document.getElementById('universal-search')?.focus();
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
+    const openPalette = () => window.dispatchEvent(new CustomEvent('dashboard:open-palette'));
 
     return (
         <div className="h-12 border-b border-white/5 bg-[rgba(15,30,40,0.4)] backdrop-blur-xl px-5 flex items-center gap-4 shrink-0 relative z-10">
-            {/* Universal search */}
-            <div className="flex items-center gap-2 flex-1 max-w-sm bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 focus-within:border-cyan-400/40 transition-all">
+            {/* Command palette trigger — opens the real ⌘K palette */}
+            <button
+                type="button"
+                onClick={openPalette}
+                className="flex items-center gap-2 flex-1 max-w-sm bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 hover:border-cyan-400/40 transition-all text-left"
+                title="Open command palette"
+            >
                 <Search className="h-3.5 w-3.5 text-gray-500 shrink-0" />
-                <input
-                    id="universal-search"
-                    type="text"
-                    placeholder="Search IPs, assets, CVEs..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="bg-transparent text-white text-xs outline-none placeholder:text-gray-600 w-full font-mono"
-                />
-                {search ? (
-                    <button onClick={() => setSearch('')} className="text-gray-600 hover:text-white transition-colors">
-                        <X className="h-3 w-3" />
-                    </button>
-                ) : (
-                    <span className="text-[9px] text-gray-700 font-mono border border-white/10 rounded px-1 shrink-0">
-                        ⌘K
-                    </span>
-                )}
-            </div>
+                <span className="text-xs text-gray-500 font-mono flex-1 truncate">
+                    Search or jump to…
+                </span>
+                <span className="text-[9px] text-gray-500 font-mono border border-white/10 rounded px-1 shrink-0">
+                    {isMac ? '⌘' : 'Ctrl'} K
+                </span>
+            </button>
 
             {/* Health pills */}
             <div className="hidden md:flex items-center gap-2">
@@ -83,22 +109,18 @@ const TopBar = ({ onQuickScan, isScanning }) => {
                 <HealthPill label="Workers" healthy={health.workers} />
             </div>
 
+            {/* Environment scope switcher */}
+            <div className="hidden md:block">
+                <EnvSwitcher />
+            </div>
+
             <div className="flex-1" />
 
-            {/* Quick scan button */}
-            <button
-                id="quick-scan-btn"
-                onClick={onQuickScan}
-                disabled={isScanning}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 ${
-                    isScanning
-                        ? 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 cursor-not-allowed'
-                        : 'bg-cyan-400 text-gray-900 hover:bg-sky-300 shadow-[0_0_12px_rgba(0,255,255,0.3)] hover:shadow-[0_0_20px_rgba(0,255,255,0.5)]'
-                }`}
-            >
-                <Zap className="h-3.5 w-3.5" />
-                {isScanning ? 'Scanning...' : 'Quick Scan'}
-            </button>
+            {/* Notifications bell */}
+            <NotificationsBell />
+
+            {/* Quick scan — confirmation popover, runs scan on Run, opens full config on Configure */}
+            <QuickScanPopover isScanning={isScanning} onScanStarted={onQuickScan} />
         </div>
     );
 };
@@ -106,6 +128,7 @@ const TopBar = ({ onQuickScan, isScanning }) => {
 // ── Main layout ───────────────────────────────────────────────────────────────
 const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) => (
     <div className="min-h-screen bg-cyber-dark text-gray-100 font-sans selection:bg-cyan-400 selection:text-gray-900 flex flex-row overflow-hidden">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         {/* Ambient background glows — BlurAdmin teal/turquoise palette */}
         <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
             <div className="absolute top-[-15%] right-[-10%] w-[55%] h-[55%] bg-[#4dbdb1]/15 blur-[140px] rounded-full" />
@@ -118,12 +141,14 @@ const Layout = ({ children, activeTab, onTabChange, onQuickScan, isScanning }) =
 
         <div className="flex-1 flex flex-col h-screen relative z-10 w-full min-w-0">
             <TopBar onQuickScan={onQuickScan} isScanning={isScanning} />
-            <main className="flex-1 px-8 py-6 pb-20 overflow-y-auto custom-scrollbar w-full">
+            <main id="main-content" className="flex-1 px-8 py-6 pb-20 overflow-y-auto custom-scrollbar w-full">
                 {children}
             </main>
         </div>
 
         <LiveConsole />
+        <ShortcutCheatsheet />
+        <CommandPalette />
     </div>
 );
 

@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 import { useAuth } from '../context/AuthContext';
+import { loadSavedViews, VIEWS_CHANGED_EVENT } from '../hooks/useSavedViews';
 
 const NAV_SECTIONS = [
     {
@@ -59,10 +60,18 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
                     }
                 </span>
             )}
-            {badge && (
+            {/* Boolean badge → pulsing dot. Numeric badge handled inline below. */}
+            {badge === true && (
                 <span
                     className="absolute -top-1 -right-1 h-2 w-2 rounded-full animate-pulse"
                     style={{ background: '#00ffff', boxShadow: '0 0 6px #00ffff' }}
+                />
+            )}
+            {/* Collapsed numeric badge — small dot with no count to avoid overlap */}
+            {collapsed && typeof badge === 'number' && badge > 0 && (
+                <span
+                    className="absolute -top-1 -right-1 h-2 w-2 rounded-full animate-pulse"
+                    style={{ background: '#ff0055', boxShadow: '0 0 6px #ff0055' }}
                 />
             )}
         </div>
@@ -70,10 +79,27 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
         {/* Label */}
         {!collapsed && (
             <span
-                className="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis transition-colors"
+                className="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis transition-colors flex-1"
                 style={{ color: active ? '#00ffff' : 'rgba(148,163,184,0.6)' }}
             >
                 {label}
+            </span>
+        )}
+
+        {/* Expanded numeric badge — count pill on the right */}
+        {!collapsed && typeof badge === 'number' && badge > 0 && (
+            <span
+                className="text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none"
+                style={{
+                    background: 'rgba(255,0,85,0.15)',
+                    border: '1px solid rgba(255,0,85,0.3)',
+                    color: '#ff4d7d',
+                    minWidth: '16px',
+                    textAlign: 'center',
+                }}
+                title={`${badge} SLA overdue`}
+            >
+                {badge > 99 ? '99+' : badge}
             </span>
         )}
     </div>
@@ -88,6 +114,15 @@ const Sidebar = ({ activeTab, onTabChange }) => {
 
     const isScanning   = realTime.scanStatus === 'RUNNING';
     const isConnected  = realTime.isConnected;
+    const overdueCount = realTime.kpi?.overdue_findings ?? 0;
+
+    // Pinned views — read from localStorage, re-read when the panel mutates them.
+    const [pinnedViews, setPinnedViews] = useState(loadSavedViews);
+    useEffect(() => {
+        const refresh = () => setPinnedViews(loadSavedViews());
+        window.addEventListener(VIEWS_CHANGED_EVENT, refresh);
+        return () => window.removeEventListener(VIEWS_CHANGED_EVENT, refresh);
+    }, []);
 
     // Persist collapse state
     const toggleCollapse = () => {
@@ -131,13 +166,22 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                         <button
                             onClick={toggleCollapse}
                             className="p-1 text-gray-600 hover:text-cyan-400 transition-colors"
+                            aria-label="Collapse sidebar"
                             title="Collapse sidebar"
                         >
                             <ChevronLeft className="h-3.5 w-3.5" />
                         </button>
                     </>
                 ) : (
-                    <div className="mx-auto p-1 cursor-pointer" onClick={toggleCollapse} title="Expand sidebar">
+                    <div
+                        className="mx-auto p-1 cursor-pointer"
+                        onClick={toggleCollapse}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Expand sidebar"
+                        title="Expand sidebar"
+                        onKeyDown={(e) => e.key === 'Enter' && toggleCollapse()}
+                    >
                         <ShieldCheck className="h-4 w-4" style={{ color: '#00ffff' }} />
                     </div>
                 )}
@@ -153,18 +197,47 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                             </p>
                         )}
                         {section.items.map(item => (
-                            <NavItem
-                                key={item.id}
-                                icon={item.id === 'ai-brain'
-                                    ? <Brain className="h-3.5 w-3.5 shrink-0" style={{ color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' }} />
-                                    : { ...item.icon, props: { ...item.icon.props, className: 'h-3.5 w-3.5 shrink-0', style: { color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' } } }
-                                }
-                                label={item.label}
-                                collapsed={collapsed}
-                                active={activeTab === item.id}
-                                onClick={() => onTabChange?.(item.id)}
-                                badge={item.id === 'ai-brain' && isScanning}
-                            />
+                            <React.Fragment key={item.id}>
+                                <NavItem
+                                    icon={item.id === 'ai-brain'
+                                        ? <Brain className="h-3.5 w-3.5 shrink-0" style={{ color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' }} />
+                                        : { ...item.icon, props: { ...item.icon.props, className: 'h-3.5 w-3.5 shrink-0', style: { color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' } } }
+                                    }
+                                    label={item.label}
+                                    collapsed={collapsed}
+                                    active={activeTab === item.id}
+                                    onClick={() => onTabChange?.(item.id)}
+                                    badge={
+                                        item.id === 'ai-brain' && isScanning
+                                            ? true
+                                            : item.id === 'threat-center' && overdueCount > 0
+                                                ? overdueCount
+                                                : undefined
+                                    }
+                                />
+                                {/* Pinned views sub-list — only under Threat Center, only when expanded */}
+                                {item.id === 'threat-center' && !collapsed && pinnedViews.length > 0 && (
+                                    <div className="ml-3 pl-2 border-l border-white/5 mb-1">
+                                        {pinnedViews.map(v => (
+                                            <button
+                                                key={v.name}
+                                                onClick={() => {
+                                                    onTabChange?.('threat-center');
+                                                    window.dispatchEvent(new CustomEvent('dashboard:navigate',
+                                                        { detail: { tab: 'threat-center', sub: 'vulnerabilities' } }));
+                                                    window.dispatchEvent(new CustomEvent('dashboard:apply-view',
+                                                        { detail: { payload: v.payload } }));
+                                                }}
+                                                className="flex items-center gap-1.5 w-full px-2 py-1 rounded text-left text-[10px] text-gray-500 hover:text-cyan-300 hover:bg-white/5 transition-colors font-mono truncate"
+                                                title={`Load view: ${v.name}`}
+                                            >
+                                                <Bookmark className="h-2.5 w-2.5 shrink-0 opacity-50" />
+                                                <span className="truncate">{v.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </React.Fragment>
                         ))}
                     </div>
                 ))}

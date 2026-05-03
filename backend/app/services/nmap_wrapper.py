@@ -1,6 +1,21 @@
 import logging
+import socket
 
 logger = logging.getLogger(__name__)
+
+
+def _can_use_raw_sockets() -> bool:
+    """True if the process can open a raw ICMP socket — required for nmap -O / -sS.
+
+    Works whether the container runs as root or as a non-root user with
+    cap_net_raw granted via `cap_add: [NET_RAW]` in docker-compose.
+    """
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
+        s.close()
+        return True
+    except (PermissionError, OSError):
+        return False
 
 class NmapWrapper:
     def __init__(self):
@@ -18,21 +33,25 @@ class NmapWrapper:
         try:
             logger.info(f"Starting {scan_type} Nmap scan on {target}")
             
-            # Detect whether we can use -O (requires root/cap_net_raw)
-            import os
-            is_root = os.getuid() == 0 if hasattr(os, 'getuid') else False
+            # Detect whether nmap can do raw-socket work (-O OS detection, -sS SYN).
+            # python-nmap runs the nmap binary as a subprocess; nmap itself needs either
+            # uid 0 OR cap_net_raw. We probe by trying to open a raw socket — works
+            # for both "container as root" and "container with cap_add: NET_RAW".
+            can_raw = _can_use_raw_sockets()
 
             if scan_type == "deep":
                 args = "-sV -A -T4 --script=vulners,banner,http-enum,smb-os-discovery"
-                if is_root:
+                if can_raw:
                     args = "-sV -O -A -T4 --script=vulners,banner,http-enum,smb-os-discovery"
                 self.nm.scan(target, arguments=args)
             elif scan_type == "full":
-                args = "-sV -T4" if not is_root else "-sV -O -T4"
+                args = "-sV -O -T4" if can_raw else "-sV -T4"
                 self.nm.scan(target, arguments=args)
             else:
-                # Quick: service version detection (-sV) on top 100 ports — fast enough, far more informative
-                self.nm.scan(target, arguments="-sV -F -T4")
+                # Quick: service version detection (-sV) on top 100 ports — fast enough, far more informative.
+                # Add -O when raw sockets are available so OS Family / OS Name populate.
+                args = "-sV -O -F -T4" if can_raw else "-sV -F -T4"
+                self.nm.scan(target, arguments=args)
 
             return self._parse_results()
         except Exception as e:

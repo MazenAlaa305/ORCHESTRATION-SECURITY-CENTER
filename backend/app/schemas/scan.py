@@ -3,7 +3,7 @@ PentesterFlow Pydantic Schemas
 Request/Response models for API endpoints
 """
 from pydantic import BaseModel, Field, HttpUrl
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
 
@@ -196,7 +196,9 @@ class AgentLogCreate(BaseModel):
     scan_id: str
     agent_name: str
     action: str
-    reasoning: Optional[Dict[str, Any]] = None
+    # `reasoning` is written as either a free-form string (most agents emit a
+    # single sentence) or a structured dict (intelligence agent). Keep both shapes.
+    reasoning: Union[Dict[str, Any], str, None] = None
     input_data: Optional[Dict[str, Any]] = None
     output_data: Optional[Dict[str, Any]] = None
 
@@ -206,7 +208,7 @@ class AgentLogResponse(BaseModel):
     scan_id: str
     agent_name: str
     action: str
-    reasoning: Optional[Dict[str, Any]] = None
+    reasoning: Union[Dict[str, Any], str, None] = None
     input_data: Optional[Dict[str, Any]] = None
     output_data: Optional[Dict[str, Any]] = None
     timestamp: datetime

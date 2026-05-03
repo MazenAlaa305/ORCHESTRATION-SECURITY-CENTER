@@ -13,7 +13,7 @@ DB_URL = "postgresql://user:password@db:5432/sme_cyber_db"
 @pytest.fixture(scope="module")
 def auth_headers():
     """Login and return Authorization headers for all API calls."""
-    resp = requests.post(f"{API_URL}/auth/login", json={"email": "test@local", "password": "Pass123"})
+    resp = requests.post(f"{API_URL}/auth/login", json={"email": "admin@local", "password": "Admin@1234"})
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -55,8 +55,8 @@ def test_scan_completion_and_assets(auth_headers, db_connection):
     scan_id = test_trigger_scan(auth_headers)
     print(f"Tracking Scan ID: {scan_id}")
 
-    # Poll for completion (max 20s)
-    max_retries = 20
+    # Poll for completion. Celery concurrency=1 — earlier queued scans must drain first.
+    max_retries = 90
     status = "queued"
     while max_retries > 0 and status not in ("completed", "failed"):
         time.sleep(1)

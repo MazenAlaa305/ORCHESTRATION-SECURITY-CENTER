@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     X, Shield, AlertTriangle, CheckCircle, XCircle, ExternalLink,
     Code, Brain, RefreshCw, Loader2, ChevronDown, ChevronUp,
+    ChevronLeft, ChevronRight,
     Copy, Check, ShieldX, Zap
 } from 'lucide-react';
 import { vulnerabilityService, findingsService } from '../../services/api';
@@ -21,8 +22,13 @@ const SEV_CONFIG = {
  *
  * @param {object} vuln — vulnerability object from the API
  * @param {function} onClose — close handler
+ * @param {function} onStatusChange — fired after status edits
+ * @param {{position?: number, total?: number, onPrev?: function, onNext?: function}} nav
+ *        Optional navigation context. When provided, renders a Prev/Next pager
+ *        in the header and binds J/K + ArrowDown/ArrowUp keys.
  */
-const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
+const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange, nav }) => {
+    const closeBtnRef = useRef(null);
     const [poc, setPoc] = useState(null);
     const [pocLoading, setPocLoading] = useState(false);
     const [pocExpanded, setPocExpanded] = useState(true);
@@ -34,6 +40,11 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
     const sev = SEV_CONFIG[(vuln?.severity || 'info').toLowerCase()] || SEV_CONFIG.info;
     const cveId = vuln?.cve_id || vuln?.type?.match(/CVE-\d{4}-\d+/)?.[0];
 
+    // Move focus to close button when drawer opens
+    useEffect(() => {
+        requestAnimationFrame(() => closeBtnRef.current?.focus());
+    }, [vuln?.id]);
+
     // Fetch PoC on open
     useEffect(() => {
         if (!vuln?.id) return;
@@ -44,12 +55,23 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
             .finally(() => setPocLoading(false));
     }, [vuln?.id]);
 
-    // Close on Escape
+    // Keyboard: Esc closes; J / ArrowDown → next; K / ArrowUp → previous.
+    // Skips when the user is typing in an input/textarea/contenteditable.
     useEffect(() => {
-        const handler = (e) => { if (e.key === 'Escape') onClose?.(); };
+        const handler = (e) => {
+            const t = e.target;
+            const isTyping = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+            if (e.key === 'Escape') { onClose?.(); return; }
+            if (isTyping) return;
+            if (e.key === 'j' || e.key === 'ArrowDown') {
+                if (nav?.onNext) { e.preventDefault(); nav.onNext(); }
+            } else if (e.key === 'k' || e.key === 'ArrowUp') {
+                if (nav?.onPrev) { e.preventDefault(); nav.onPrev(); }
+            }
+        };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [onClose]);
+    }, [onClose, nav]);
 
     const handleRevalidate = async () => {
         setIsRevalidating(true);
@@ -101,7 +123,12 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
             />
 
             {/* Drawer Panel */}
-            <div className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl flex flex-col bg-cyber-dark border-l ${sev.border} ${sev.glow} animate-slide-in-right overflow-hidden`}>
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="incident-drawer-title"
+                className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl flex flex-col bg-cyber-dark border-l ${sev.border} ${sev.glow} animate-slide-in-right overflow-hidden`}
+            >
                 {/* Header */}
                 <div className={`px-6 py-4 border-b border-white/10 ${sev.bg} shrink-0`}>
                     <div className="flex items-start justify-between gap-4">
@@ -121,7 +148,7 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
                                     </a>
                                 )}
                             </div>
-                            <h2 className="text-white font-black text-lg tracking-tight mt-1">
+                            <h2 id="incident-drawer-title" className="text-white font-black text-lg tracking-tight mt-1">
                                 {vuln.title || vuln.type || 'Unknown Vulnerability'}
                             </h2>
                             <p className="text-gray-500 text-xs font-mono mt-0.5">{vuln.url}</p>
@@ -131,12 +158,41 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
                                 </p>
                             )}
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors shrink-0"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                            {nav && typeof nav.position === 'number' && typeof nav.total === 'number' && nav.total > 0 && (
+                                <div className="flex items-center gap-0.5 mr-1">
+                                    <button
+                                        onClick={() => nav.onPrev?.()}
+                                        disabled={!nav.onPrev || nav.position <= 1}
+                                        className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        title="Previous (K / ↑)"
+                                        aria-label="Previous finding"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <span className="text-[10px] font-mono text-gray-400 px-1 tabular-nums">
+                                        {nav.position} / {nav.total}
+                                    </span>
+                                    <button
+                                        onClick={() => nav.onNext?.()}
+                                        disabled={!nav.onNext || nav.position >= nav.total}
+                                        className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        title="Next (J / ↓)"
+                                        aria-label="Next finding"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                ref={closeBtnRef}
+                                onClick={onClose}
+                                className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                aria-label="Close vulnerability detail"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Action Message */}
@@ -214,6 +270,7 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange }) => {
                                         iso27001_annex_a: 'ISO 27001',
                                         nist_csf_function: 'NIST CSF',
                                         pci_dss_requirement: 'PCI DSS',
+                                        mitre_attack: 'MITRE ATT&CK',
                                     };
                                     return (
                                         <span key={framework}

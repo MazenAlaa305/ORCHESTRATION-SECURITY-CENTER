@@ -119,6 +119,9 @@ export const vulnerabilityService = {
     // Update vulnerability status
     update: (id, data) => api.patch(`/vulnerabilities/${id}`, data),
 
+    // Bulk update — returns { updated: [{id, previous_status, previous_remediation}], not_found: [...] }
+    bulkUpdate: (ids, patch) => api.patch('/vulnerabilities/bulk', { ids, ...patch }),
+
     // Update Workflow (Ticket, Assignee, Status)
     updateWorkflow: (id, { ticket_id, assigned_to, status }) => api.patch(`/vulnerabilities/${id}/workflow`, null, {
         params: { ticket_id, assigned_to, status }
@@ -149,6 +152,7 @@ export const dashboardService = {
     getKpiSnapshot: () => api.get('/dashboard/kpi-snapshot'),
     getActionItems: () => api.get('/dashboard/actions'),
     refreshRiskScores: () => api.post('/dashboard/refresh-risk'),
+    getRiskBreakdown: (scanId) => api.get(`/dashboard/risk/${scanId}`),
 };
 
 export const findingsService = {

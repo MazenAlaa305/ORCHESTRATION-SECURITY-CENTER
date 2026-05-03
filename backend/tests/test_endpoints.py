@@ -25,8 +25,8 @@ def test_root_open(client):
     "/api/v1/scans/",
     "/api/v1/targets/",
     "/api/v1/findings/",
-    "/api/v1/dashboard/kpi",
-    "/api/v1/reports/",
+    "/api/v1/dashboard/kpi-snapshot",
+    "/api/v1/reports/dummy-scan-id",
     "/api/v1/vulnerabilities/",
 ])
 def test_protected_routes_reject_unauthenticated(client, path):
@@ -60,7 +60,7 @@ def test_targets_list_empty(client, admin_headers):
 # ── Dashboard KPI ─────────────────────────────────────────────────────────────
 
 def test_dashboard_kpi_returns_object(client, analyst_headers):
-    r = client.get("/api/v1/dashboard/kpi", headers=analyst_headers)
+    r = client.get("/api/v1/dashboard/kpi-snapshot", headers=analyst_headers)
     # Some legacy dashboard endpoints expect a scan_id query param; tolerate 200/422
     assert r.status_code in (200, 422)
 
@@ -70,7 +70,11 @@ def test_dashboard_kpi_returns_object(client, analyst_headers):
 def test_scans_list_empty(client, admin_headers):
     r = client.get("/api/v1/scans/", headers=admin_headers)
     assert r.status_code == 200
-    assert isinstance(r.json(), list)
+    body = r.json()
+    # Endpoint returns a paginated envelope: {items: [], page, page_size, total}
+    assert isinstance(body, dict)
+    assert isinstance(body.get("items"), list)
+    assert body["items"] == []
 
 
 # ── Config (public) ───────────────────────────────────────────────────────────
