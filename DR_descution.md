@@ -983,3 +983,380 @@ bash start-lite.sh
 - Don't memorize this document — internalize it. The examiner can tell the difference.
 
 — *Generated 2026-05-03, week 12 of 16. Re-generate if the codebase changes materially before defense day.*
+
+---
+
+## Appendix A — Complete File Ownership Map (Repo-Audit, 2026-05-07)
+
+> **Purpose:** Single, exhaustive owner-per-file map produced from a full sweep of the working tree. Files are grouped by subsystem under each member. Anything not owned by anyone or owned by multiple members is listed in §A.13 below.
+> **Convention:** *(shared: Name)* means co-owned but the listed member is the primary. **Bold** = file confirmed present in the working tree at audit time.
+
+### A.1 Omar Kapil — Team Leader & DevOps Sub-Leader
+
+**Docker / Compose**
+- **[docker-compose.yml](docker-compose.yml)** *(shared: Shaban)*
+- **[docker-compose.lab.yml](docker-compose.lab.yml)** *(shared: Shahd)*
+- **[backend/Dockerfile](backend/Dockerfile)** *(shared: Reem)*
+- **[frontend/Dockerfile](frontend/Dockerfile)**, **[frontend/Dockerfile.prod](frontend/Dockerfile.prod)** *(shared: Marize)*
+
+**Lab / lifecycle scripts**
+- **[lab_setup.ps1](lab_setup.ps1)** *(shared: Shahd)*, **[trigger_lab_scans.ps1](trigger_lab_scans.ps1)**
+- **[start-lite.ps1](start-lite.ps1)**, **[start-lite.sh](start-lite.sh)**, **[start-full.ps1](start-full.ps1)**
+- **[stop-all.ps1](stop-all.ps1)**, **[stop-all.sh](stop-all.sh)**
+
+**Reverse proxy / network isolation**
+- **[infra/caddy/Caddyfile](infra/caddy/Caddyfile)**, **[infra/nginx.conf](infra/nginx.conf)**
+- **[infra/isolation/docker-compose.lab.isolation.override.yml](infra/isolation/docker-compose.lab.isolation.override.yml)**
+- **[infra/isolation/lab_isolation.ps1](infra/isolation/lab_isolation.ps1)**, **[infra/isolation/lab_isolation.sh](infra/isolation/lab_isolation.sh)**
+
+**CI/CD**
+- **[.github/workflows/ci.yml](.github/workflows/ci.yml)**, **[.github/workflows/cd.yml](.github/workflows/cd.yml)**
+
+**Coordination / audit docs**
+- **[project_plan.md](project_plan.md)**, **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)**, **[AUDIT_REPORT.md](AUDIT_REPORT.md)**
+- **[FINAL_DEMO_SCRIPT.md](FINAL_DEMO_SCRIPT.md)**, **[MANUAL_LIVE_DEMO.md](MANUAL_LIVE_DEMO.md)**
+- **[FINISHINGPLAN.md](FINISHINGPLAN.md)**, **[mode1run.md](mode1run.md)**, **[omar_kapil_role.md](omar_kapil_role.md)**
+- **[HOW_TO_RUN.md](HOW_TO_RUN.md)** *(shared: Omar Tarek)*
+- **[.env](.env)**, **[.gitignore](.gitignore)**, **[.vscode/](.vscode/)**, **[.claude/](.claude/)**
+
+### A.2 Reem Amin — Backend Sub-Leader
+
+**FastAPI core**
+- **[backend/app/main.py](backend/app/main.py)**, **[backend/app/core/config.py](backend/app/core/config.py)**
+- **[backend/app/core/database.py](backend/app/core/database.py)**, **[backend/app/core/security.py](backend/app/core/security.py)**
+- **[backend/app/core/crypto.py](backend/app/core/crypto.py)**, **[backend/app/core/request_id.py](backend/app/core/request_id.py)**
+- **[backend/app/api/api.py](backend/app/api/api.py)**, **[backend/app/api/deps.py](backend/app/api/deps.py)**
+- All `__init__.py` package markers under `backend/app/`
+
+**Endpoints (her domain)**
+- **[backend/app/api/v1/endpoints/auth.py](backend/app/api/v1/endpoints/auth.py)**
+- **[backend/app/api/v1/endpoints/dashboard.py](backend/app/api/v1/endpoints/dashboard.py)**
+- **[backend/app/api/v1/endpoints/scans.py](backend/app/api/v1/endpoints/scans.py)**
+- **[backend/app/api/v1/endpoints/targets.py](backend/app/api/v1/endpoints/targets.py)**
+- **[backend/app/api/v1/endpoints/reports.py](backend/app/api/v1/endpoints/reports.py)**
+- **[backend/app/api/v1/endpoints/rbac.py](backend/app/api/v1/endpoints/rbac.py)**
+- **[backend/app/api/v1/endpoints/audit.py](backend/app/api/v1/endpoints/audit.py)**
+- **[backend/app/api/v1/endpoints/config.py](backend/app/api/v1/endpoints/config.py)**
+
+**Models / Schemas**
+- **[backend/app/models/scan.py](backend/app/models/scan.py)**, **[backend/app/models/user.py](backend/app/models/user.py)**, **[backend/app/models/config.py](backend/app/models/config.py)**
+- **[backend/app/schemas/scan.py](backend/app/schemas/scan.py)**
+
+**Migrations (Alembic)**
+- **[backend/alembic/env.py](backend/alembic/env.py)**, **[backend/alembic.ini](backend/alembic.ini)**
+- All 16 files under **[backend/alembic/versions/](backend/alembic/versions/)**
+
+**Backend bootstrap**
+- **[backend/Dockerfile](backend/Dockerfile)** *(shared: Omar K)*, **[backend/requirements.txt](backend/requirements.txt)**
+- **[backend/init_db.py](backend/init_db.py)**, **[backend/seed_user.py](backend/seed_user.py)**, **[backend/utils.py](backend/utils.py)**
+
+### A.3 Yousef Abdel Hady — AI & Risk Engine
+
+**Agent pipeline**
+- **[backend/app/services/agent_orchestrator.py](backend/app/services/agent_orchestrator.py)**
+- **[backend/app/services/discovery_agent.py](backend/app/services/discovery_agent.py)**
+- **[backend/app/services/intelligence_agent.py](backend/app/services/intelligence_agent.py)**
+- **[backend/app/services/validation_probe.py](backend/app/services/validation_probe.py)**
+- **[backend/app/services/finding_dedup.py](backend/app/services/finding_dedup.py)**
+
+**Risk / scoring**
+- **[backend/app/services/unified_risk_engine.py](backend/app/services/unified_risk_engine.py)**
+- **[backend/app/services/cvss.py](backend/app/services/cvss.py)**
+- **[backend/app/services/scoring_explainer.py](backend/app/services/scoring_explainer.py)**
+- **[backend/app/services/framework_tagger.py](backend/app/services/framework_tagger.py)**
+- **[backend/app/services/sla.py](backend/app/services/sla.py)**
+
+**LLM advisory layer**
+- **[backend/app/services/ai_advisor.py](backend/app/services/ai_advisor.py)**
+- **[backend/app/services/llm_guard.py](backend/app/services/llm_guard.py)**
+- **[backend/ai_advisor.py](backend/ai_advisor.py)** *(legacy duplicate at backend root — schedule for deletion)*
+- **[frontend/src/components/SecurityAdvisor.jsx](frontend/src/components/SecurityAdvisor.jsx)** *(consumer of his AI advisor; shared: Rahma for visual styling)*
+
+### A.4 Mohamed Shaban — Task Queue & Docker Orchestration
+
+**Async / Celery / WebSocket**
+- **[backend/app/services/scan_tasks.py](backend/app/services/scan_tasks.py)**
+- **[backend/app/services/event_publisher.py](backend/app/services/event_publisher.py)**
+- **[backend/app/services/ws_manager.py](backend/app/services/ws_manager.py)**
+- **[backend/app/services/scan_reaper.py](backend/app/services/scan_reaper.py)**
+- **[backend/app/services/task_monitor.py](backend/app/services/task_monitor.py)**
+- **[backend/app/services/asset_monitor.py](backend/app/services/asset_monitor.py)**
+- **[backend/app/core/celery_app.py](backend/app/core/celery_app.py)**
+
+**SOAR / lab orchestration**
+- **[backend/app/services/soar_orchestrator.py](backend/app/services/soar_orchestrator.py)**
+- **[backend/app/services/lab_manager.py](backend/app/services/lab_manager.py)**
+- **[backend/app/api/v1/endpoints/lab.py](backend/app/api/v1/endpoints/lab.py)**
+
+**Health / system checks**
+- **[infra/healthcheck.sh](infra/healthcheck.sh)**
+- **[backend/scripts/full_system_check.py](backend/scripts/full_system_check.py)**
+- **[docker-compose.yml](docker-compose.yml)** *(shared: Omar K)*
+
+### A.5 Marize Ehap — Frontend Sub-Leader
+
+**App shell / routing**
+- **[frontend/src/App.jsx](frontend/src/App.jsx)**, **[frontend/src/main.jsx](frontend/src/main.jsx)**
+- **[frontend/src/pages/Dashboard.jsx](frontend/src/pages/Dashboard.jsx)**
+- **[frontend/src/pages/LoginPage.jsx](frontend/src/pages/LoginPage.jsx)**
+- **[frontend/src/pages/SettingsPage.jsx](frontend/src/pages/SettingsPage.jsx)**
+- **[frontend/src/layout/Layout.jsx](frontend/src/layout/Layout.jsx)**, **[frontend/src/layout/Sidebar.jsx](frontend/src/layout/Sidebar.jsx)**
+
+**Contexts / services / hooks / stores**
+- **[frontend/src/context/RealTimeContext.jsx](frontend/src/context/RealTimeContext.jsx)**
+- **[frontend/src/context/AuthContext.jsx](frontend/src/context/AuthContext.jsx)**
+- **[frontend/src/context/ConfigContext.jsx](frontend/src/context/ConfigContext.jsx)**
+- **[frontend/src/services/api.js](frontend/src/services/api.js)**, **[frontend/src/api/config.js](frontend/src/api/config.js)**
+- **[frontend/src/hooks/useAuth.js](frontend/src/hooks/useAuth.js)**
+- **[frontend/src/hooks/useGlobalShortcuts.js](frontend/src/hooks/useGlobalShortcuts.js)**
+- **[frontend/src/hooks/useSavedViews.js](frontend/src/hooks/useSavedViews.js)**
+- **[frontend/src/stores/envStore.js](frontend/src/stores/envStore.js)**
+
+**Shared UI primitives**
+- **[frontend/src/components/ui/CyberButton.jsx](frontend/src/components/ui/CyberButton.jsx)**, **[CyberBadge.jsx](frontend/src/components/ui/CyberBadge.jsx)**
+- **[frontend/src/components/ui/ProtectedRoute.jsx](frontend/src/components/ui/ProtectedRoute.jsx)**, **[RoleGuard.jsx](frontend/src/components/ui/RoleGuard.jsx)**
+- **[frontend/src/components/ui/Tabs.jsx](frontend/src/components/ui/Tabs.jsx)**, **[SubTabBar.jsx](frontend/src/components/ui/SubTabBar.jsx)**, **[GaugeRing.jsx](frontend/src/components/ui/GaugeRing.jsx)**
+- **[frontend/src/components/ErrorBoundary.jsx](frontend/src/components/ErrorBoundary.jsx)**, **[TabNavigation.jsx](frontend/src/components/TabNavigation.jsx)**
+- **[frontend/src/components/CommandPalette.jsx](frontend/src/components/CommandPalette.jsx)**, **[ToastProvider.jsx](frontend/src/components/ToastProvider.jsx)**
+- **[frontend/src/components/QuickScanPopover.jsx](frontend/src/components/QuickScanPopover.jsx)**, **[ShortcutCheatsheet.jsx](frontend/src/components/ShortcutCheatsheet.jsx)**
+- **[frontend/src/components/NotificationsBell.jsx](frontend/src/components/NotificationsBell.jsx)**
+
+**Build / config**
+- **[frontend/tailwind.config.js](frontend/tailwind.config.js)**, **[frontend/postcss.config.js](frontend/postcss.config.js)**
+- **[frontend/vite.config.js](frontend/vite.config.js)**, **[frontend/package.json](frontend/package.json)**, **[frontend/package-lock.json](frontend/package-lock.json)**
+- **[frontend/index.html](frontend/index.html)**
+
+### A.6 Omnia Helmy — Network Topology & Visualization
+
+- **[frontend/src/components/dashboard/NetworkTopology.jsx](frontend/src/components/dashboard/NetworkTopology.jsx)**
+- **[frontend/src/components/dashboard/TopologyLegend.jsx](frontend/src/components/dashboard/TopologyLegend.jsx)**
+- **[frontend/src/components/dashboard/VulnTrend.jsx](frontend/src/components/dashboard/VulnTrend.jsx)**
+- **[frontend/src/components/dashboard/RiskHeatmap.jsx](frontend/src/components/dashboard/RiskHeatmap.jsx)**
+- **[frontend/src/components/dashboard/UptimeGauge.jsx](frontend/src/components/dashboard/UptimeGauge.jsx)**
+- **[frontend/src/components/dashboard/StatCards.jsx](frontend/src/components/dashboard/StatCards.jsx)**
+- **[frontend/src/components/dashboard/SeverityDonut.jsx](frontend/src/components/dashboard/SeverityDonut.jsx)**
+- **[frontend/src/components/dashboard/AssetTimeline.jsx](frontend/src/components/dashboard/AssetTimeline.jsx)**
+- **[frontend/src/components/dashboard/ExposureMap.jsx](frontend/src/components/dashboard/ExposureMap.jsx)**
+- **[frontend/src/components/dashboard/RiskScore.jsx](frontend/src/components/dashboard/RiskScore.jsx)**
+- **[frontend/src/components/dashboard/RiskBreakdownDrawer.jsx](frontend/src/components/dashboard/RiskBreakdownDrawer.jsx)**
+- **[frontend/src/components/MetricCard.jsx](frontend/src/components/MetricCard.jsx)** *(shared: Rahma)*
+
+### A.7 Rahma Ebrahem — Dashboard UI & UX
+
+**Operational panels**
+- **[frontend/src/components/dashboard/ActionCenter.jsx](frontend/src/components/dashboard/ActionCenter.jsx)**
+- **[frontend/src/components/dashboard/OrchestrationFeed.jsx](frontend/src/components/dashboard/OrchestrationFeed.jsx)**
+- **[frontend/src/components/dashboard/ScanButton.jsx](frontend/src/components/dashboard/ScanButton.jsx)**
+- **[frontend/src/components/dashboard/ScanHistory.jsx](frontend/src/components/dashboard/ScanHistory.jsx)**
+- **[frontend/src/components/dashboard/ScanConfigModal.jsx](frontend/src/components/dashboard/ScanConfigModal.jsx)**
+- **[frontend/src/components/dashboard/ScanPipelinePanel.jsx](frontend/src/components/dashboard/ScanPipelinePanel.jsx)**
+- **[frontend/src/components/dashboard/ScanningBanner.jsx](frontend/src/components/dashboard/ScanningBanner.jsx)**
+- **[frontend/src/components/dashboard/ActivityFeed.jsx](frontend/src/components/dashboard/ActivityFeed.jsx)**
+- **[frontend/src/components/dashboard/AgentLogViewer.jsx](frontend/src/components/dashboard/AgentLogViewer.jsx)**
+- **[frontend/src/components/dashboard/LiveConsole.jsx](frontend/src/components/dashboard/LiveConsole.jsx)**
+- **[frontend/src/components/dashboard/Taskbar.jsx](frontend/src/components/dashboard/Taskbar.jsx)**
+
+**Detail / drawer / modal panels**
+- **[frontend/src/components/dashboard/AssetDetailPanel.jsx](frontend/src/components/dashboard/AssetDetailPanel.jsx)**
+- **[frontend/src/components/dashboard/IncidentDetailDrawer.jsx](frontend/src/components/dashboard/IncidentDetailDrawer.jsx)**
+- **[frontend/src/components/dashboard/VulnerabilitiesPanel.jsx](frontend/src/components/dashboard/VulnerabilitiesPanel.jsx)**
+- **[frontend/src/components/dashboard/RemediationPanel.jsx](frontend/src/components/dashboard/RemediationPanel.jsx)**
+- **[frontend/src/components/dashboard/TargetsManager.jsx](frontend/src/components/dashboard/TargetsManager.jsx)**
+- **[frontend/src/components/dashboard/UnifiedInbox.jsx](frontend/src/components/dashboard/UnifiedInbox.jsx)**
+- **[frontend/src/components/dashboard/Reports.jsx](frontend/src/components/dashboard/Reports.jsx)**
+- **[frontend/src/components/dashboard/SettingsPanel.jsx](frontend/src/components/dashboard/SettingsPanel.jsx)**
+- **[frontend/src/components/dashboard/EnvironmentWizard.jsx](frontend/src/components/dashboard/EnvironmentWizard.jsx)**
+- **[frontend/src/components/dashboard/LabEnvironment.jsx](frontend/src/components/dashboard/LabEnvironment.jsx)**
+
+**Legacy & root-level components**
+- **[frontend/src/components/Dashboard.jsx](frontend/src/components/Dashboard.jsx)**
+- **[frontend/src/components/DeviceDetailModal.jsx](frontend/src/components/DeviceDetailModal.jsx)**
+- **[frontend/src/components/ReportGenerator.jsx](frontend/src/components/ReportGenerator.jsx)**
+
+**UX-focused UI primitives**
+- **[frontend/src/components/ui/Toast.jsx](frontend/src/components/ui/Toast.jsx)**, **[SkeletonPulse.jsx](frontend/src/components/ui/SkeletonPulse.jsx)**
+- **[frontend/src/components/ui/EmptyState.jsx](frontend/src/components/ui/EmptyState.jsx)**, **[ConfirmDialog.jsx](frontend/src/components/ui/ConfirmDialog.jsx)**
+
+**UX docs**
+- **[UX_ENHANCEMENT_PLAN.md](UX_ENHANCEMENT_PLAN.md)**
+
+### A.8 Shahd Paher — Scan Orchestration Sub-Leader
+
+**Backend scanners / agents**
+- **[backend/app/services/nmap_wrapper.py](backend/app/services/nmap_wrapper.py)**
+- **[backend/app/services/nuclei_wrapper.py](backend/app/services/nuclei_wrapper.py)**
+- **[backend/app/services/openvas.py](backend/app/services/openvas.py)**
+- **[backend/app/services/infrastructure_agent.py](backend/app/services/infrastructure_agent.py)**
+- **[backend/app/services/scope_guard.py](backend/app/services/scope_guard.py)**
+
+**Reports / signing pipeline**
+- **[backend/app/services/pdf_generator.py](backend/app/services/pdf_generator.py)**
+- **[backend/app/services/report_signer.py](backend/app/services/report_signer.py)**
+
+**Endpoints**
+- **[backend/app/api/v1/endpoints/findings.py](backend/app/api/v1/endpoints/findings.py)**
+- **[backend/app/api/v1/endpoints/openvas.py](backend/app/api/v1/endpoints/openvas.py)**
+- **[backend/app/api/v1/endpoints/vulnerabilities.py](backend/app/api/v1/endpoints/vulnerabilities.py)**
+- **[backend/app/api/v1/endpoints/network.py](backend/app/api/v1/endpoints/network.py)**
+
+**OpenVAS frontend (own slice)**
+- **[frontend/src/components/OpenVAS/ScanButton.jsx](frontend/src/components/OpenVAS/ScanButton.jsx)**
+- **[frontend/src/components/OpenVAS/Scheduler.jsx](frontend/src/components/OpenVAS/Scheduler.jsx)**
+- **[frontend/src/components/OpenVAS/RiskChart.jsx](frontend/src/components/OpenVAS/RiskChart.jsx)**
+- **[frontend/src/components/OpenVAS/VulnerabilitiesList.jsx](frontend/src/components/OpenVAS/VulnerabilitiesList.jsx)**
+
+**Lab environment**
+- **[docker-compose.lab.yml](docker-compose.lab.yml)** *(shared: Omar K)*
+- **[lab_setup.ps1](lab_setup.ps1)** *(shared: Omar K)*
+- **[lab/scenarios/sqli_scenario.md](lab/scenarios/sqli_scenario.md)**, **[xss_scenario.md](lab/scenarios/xss_scenario.md)**, **[misconfig_scenario.md](lab/scenarios/misconfig_scenario.md)**
+- **[lab/data/samba/](lab/data/)** (welcome.txt, hr_data, it_backups, shared)
+- **[lab/config/coredns/](lab/config/coredns/)** (Corefile, sme-lab.local.zone)
+- **[lab/config/nginx/api_gateway.conf](lab/config/nginx/api_gateway.conf)**, **[workstation.conf](lab/config/nginx/workstation.conf)**
+- **[lab/config/postgres/init.sql](lab/config/postgres/init.sql)**
+- **[lab/traffic-generator/Dockerfile](lab/traffic-generator/Dockerfile)**, **[generator.py](lab/traffic-generator/generator.py)**, **[requirements.txt](lab/traffic-generator/requirements.txt)**
+- **[lab_config/nginx.conf](lab_config/nginx.conf)**, **[lab_config/entrypoint.sh](lab_config/entrypoint.sh)**
+- **[infra/openvas/sync.sh](infra/openvas/sync.sh)**
+- **[backend/scripts/simulate_attack.py](backend/scripts/simulate_attack.py)**
+
+### A.9 Mariz Ehap — SIEM & Log Analytics
+
+**Backend integration**
+- **[backend/app/services/wazuh_integration.py](backend/app/services/wazuh_integration.py)**
+- **[backend/app/services/elastic_integration.py](backend/app/services/elastic_integration.py)**
+- **[backend/app/services/alert_correlator.py](backend/app/services/alert_correlator.py)**
+- **[backend/app/api/v1/endpoints/siem.py](backend/app/api/v1/endpoints/siem.py)**
+
+**Lab SIEM plumbing**
+- **[lab/log-shipper/Dockerfile](lab/log-shipper/Dockerfile)**, **[shipper.py](lab/log-shipper/shipper.py)**, **[requirements.txt](lab/log-shipper/requirements.txt)**
+- **[lab/wazuh/custom_rules.xml](lab/wazuh/custom_rules.xml)**
+
+### A.10 Yosef Ali — QA Engineer (API & Integration Testing)
+
+**Pytest suite**
+- **[backend/tests/conftest.py](backend/tests/conftest.py)**
+- **[backend/tests/test_auth.py](backend/tests/test_auth.py)**, **[test_auth_flow.py](backend/tests/test_auth_flow.py)**, **[test_rbac.py](backend/tests/test_rbac.py)**
+- **[backend/tests/test_endpoints.py](backend/tests/test_endpoints.py)**
+- **[backend/tests/test_risk.py](backend/tests/test_risk.py)**, **[test_risk_engine.py](backend/tests/test_risk_engine.py)**, **[test_risk_engine_manual.py](backend/tests/test_risk_engine_manual.py)**
+- **[backend/tests/test_agents.py](backend/tests/test_agents.py)**
+- **[backend/tests/test_websocket.py](backend/tests/test_websocket.py)**
+- **[backend/tests/test_scan_tasks.py](backend/tests/test_scan_tasks.py)**
+- **[backend/tests/test_nmap_wrapper.py](backend/tests/test_nmap_wrapper.py)**
+- **[backend/tests/test_siem_integration.py](backend/tests/test_siem_integration.py)**
+- **[backend/tests/test_e2e_scans.py](backend/tests/test_e2e_scans.py)** *(shared: Mazin)*
+
+**Postman / smoke**
+- **[postman/OrchestrationSecurityCenter_API.postman_collection.json](postman/OrchestrationSecurityCenter_API.postman_collection.json)**
+- **[backend/verify_auth.ps1](backend/verify_auth.ps1)**, **[backend/verify_scan.ps1](backend/verify_scan.ps1)**
+- **[scratch_check_assets.py](scratch_check_assets.py)**
+
+### A.11 Mazin Alla — QA Engineer (E2E & Frontend Testing)
+
+- **[tests/e2e/conftest.py](tests/e2e/conftest.py)**
+- **[tests/e2e/test_login_flow.py](tests/e2e/test_login_flow.py)**
+- **[tests/e2e/test_scan_trigger.py](tests/e2e/test_scan_trigger.py)**
+- **[tests/e2e/test_report_export.py](tests/e2e/test_report_export.py)**
+- **[frontend/src/tests/Dashboard.test.js](frontend/src/tests/Dashboard.test.js)** *(shared: Yosef)*
+- **[UAT_REPORT.md](UAT_REPORT.md)**, **[BROWSER_COMPAT_REPORT.md](BROWSER_COMPAT_REPORT.md)**
+
+### A.12 Omar Tarek — Documentation & Presentation Lead
+
+**Academic / project docs**
+- **[FYP_Documentation.md](FYP_Documentation.md)**, **[FYP_Figures.md](FYP_Figures.md)**
+- **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)**, **[USE_CASES_AND_EVALUATION.md](USE_CASES_AND_EVALUATION.md)**
+- **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)**
+- **[HOW_TO_RUN.md](HOW_TO_RUN.md)** *(shared: Omar K)*
+- **[DR_descution.md](DR_descution.md)** (this file)
+
+**Slides / presentation**
+- **[FINAL_PRESENTATION.md](FINAL_PRESENTATION.md)**, **[FINAL_PRESENTATION.pptx](FINAL_PRESENTATION.pptx)**
+- **[Found404_Graduation_Presentation.pptx](Found404_Graduation_Presentation.pptx)**
+- **[Found_404_Defense_Presentation.pptx](Found_404_Defense_Presentation.pptx)**
+- **[Graduation_Presentation_Guide.docx](Graduation_Presentation_Guide.docx)**
+- **[build_presentation.py](build_presentation.py)**, **[generate_presentation.py](generate_presentation.py)**
+- **[google_slides_script.gs](google_slides_script.gs)**
+- **[the all project screens.pdf](the%20all%20project%20screens.pdf)**, **[docaiv_v2.docx](docaiv_v2.docx)**
+
+**Demo / runbooks**
+- **[demo/demo_script.md](demo/demo_script.md)**, **[demo/demo_checklist.md](demo/demo_checklist.md)**
+
+**docs/ directory**
+- **[docs/API_GUIDE.md](docs/API_GUIDE.md)**, **[docs/ARCHITECTURE_DIAGRAM.md](docs/ARCHITECTURE_DIAGRAM.md)**
+- **[docs/PRESENTATION_PLAN.md](docs/PRESENTATION_PLAN.md)**
+- **[docs/audit/baseline_2026-04-24.md](docs/audit/baseline_2026-04-24.md)**
+- **[docs/contracts/openapi_2026-04-24.json](docs/contracts/openapi_2026-04-24.json)**
+
+**team_roles/ index**
+- All 13 files under **[team_roles/](team_roles/)** (`README.md` + 12 per-member role docs)
+
+### A.13 Gap Analysis — Files Needing Your Decision
+
+**A.13.1 Auto-assigned (most-related role) — please confirm**
+| File | Auto-assigned to | Why |
+|---|---|---|
+| `backend/ai_advisor.py` (legacy duplicate at backend root) | **Yousef** | Same name as `app/services/ai_advisor.py`, AI-domain |
+| `backend/app/services/sla.py` | **Yousef** | SLA tied to risk severity bands, lives next to risk engine |
+| `backend/app/services/asset_monitor.py` | **Shaban** | Periodic background task — fits async/queue domain |
+| `backend/app/services/lab_manager.py` | **Shaban** | Container lifecycle = orchestration domain |
+| `backend/app/services/pdf_generator.py` | **Shahd** | Reports come out of the scan pipeline he owns; could move to **Reem** if treated as API output |
+| `backend/app/services/report_signer.py` | **Shahd** | Pairs with pdf_generator |
+| `backend/app/api/v1/endpoints/audit.py` | **Reem** | Pure API plumbing; was unowned in original plan |
+| `backend/app/api/v1/endpoints/config.py` | **Reem** | Public feature-flags endpoint |
+| `backend/app/api/v1/endpoints/vulnerabilities.py` | **Shahd** | Security domain (was ambiguous between Reem and Shahd) |
+| `backend/app/api/v1/endpoints/network.py` | **Shahd** | Network discovery output |
+| `backend/app/api/v1/endpoints/lab.py` | **Shaban** | Calls `lab_manager` |
+| `backend/app/models/config.py` | **Reem** | DB model |
+| `backend/utils.py`, `init_db.py`, `seed_user.py`, `Dockerfile`, `requirements.txt`, `alembic.ini` | **Reem** | Backend bootstrap |
+| `backend/scripts/full_system_check.py` | **Shaban** | System health diagnostic |
+| `backend/scripts/simulate_attack.py` | **Shahd** | Attack-side helper |
+| `frontend/src/components/SecurityAdvisor.jsx` | **Yousef** *(primary)* | Renders his AI advisor output |
+| `frontend/src/components/MetricCard.jsx` | **Omnia** *(shared: Rahma)* | Visual primitive used across charts |
+| `frontend/src/components/Dashboard.jsx` (legacy wrapper) | **Rahma** | Per existing plan |
+| `frontend/src/components/DeviceDetailModal.jsx`, `ReportGenerator.jsx` | **Rahma** | UI panels |
+| All `frontend/src/components/ui/*.jsx` | **Marize** *(except Toast/SkeletonPulse/EmptyState/ConfirmDialog → Rahma)* | Marize owns the design-system primitives, Rahma owns the UX-state primitives |
+| `frontend/src/api/config.js`, `stores/envStore.js`, `hooks/useGlobalShortcuts.js`, `hooks/useSavedViews.js` | **Marize** | App-shell wiring |
+| `frontend/src/tests/Dashboard.test.js` | **Mazin** *(shared: Yosef)* | Frontend test |
+| `frontend/Dockerfile`, `Dockerfile.prod`, `vite.config.js`, `postcss.config.js`, `package.json`, `index.html` | **Marize** *(Dockerfiles shared: Omar K)* | Build config |
+| `infra/healthcheck.sh` | **Shaban** | Was his planned deliverable |
+| `infra/caddy/Caddyfile`, `infra/nginx.conf`, `infra/isolation/*` | **Omar K** | Reverse proxy + isolation |
+| `infra/openvas/sync.sh` | **Shahd** | OpenVAS data sync |
+| `lab_config/nginx.conf`, `lab_config/entrypoint.sh` | **Shahd** | Lab support config |
+| `lab/scenarios/*.md` | **Shahd** | Already in his planned deliverables |
+| `lab/log-shipper/*` | **Mariz** | SIEM ingest |
+| `lab/wazuh/custom_rules.xml` | **Mariz** | Wazuh rules |
+| `lab/data/*`, `lab/config/*`, `lab/traffic-generator/*` | **Shahd** | Lab seed/config |
+| `start-lite.ps1`, `start-lite.sh`, `start-full.ps1`, `stop-all.ps1`, `stop-all.sh` | **Omar K** | Stack lifecycle |
+| `trigger_lab_scans.ps1` | **Omar K** *(shared: Shahd)* | Scan trigger automation |
+| `.github/workflows/cd.yml` | **Omar K** | Was his planned deliverable |
+| `AUDIT_REPORT.md`, `MANUAL_LIVE_DEMO.md`, `mode1run.md`, `FINISHINGPLAN.md`, `omar_kapil_role.md` | **Omar K** | Coordination notes |
+| `docs/PRESENTATION_PLAN.md`, `docs/audit/baseline_2026-04-24.md`, `docs/contracts/openapi_2026-04-24.json` | **Omar Tarek** | Documentation surface |
+| `Found404_Graduation_Presentation.pptx`, `Found_404_Defense_Presentation.pptx`, `Graduation_Presentation_Guide.docx`, `the all project screens.pdf`, `docaiv_v2.docx`, `build_presentation.py`, `generate_presentation.py`, `google_slides_script.gs` | **Omar Tarek** | Slide artefacts |
+| `team_roles/*.md` (13 files) | **Omar Tarek** | Per-member role docs index |
+| `evidence/phase{2..6}/*` and `evidence/phases_4_5_6_sign_off.md` | **Omar K** *(shared: Yosef)* | Phase gate audit artefacts |
+| `UX_ENHANCEMENT_PLAN.md` | **Rahma** | UX plan |
+| `BROWSER_COMPAT_REPORT.md`, `UAT_REPORT.md` | **Mazin** | QA reports |
+| `SECURITY_AUDIT.md` | **Omar K** | Self-audit deliverable |
+
+**A.13.2 Truly unassigned — please pick an owner**
+| File | Suggestion | Notes |
+|---|---|---|
+| `newplan24/4/2026.md` | ? | Orphan note — content unclear; may be obsolete planning |
+| `test.db` | **delete** | SQLite runtime artefact — should be in `.gitignore`, not owned |
+| `omar_kapil_role.md` (root) | duplicate of `team_roles/00_omar_kapil_role.md`? | Decide whether to delete the root copy |
+| `docaiv_v2.docx` | **Omar Tarek** | Filename suggests early documentation draft — confirm |
+| `Found404_Graduation_Presentation.pptx` vs `FINAL_PRESENTATION.pptx` | **Omar Tarek** | Confirm which is canonical for defense; mark the other "archived" |
+
+**A.13.3 Files mentioned in the plan but missing in tree (verify or remove from plan)**
+| File | Mentioned by | Action |
+|---|---|---|
+| `frontend/src/components/VulnerabilityList.jsx` | Rahma's plan | Replaced by `dashboard/VulnerabilitiesPanel.jsx` — remove from plan |
+| `lab/kibana/dashboards/sme_overview.ndjson` | Mariz's plan | Not present — either build it or remove from plan |
+| `HARDENING_PLAN.md` | Omar Tarek's plan | Not present — confirm or remove from plan |
+
+**A.13.4 Overlap warnings**
+- `docker-compose.yml` and `docker-compose.lab.yml` are co-owned (Omar K + Shaban / Omar K + Shahd). Decide on a single PR-approver per file before freeze.
+- `frontend/src/components/MetricCard.jsx` overlaps Omnia (chart visual) and Rahma (UI primitive) — primary = Omnia.
+- `backend/tests/test_e2e_scans.py` overlaps Yosef and Mazin — primary = Yosef (backend pytest), Mazin contributes scenarios.
+- `frontend/src/tests/Dashboard.test.js` — primary = Mazin, Yosef as backup.
+- `HOW_TO_RUN.md` — Omar K writes infra/ops content, Omar Tarek polishes language.
+
+— *Appendix A generated 2026-05-07 from a full repo audit. Re-run after every freeze gate.*

@@ -510,3 +510,117 @@ The backend is restarting or overloaded. The frontend reconnects automatically w
 ---
 
 *Last updated: 2026-04-25 (stabilization phase 5 — lab isolation & simplified configuration)*
+
+---
+
+# Appendix — Mode 1 Run Report (2026-04-22)
+
+> Merged from `mode1run.md`. Reference run that proved Mode 1 (Lite) is fully operational.
+
+**Generated:** 2026-04-22 — 23:01 (local) / 21:01 UTC · **Run Type:** Mode 1 (Dashboard + Lab Scans, Lite)
+
+## Summary
+
+| Check | Result |
+|---|---|
+| Docker Desktop | OK (v29.3.1) |
+| Lab Network | OK (`the-dashboard-project-_lab_network`) |
+| Main Stack Build | OK (after 1 fix — see §3) |
+| All 6 Core Services | Up |
+| Backend Health | `status: ok` |
+| DB Schema | `m7n8o9p0q1r2` (current = head) |
+| Redis | Connected |
+| Celery Worker | Ready (3 tasks registered) |
+| Lab Environment | All lab containers up |
+| Lab Targets Seeded | 2 targets (from previous session) |
+| API Authentication | JWT Bearer flow works |
+| Dashboard URL | https://localhost (Caddy TLS) |
+| Swagger Docs | http://localhost:8000/docs |
+
+**Overall: Mode 1 is FULLY OPERATIONAL.**
+
+## Build Issue & Fix
+
+The new `frontend/Dockerfile.prod` uses `npm ci`, requiring `package-lock.json` perfectly in sync with `package.json`. The pulled code added `framer-motion`, `d3-hierarchy`, `zustand`, `react-window` without regenerating the lock file.
+
+```
+npm error `npm ci` can only install packages when your package.json and package-lock.json are in sync.
+npm error Missing: d3-hierarchy@3.1.2 from lock file
+npm error Missing: framer-motion@11.18.2 from lock file
+npm error Missing: react-window@1.8.11 from lock file
+npm error Missing: zustand@4.5.7 from lock file
+```
+
+**Fix applied:** changed `Dockerfile.prod` from `RUN npm ci --prefer-offline` → `RUN npm install`.
+**Permanent fix needed:** regenerate `package-lock.json` and commit it.
+
+Build then completed in ~4 min 9 s. Frontend output: 3,201 modules, dist/index 1.12 kB, dist/assets/vendor-charts 541.07 kB (gzip 153.9 kB), dist/assets/index 132.30 kB (gzip 42.79 kB), built in 17.23 s.
+
+## Container Status (Post-Startup)
+
+| Container | Status | Ports | Memory |
+|---|---|---|---|
+| `sme_dashboard_caddy` | Up | 80→80, 443→443 | 14 MiB / 64 MiB |
+| `sme_dashboard_backend` | Up | 8000→8000 | 116 MiB / 384 MiB |
+| `sme_dashboard_frontend` | Up | 80/tcp internal | 7 MiB / 48 MiB |
+| `sme_dashboard_db` | Up (healthy) | 5432→5432 | 31 MiB / 256 MiB |
+| `sme_dashboard_redis` | Up | 6379→6379 | 5 MiB / 96 MiB |
+| `sme_dashboard_celery` | Up | — | 85 MiB / 512 MiB |
+| **Main stack total** | | | **~258 MiB** |
+| `lab_webserver` | Up | :3000 (Juice Shop) | 126 MiB / 384 MiB |
+| `lab_api_gateway` | Up | :8081 (nginx) | 10 MiB / 64 MiB |
+| `lab_database` | Up | :5433 (Postgres) | 33 MiB / 128 MiB |
+| `lab_fileserver` | Up (healthy) | :4445 (SMB), :1139 | 24 MiB / 128 MiB |
+| `lab_redis_cache` | Up | :6380 | 4 MiB / 64 MiB |
+| `lab_traffic_gen` | Up | — | 67 MiB / 128 MiB |
+| **Lab stack total** | | | **~264 MiB** |
+| **Grand total** | | | **~522 MiB containers** |
+
+## Backend Health
+
+```json
+{
+  "status": "ok",
+  "api": true,
+  "redis": true,
+  "workers": true,
+  "schema_synced": true,
+  "schema_detail": "current=m7n8o9p0q1r2 head=m7n8o9p0q1r2"
+}
+```
+
+## Celery Worker
+3 tasks registered: `check_sla_breaches`, `run_scan_task`, `trigger_periodic_scan`. Concurrency=1 (lite). Connected to `redis://redis:6379/0`.
+
+## Lab Target Seed
+`POST http://localhost:8000/api/v1/lab/seed` →
+```json
+{
+  "seeded": [
+    { "name": "E-Commerce Web Server",  "status": "exists" },
+    { "name": "Corporate API Gateway",  "status": "exists" }
+  ],
+  "count": 2
+}
+```
+
+## Auth & Verification
+- `POST /api/v1/auth/login` — `admin@local / Admin@1234` → JWT Bearer (HS256), `role: ADMIN`, `force_password_change: true`.
+- Targets registered: `[Lab] E-Commerce Web Server` (http://lab_webserver:3000), `[Lab] Corporate API Gateway` (http://lab_api_gateway:8081).
+
+## Issues Encountered
+
+1. **`npm ci` fails on frontend build** (FIXED) — `package-lock.json` stale; switched to `npm install` in `Dockerfile.prod`. Permanent fix: regenerate the lock file.
+2. **Admin password not set** (worked around) — `postgres_data` volume preserved from a prior session with a different password. `docker compose down -v` + restart reseeds correctly.
+3. **Redis listener reconnect warnings** (benign) — async listener times out during 30 s startup wait; recovers within 1 s.
+
+## Resource Budget
+
+| Component | RAM Used | RAM Limit |
+|---|---|---|
+| Main stack | ~258 MiB | 1.36 GiB |
+| Lab containers (6) | ~264 MiB | ~896 MiB |
+| **Mode 1 grand total** | **~522 MiB** | ~2.2 GiB |
+
+Well within the 8 GB Mode 1 budget. Windows + Docker Desktop overhead (~4.5 GB) → total system usage ~5.0–5.5 GB on a 16 GB machine.
+

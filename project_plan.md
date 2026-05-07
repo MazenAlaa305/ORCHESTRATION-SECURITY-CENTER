@@ -903,3 +903,154 @@ Every team member regardless of sub-team must understand:
 ---
 
 *Last Updated: April 19, 2026 | Team Leader: Omar Kapil | Version: 2.0*
+
+---
+
+## Appendix A — Complete File Ownership Map (Repo Audit, 2026-05-07)
+
+> Produced from a full sweep of the working tree. Mirrors `DR_descution.md` Appendix A.
+> Use this as the gatekeeping reference when assigning PR reviewers. *(shared: Name)* = co-owned, listed member is primary.
+
+### Summary table
+
+| Member | Role | Primary subsystems | # Files Owned |
+|---|---|---|---|
+| Omar Kapil | Team Lead / DevOps | Compose, infra, CI/CD, lifecycle scripts, audit/coord docs | ~22 |
+| Reem Amin | Backend Sub-Lead | FastAPI core, auth/admin endpoints, ORM models, schemas, Alembic | ~40 (incl. all 16 migrations) |
+| Yousef Abdel Hady | AI & Risk Engine | Agent pipeline, risk/scoring, LLM advisory layer | ~13 |
+| Mohamed Shaban | Task Queue & Docker | Celery, Redis pub/sub, WS bridge, lab/SOAR orchestration | ~13 |
+| Marize Ehap | Frontend Sub-Lead | App shell, routing, contexts, services, hooks, design-system primitives, build config | ~32 |
+| Omnia Helmy | Visualizations | Topology, charts, KPI cards | ~12 |
+| Rahma Ebrahem | UI/UX Panels | Operational panels, drawers, modals, UX primitives | ~28 |
+| Shahd Paher | Security & Lab | Scanners, scope guard, OpenVAS UI, lab config, scenarios | ~25 |
+| Mariz Ehap | SIEM | Wazuh/Elastic integration, log shipper, custom rules | 8 |
+| Yosef Ali | QA (API) | Pytest suite, Postman collection, smoke scripts | ~16 |
+| Mazin Alla | QA (E2E) | Playwright suite, UAT/Browser-Compat reports | 7 |
+| Omar Tarek | Documentation & Slides | FYP report, slides, demo scripts, docs/, role docs | ~24 |
+
+### A.1 Omar Kapil — DevOps / Team Lead
+
+- **Compose:** docker-compose.yml *(shared: Shaban)*, docker-compose.lab.yml *(shared: Shahd)*
+- **CI/CD:** .github/workflows/ci.yml, cd.yml
+- **Reverse proxy / isolation:** infra/caddy/Caddyfile, infra/nginx.conf, infra/isolation/*
+- **Lifecycle scripts:** lab_setup.ps1 *(shared: Shahd)*, trigger_lab_scans.ps1, start-lite.ps1/sh, start-full.ps1, stop-all.ps1/sh
+- **Coord docs:** project_plan.md, SECURITY_AUDIT.md, AUDIT_REPORT.md, FINAL_DEMO_SCRIPT.md, MANUAL_LIVE_DEMO.md, FINISHINGPLAN.md, mode1run.md, omar_kapil_role.md, HOW_TO_RUN.md *(shared: Omar Tarek)*
+- **Hidden config:** .env, .gitignore, .vscode/, .claude/
+
+### A.2 Reem Amin — Backend Sub-Lead
+
+- **Core:** backend/app/main.py, backend/app/core/{config,database,security,crypto,request_id}.py
+- **API plumbing:** backend/app/api/{api,deps}.py + all `__init__.py`
+- **Endpoints:** auth.py, dashboard.py, scans.py, targets.py, reports.py, rbac.py, audit.py, config.py
+- **Models / Schemas:** backend/app/models/{scan,user,config}.py, backend/app/schemas/scan.py
+- **Alembic:** backend/alembic/env.py + all 16 versions/*.py + backend/alembic.ini
+- **Bootstrap:** backend/{Dockerfile *(shared: Omar K)*, requirements.txt, init_db.py, seed_user.py, utils.py}
+
+### A.3 Yousef Abdel Hady — AI & Risk Engine
+
+- **Agents:** agent_orchestrator.py, discovery_agent.py, intelligence_agent.py, validation_probe.py, finding_dedup.py
+- **Scoring:** unified_risk_engine.py, cvss.py, scoring_explainer.py, framework_tagger.py, sla.py
+- **LLM:** ai_advisor.py, llm_guard.py, backend/ai_advisor.py *(legacy duplicate)*
+- **Frontend consumer:** frontend/src/components/SecurityAdvisor.jsx
+
+### A.4 Mohamed Shaban — Task Queue & Docker
+
+- **Async/Celery/WS:** scan_tasks.py, event_publisher.py, ws_manager.py, scan_reaper.py, task_monitor.py, asset_monitor.py, core/celery_app.py
+- **Lab/SOAR:** lab_manager.py, soar_orchestrator.py, endpoints/lab.py
+- **Health:** infra/healthcheck.sh, backend/scripts/full_system_check.py, docker-compose.yml *(shared: Omar K)*
+
+### A.5 Marize Ehap — Frontend Sub-Lead
+
+- **App shell:** App.jsx, main.jsx, pages/{Dashboard,LoginPage,SettingsPage}.jsx, layout/{Layout,Sidebar}.jsx
+- **Contexts/services/hooks:** context/{RealTime,Auth,Config}Context.jsx, services/api.js, api/config.js, hooks/{useAuth,useGlobalShortcuts,useSavedViews}.js, stores/envStore.js
+- **Design-system primitives:** ui/{CyberButton,CyberBadge,ProtectedRoute,RoleGuard,Tabs,SubTabBar,GaugeRing}.jsx, ErrorBoundary.jsx, TabNavigation.jsx, CommandPalette.jsx, ToastProvider.jsx, QuickScanPopover.jsx, ShortcutCheatsheet.jsx, NotificationsBell.jsx
+- **Build config:** tailwind.config.js, postcss.config.js, vite.config.js, package.json, package-lock.json, index.html, Dockerfile, Dockerfile.prod *(shared: Omar K)*
+
+### A.6 Omnia Helmy — Visualizations
+
+- NetworkTopology.jsx, TopologyLegend.jsx, VulnTrend.jsx, RiskHeatmap.jsx, UptimeGauge.jsx, StatCards.jsx, SeverityDonut.jsx, AssetTimeline.jsx, ExposureMap.jsx, RiskScore.jsx, RiskBreakdownDrawer.jsx, MetricCard.jsx *(shared: Rahma)*
+
+### A.7 Rahma Ebrahem — UI/UX Panels
+
+- **Operational:** ActionCenter, OrchestrationFeed, ScanButton, ScanHistory, ScanConfigModal, ScanPipelinePanel, ScanningBanner, ActivityFeed, AgentLogViewer, LiveConsole, Taskbar
+- **Drawers/modals:** AssetDetailPanel, IncidentDetailDrawer, VulnerabilitiesPanel, RemediationPanel, TargetsManager, UnifiedInbox, Reports, SettingsPanel, EnvironmentWizard, LabEnvironment
+- **Legacy/root:** components/{Dashboard,DeviceDetailModal,ReportGenerator}.jsx
+- **UX primitives:** ui/{Toast,SkeletonPulse,EmptyState,ConfirmDialog}.jsx
+- **UX docs:** UX_ENHANCEMENT_PLAN.md
+
+### A.8 Shahd Paher — Security & Lab
+
+- **Backend services:** nmap_wrapper.py, nuclei_wrapper.py, openvas.py, infrastructure_agent.py, scope_guard.py, pdf_generator.py, report_signer.py
+- **Endpoints:** findings.py, openvas.py, vulnerabilities.py, network.py
+- **Frontend OpenVAS:** components/OpenVAS/{ScanButton,Scheduler,RiskChart,VulnerabilitiesList}.jsx
+- **Lab:** docker-compose.lab.yml *(shared: Omar K)*, lab_setup.ps1 *(shared: Omar K)*, lab/scenarios/{sqli,xss,misconfig}_scenario.md, lab/data/**, lab/config/{coredns,nginx,postgres}/**, lab/traffic-generator/**, lab_config/{nginx.conf,entrypoint.sh}, infra/openvas/sync.sh, backend/scripts/simulate_attack.py
+
+### A.9 Mariz Ehap — SIEM
+
+- **Backend:** wazuh_integration.py, elastic_integration.py, alert_correlator.py, endpoints/siem.py
+- **Lab:** lab/log-shipper/{Dockerfile,shipper.py,requirements.txt}, lab/wazuh/custom_rules.xml
+
+### A.10 Yosef Ali — QA (API/Integration)
+
+- **Pytest:** backend/tests/{conftest, test_auth, test_auth_flow, test_rbac, test_endpoints, test_risk, test_risk_engine, test_risk_engine_manual, test_agents, test_websocket, test_scan_tasks, test_nmap_wrapper, test_siem_integration, test_e2e_scans *(shared: Mazin)*}.py
+- **Postman/smoke:** postman/OrchestrationSecurityCenter_API.postman_collection.json, backend/verify_auth.ps1, backend/verify_scan.ps1, scratch_check_assets.py
+
+### A.11 Mazin Alla — QA (E2E)
+
+- tests/e2e/{conftest,test_login_flow,test_scan_trigger,test_report_export}.py
+- frontend/src/tests/Dashboard.test.js *(shared: Yosef)*
+- UAT_REPORT.md, BROWSER_COMPAT_REPORT.md
+
+### A.12 Omar Tarek — Documentation & Slides
+
+- **Reports:** FYP_Documentation.md, FYP_Figures.md, PROJECT_OVERVIEW.md, USE_CASES_AND_EVALUATION.md, ARCHITECTURE_DIAGRAM.md, HOW_TO_RUN.md *(shared: Omar K)*, DR_descution.md
+- **Slides:** FINAL_PRESENTATION.{md,pptx}, Found404_Graduation_Presentation.pptx, Found_404_Defense_Presentation.pptx, Graduation_Presentation_Guide.docx, build_presentation.py, generate_presentation.py, google_slides_script.gs, the all project screens.pdf, docaiv_v2.docx
+- **Demo:** demo/{demo_script,demo_checklist}.md
+- **docs/ tree:** docs/{API_GUIDE.md, ARCHITECTURE_DIAGRAM.md, PRESENTATION_PLAN.md, audit/baseline_2026-04-24.md, contracts/openapi_2026-04-24.json}
+- **team_roles/ index:** all 13 files (README + 12 per-member docs)
+
+### A.13 Files needing your decision
+
+**Auto-assigned to most-related role (please confirm):**
+- `backend/ai_advisor.py` (legacy duplicate) → Yousef
+- `backend/app/services/{sla,asset_monitor,lab_manager,pdf_generator,report_signer}.py` → Yousef / Shaban / Shaban / Shahd / Shahd respectively
+- `backend/app/api/v1/endpoints/{audit,config,vulnerabilities,network,lab}.py` → Reem / Reem / Shahd / Shahd / Shaban
+- `backend/app/models/config.py` → Reem
+- `backend/scripts/{full_system_check,simulate_attack}.py` → Shaban / Shahd
+- `frontend/src/components/SecurityAdvisor.jsx` → Yousef (primary)
+- `frontend/src/components/MetricCard.jsx` → Omnia (shared: Rahma)
+- `frontend/src/api/config.js`, `stores/envStore.js`, `hooks/use{GlobalShortcuts,SavedViews}.js` → Marize
+- `frontend/src/tests/Dashboard.test.js` → Mazin (shared: Yosef)
+- `infra/healthcheck.sh` → Shaban; `infra/caddy/Caddyfile`, `infra/nginx.conf`, `infra/isolation/*` → Omar K; `infra/openvas/sync.sh` → Shahd
+- `lab_config/{nginx.conf,entrypoint.sh}` → Shahd
+- `lab/log-shipper/*`, `lab/wazuh/custom_rules.xml` → Mariz
+- `lab/data/*`, `lab/config/*`, `lab/traffic-generator/*` → Shahd
+- `start-{lite,full}.{ps1,sh}`, `stop-all.{ps1,sh}` → Omar K
+- `trigger_lab_scans.ps1` → Omar K (shared: Shahd)
+- `evidence/phase{2..6}/*` → Omar K (shared: Yosef)
+- `BROWSER_COMPAT_REPORT.md`, `UAT_REPORT.md` → Mazin
+- `SECURITY_AUDIT.md`, `AUDIT_REPORT.md`, `MANUAL_LIVE_DEMO.md`, `mode1run.md`, `FINISHINGPLAN.md` → Omar K
+- `UX_ENHANCEMENT_PLAN.md` → Rahma
+- `team_roles/*.md` (13 files) → Omar Tarek
+- `docs/PRESENTATION_PLAN.md`, `docs/audit/baseline_2026-04-24.md`, `docs/contracts/openapi_2026-04-24.json` → Omar Tarek
+- All slide-build artefacts (`*.pptx`, `*.docx`, `build_presentation.py`, `generate_presentation.py`, `google_slides_script.gs`, `the all project screens.pdf`) → Omar Tarek
+
+**Truly unassigned (decide):**
+- `newplan24/4/2026.md` — orphan note; confirm relevance or delete
+- `test.db` — SQLite runtime artefact; add to `.gitignore` and remove from repo
+- `omar_kapil_role.md` (root) — duplicate of `team_roles/00_omar_kapil_role.md`; decide which to keep
+- `docaiv_v2.docx` — appears to be Omar Tarek's; confirm
+
+**Listed in this plan but missing from tree (fix the plan or build the file):**
+- `frontend/src/components/VulnerabilityList.jsx` — replaced by `dashboard/VulnerabilitiesPanel.jsx`; remove from Rahma's list
+- `lab/kibana/dashboards/sme_overview.ndjson` — not present; Mariz to build or drop
+- `HARDENING_PLAN.md` — not present; Omar Tarek to build or drop
+
+**Co-ownership warnings (assign primary PR approver):**
+- `docker-compose.yml` (Omar K + Shaban), `docker-compose.lab.yml` (Omar K + Shahd)
+- `frontend/src/components/MetricCard.jsx` (Omnia + Rahma) — primary: Omnia
+- `backend/tests/test_e2e_scans.py` (Yosef + Mazin) — primary: Yosef
+- `frontend/src/tests/Dashboard.test.js` (Mazin + Yosef) — primary: Mazin
+- `HOW_TO_RUN.md` (Omar K + Omar Tarek) — primary: Omar K
+
+*Appendix A generated 2026-05-07 from a full repo sweep. Re-run after every freeze gate.*
