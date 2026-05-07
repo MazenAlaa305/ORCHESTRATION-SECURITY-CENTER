@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 import Layout from '../layout/Layout';
 import StatCards from '../components/dashboard/StatCards';
@@ -20,7 +21,7 @@ import { useConfig } from '../context/ConfigContext';
 import {
     LayoutDashboard, History, Settings, Activity,
     Network, FileText, Target, Bug, Brain,
-    Scan as ScanIcon, Zap, Server,
+    Scan as ScanIcon, Server,
 } from 'lucide-react';
 
 // ── Lazy-loaded heavy panels (code-split to improve initial load time) ────────
@@ -29,10 +30,8 @@ const ScanHistory          = lazy(() => import('../components/dashboard/ScanHist
 const TargetsManager       = lazy(() => import('../components/dashboard/TargetsManager'));
 const VulnerabilitiesPanel = lazy(() => import('../components/dashboard/VulnerabilitiesPanel'));
 const AgentLogViewer       = lazy(() => import('../components/dashboard/AgentLogViewer'));
-const ScanPipelinePanel    = lazy(() => import('../components/dashboard/ScanPipelinePanel'));
 const UnifiedInbox         = lazy(() => import('../components/dashboard/UnifiedInbox'));
 const Reports              = lazy(() => import('../components/dashboard/Reports'));
-const OpenVasScanButton    = lazy(() => import('../components/OpenVAS/ScanButton'));
 const RiskChart            = lazy(() => import('../components/OpenVAS/RiskChart'));
 const Scheduler            = lazy(() => import('../components/OpenVAS/Scheduler'));
 const VulnerabilitiesList  = lazy(() => import('../components/OpenVAS/VulnerabilitiesList'));
@@ -147,7 +146,7 @@ const Dashboard = () => {
     const handleScanStarted = (scan) => {
         setRefreshKey(k => k + 1);
         if (scan?.id) setActiveScanId(scan.id);
-        navTo('ai-brain', 'ai-console');
+        navTo('operations', 'history');
     };
 
     const handleMainTabChange = useCallback((tabId) => {
@@ -158,11 +157,13 @@ const Dashboard = () => {
         navTo(activeTab, sub);
     }, [navTo, activeTab]);
 
-    // Vuln trend: last 7 scans in chronological order
-    const trendData = [...scans].slice(0, 7).reverse().map(s => ({
-        date:  s.started_at ? new Date(s.started_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '?',
-        count: s.vulnerabilities_count ?? 0,
-    }));
+    // Exposure trend: daily vulnerability discovery counts from the backend
+    const { data: trendData = [] } = useQuery({
+        queryKey: ['exposure-trend'],
+        queryFn: () => dashboardService.getExposureTrend(14).then(r => r.data),
+        staleTime: 60_000,
+        refetchInterval: 60_000,
+    });
 
     // Heatmap data sourced directly from live KPI counts
     const heatmapData = [
@@ -295,7 +296,11 @@ const Dashboard = () => {
                             </div>
                         )}
                         {activeSubTab === 'history' && <ScanHistory refresh={refreshKey} />}
-                        {activeSubTab === 'targets' && <TargetsManager onScanStarted={handleScanStarted} />}
+                        {activeSubTab === 'targets' && (
+                            <ErrorBoundary>
+                                <TargetsManager onScanStarted={handleScanStarted} />
+                            </ErrorBoundary>
+                        )}
                         {activeSubTab === 'lab'     && <LabEnvironment />}
                     </Suspense>
                 </div>

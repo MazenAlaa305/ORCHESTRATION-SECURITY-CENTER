@@ -34,13 +34,26 @@ const VulnerabilitiesList = ({ taskId, scanId }) => {
         fetchResults();
     }, [taskId, scanId]);
 
-    if (!taskId) {
-        return <div className="text-gray-500 italic text-center p-10">Select a scan to view detailed results.</div>;
+    // Show placeholder when neither an OpenVAS taskId nor a regular scanId is provided
+    if (!taskId && !scanId) {
+        return (
+            <div className="glass-card flex flex-col items-center justify-center gap-3 p-10 text-center">
+                <ShieldCheck className="h-10 w-10 text-gray-600" />
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">No scan selected</p>
+                <p className="text-gray-700 text-xs">Run a scan to see vulnerability results here.</p>
+            </div>
+        );
     }
 
     if (loading) return <div className="text-cyber-accent text-center p-10 animate-pulse">Loading Scan Results...</div>;
     if (error) return <div className="text-red-400 text-center p-10">{error}</div>;
-    if (results.length === 0) return <div className="text-green-400 text-center p-10 flex flex-col items-center gap-2"><ShieldCheck className="h-10 w-10" /> No vulnerabilities found!</div>;
+    if (results.length === 0) return (
+        <div className="glass-card flex flex-col items-center justify-center gap-3 p-10 text-center">
+            <ShieldCheck className="h-10 w-10 text-green-500" />
+            <p className="text-green-400 text-sm font-bold">No vulnerabilities found</p>
+            <p className="text-gray-600 text-xs">This scan came back clean.</p>
+        </div>
+    );
 
     const toggleExpand = (index) => {
         if (expandedFull === index) setExpandedFull(null);
@@ -76,8 +89,12 @@ const VulnerabilitiesList = ({ taskId, scanId }) => {
                             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <h5 className="text-cyber-neon text-xs uppercase font-bold mb-1">Description</h5>
-                                    <p className="text-gray-300 text-sm leading-relaxed">{vuln.description}</p>
-                                    {vuln.simplified_description && (
+                                    <p className="text-gray-300 text-sm leading-relaxed">
+                                        {vuln.simplified_description || vuln.description
+                                            || (vuln.type ? `A ${vuln.type} vulnerability was detected on ${vuln.url || vuln.host || 'the target system'}.` : null)
+                                            || `Security finding on ${vuln.url || vuln.host || 'target'}. Severity: ${(vuln.severity || 'unknown').toUpperCase()}.`}
+                                    </p>
+                                    {vuln.simplified_description && vuln.description && (
                                         <div className="mt-2 bg-blue-500/10 p-2 rounded border border-blue-500/30">
                                             <p className="text-blue-200 text-xs italic">
                                                 <span className="font-bold">AI Summary:</span> {vuln.simplified_description}

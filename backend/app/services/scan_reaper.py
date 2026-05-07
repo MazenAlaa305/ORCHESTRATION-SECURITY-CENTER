@@ -18,8 +18,8 @@ from app.models.scan import Scan, ScanStatus
 logger = logging.getLogger(__name__)
 
 # Default threshold: scans running longer than this are considered orphaned.
-# 60 minutes is generous — even a full Nmap + Nuclei scan should complete in < 20 min.
-DEFAULT_STALE_MINUTES = 60
+# 5 minutes covers any scan that was in-flight when the worker was restarted.
+DEFAULT_STALE_MINUTES = 5
 
 
 async def reap_orphan_scans(db, stale_after_minutes: int = DEFAULT_STALE_MINUTES) -> int:

@@ -60,6 +60,16 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
         }
     }, [realTime.scanStatus]);
 
+    // Watchdog: if the button stays locked for > 10 minutes, force-reset
+    useEffect(() => {
+        if (!isRunning) return;
+        const timer = setTimeout(() => {
+            setLoading(false);
+            setStepIndex(-1);
+        }, 10 * 60 * 1000);
+        return () => clearTimeout(timer);
+    }, [isRunning]);
+
     const handleScan = async () => {
         setError('');
         const trimmed = target.trim();

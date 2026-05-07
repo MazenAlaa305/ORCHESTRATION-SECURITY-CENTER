@@ -585,6 +585,31 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         )
         cumulative_health = round(max(0.0, 100.0 - _risk), 2)
 
+        # Publish ALERT_NEW for critical/high findings so the notifications bell populates
+        _now_iso = datetime.utcnow().isoformat()
+        _alerted_sevs = {"critical", "high"}
+        _alerted_vulns = [v for v in all_vulns if v.get("severity", "").lower() in _alerted_sevs]
+        for _av in _alerted_vulns[:15]:
+            publisher.publish_sync("ALERT_NEW", {
+                "title": f"{_av['severity'].title()} — {_av['description'][:80]}",
+                "severity": _av["severity"].lower(),
+                "message": _av["description"],
+                "target": _av.get("host", raw_target),
+                "timestamp": _now_iso,
+            })
+        # Always publish a scan-complete summary notification
+        _top_sev = "critical" if counts["critical"] > 0 else "high" if counts["high"] > 0 else "medium" if counts["medium"] > 0 else "info"
+        publisher.publish_sync("ALERT_NEW", {
+            "title": f"Scan Complete — {vuln_count} finding(s) on {_sanitise_target(raw_target)}",
+            "severity": _top_sev,
+            "message": (
+                f"{counts['critical']} critical, {counts['high']} high, "
+                f"{counts['medium']} medium, {counts['low']} low"
+            ),
+            "target": raw_target,
+            "timestamp": _now_iso,
+        })
+
         publisher.publish_sync("SCAN_STATUS", {"scan_id": scan.id, "status": "COMPLETED"})
         publisher.publish_sync("RISK_UPDATE", {
             "scan_id": scan.id,
@@ -601,6 +626,11 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         scan.status = ScanStatus.FAILED
         scan.failure_reason = str(exc)[:120]
         scan.risk_score = 0
+        # Notify frontend so the scan button unlocks immediately
+        try:
+            publisher.publish_sync("SCAN_STATUS", {"scan_id": scan_id, "status": "IDLE"})
+        except Exception:
+            pass
         try:
             self.retry(exc=exc)
         except Exception:

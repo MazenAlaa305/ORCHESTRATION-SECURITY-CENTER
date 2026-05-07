@@ -29,6 +29,7 @@ class KPISnapshot(BaseModel):
     total_assets: int
     last_scan_id: Optional[str]
     overdue_findings: int = 0   # Phase 4.3 — SLA breach count
+    in_progress_count: int = 0  # Vulnerabilities currently being remediated
 
 
 class RiskBreakdownItem(BaseModel):
@@ -139,12 +140,12 @@ def get_kpi_snapshot(db: Session = Depends(get_db)):
 
     # SLA overdue — count OPEN vulnerabilities past their SLA window
     # Uses the vulnerabilities table directly (findings table is sparsely populated).
-    # SLA windows: CRITICAL=7d, HIGH=30d, MEDIUM=90d, LOW=180d
+    # SLA windows: CRITICAL=1d, HIGH=3d, MEDIUM=7d, LOW=14d
     _SLA_WINDOWS = {
-        SeverityLevel.CRITICAL: 7,
-        SeverityLevel.HIGH:     30,
-        SeverityLevel.MEDIUM:   90,
-        SeverityLevel.LOW:      180,
+        SeverityLevel.CRITICAL: 1,
+        SeverityLevel.HIGH:     3,
+        SeverityLevel.MEDIUM:   7,
+        SeverityLevel.LOW:      14,
     }
     try:
         from datetime import timedelta
@@ -163,6 +164,13 @@ def get_kpi_snapshot(db: Session = Depends(get_db)):
     except Exception:
         overdue = 0
 
+    # In-progress count — vulnerabilities actively being remediated
+    in_progress_count = (
+        db.query(Vulnerability)
+        .filter(Vulnerability.status == VulnStatus.IN_PROGRESS)
+        .count()
+    )
+
     return {
         "overall_score": overall_score,
         "health_score": health_score,
@@ -170,7 +178,47 @@ def get_kpi_snapshot(db: Session = Depends(get_db)):
         "total_assets": assets_count,
         "last_scan_id": last_scan_id,
         "overdue_findings": overdue,
+        "in_progress_count": in_progress_count,
     }
+
+
+@router.get("/exposure-trend")
+def get_exposure_trend(days: int = 14, db: Session = Depends(get_db)):
+    """
+    Return daily vulnerability discovery counts for the last N days.
+    Counts ALL vulnerabilities (any status) discovered per day so the trend
+    reflects real exposure over time rather than filtering by current status.
+    """
+    from datetime import timedelta, date as date_type
+    from sqlalchemy import func, cast, Date as SADate
+
+    end = datetime.utcnow()
+    start = end - timedelta(days=days)
+
+    rows = (
+        db.query(
+            cast(Vulnerability.created_at, SADate).label("day"),
+            func.count(Vulnerability.id).label("count"),
+        )
+        .filter(Vulnerability.created_at >= start)
+        .group_by(cast(Vulnerability.created_at, SADate))
+        .order_by(cast(Vulnerability.created_at, SADate))
+        .all()
+    )
+
+    # Build lookup of day → count
+    day_counts = {str(r.day): r.count for r in rows}
+
+    # Fill every calendar day in the range (missing days = 0)
+    trend = []
+    for i in range(days):
+        day: date_type = (start + timedelta(days=i + 1)).date()
+        trend.append({
+            "date": day.strftime("%d %b"),
+            "count": day_counts.get(str(day), 0),
+        })
+
+    return trend
 
 
 @router.get("/risk/{scan_id}", response_model=RiskBreakdown)

@@ -153,6 +153,7 @@ export const dashboardService = {
     getActionItems: () => api.get('/dashboard/actions'),
     refreshRiskScores: () => api.post('/dashboard/refresh-risk'),
     getRiskBreakdown: (scanId) => api.get(`/dashboard/risk/${scanId}`),
+    getExposureTrend: (days = 14) => api.get('/dashboard/exposure-trend', { params: { days } }),
 };
 
 export const findingsService = {

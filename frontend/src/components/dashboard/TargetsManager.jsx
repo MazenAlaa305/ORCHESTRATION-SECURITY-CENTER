@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, Trash2, ExternalLink, Shield, Globe, Search, CheckCircle, Loader2, Zap } from 'lucide-react';
+import { Target, Plus, Trash2, ExternalLink, Shield, Globe, Search, CheckCircle, Loader2, Zap, AlertCircle, X } from 'lucide-react';
 import { targetService, pentesterService } from '../../services/api';
 import EnvironmentWizard from './EnvironmentWizard';
 import ScanConfigModal from './ScanConfigModal';
@@ -12,6 +12,7 @@ const TargetsManager = ({ onScanStarted }) => {
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(null);
     const [scanConfigTarget, setScanConfigTarget] = useState(null);
+    const [scanError, setScanError] = useState(null);
 
     // Discovery
     const [discoveryDomain, setDiscoveryDomain] = useState('');
@@ -62,10 +63,14 @@ const TargetsManager = ({ onScanStarted }) => {
 
     const handleStartAIScan = async (targetId) => {
         setScanning(targetId);
+        setScanError(null);
         try {
-            await pentesterService.startAIScan(targetId);
-            onScanStarted?.();
+            const res = await pentesterService.startAIScan(targetId);
+            window.dispatchEvent(new CustomEvent('dashboard:scan-started', { detail: res?.data }));
+            onScanStarted?.(res?.data);
         } catch (error) {
+            const msg = error?.response?.data?.detail || error?.message || 'Scan failed to start';
+            setScanError(msg);
             console.error('Failed to start AI scan:', error);
         } finally {
             setScanning(null);
@@ -83,6 +88,16 @@ const TargetsManager = ({ onScanStarted }) => {
 
     return (
         <div className="space-y-6 animate-fade-in">
+            {/* Scan error banner */}
+            {scanError && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                    <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                    <p className="text-red-300 text-sm flex-1">{scanError}</p>
+                    <button onClick={() => setScanError(null)} className="text-red-400 hover:text-red-300">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -232,7 +247,11 @@ const TargetsManager = ({ onScanStarted }) => {
                                 </span>
                                 {target.last_scanned_at && (
                                     <span className="text-[10px] text-gray-600 font-mono">
-                                        Last scan: {new Date(target.last_scanned_at).toLocaleDateString()}
+                                        Last scan: {new Date(
+                                            target.last_scanned_at.endsWith('Z') || target.last_scanned_at.includes('+')
+                                                ? target.last_scanned_at
+                                                : target.last_scanned_at + 'Z'
+                                        ).toLocaleDateString()}
                                     </span>
                                 )}
                             </div>

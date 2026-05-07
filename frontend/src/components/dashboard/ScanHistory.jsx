@@ -39,22 +39,31 @@ const riskBucket = (score) => {
     return 'info';
 };
 
+// Ensure naive UTC strings from the backend get a "Z" suffix so the browser
+// treats them as UTC rather than local time.
+const toUTC = (iso) => {
+    if (!iso) return null;
+    if (iso.endsWith('Z') || iso.includes('+') || iso.includes('-', 10)) return iso;
+    return iso + 'Z';
+};
+
 // "2h ago" relative formatter; falls back to absolute for > 30d.
 const relativeTime = (iso) => {
-    if (!iso) return 'N/A';
-    const t = new Date(iso).getTime();
+    const utc = toUTC(iso);
+    if (!utc) return 'N/A';
+    const t = new Date(utc).getTime();
     if (Number.isNaN(t)) return 'N/A';
     const diff = (Date.now() - t) / 1000;
     if (diff < 60)       return 'just now';
     if (diff < 3600)     return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400)    return `${Math.floor(diff / 3600)}h ago`;
     if (diff < 86400*30) return `${Math.floor(diff / 86400)}d ago`;
-    return new Date(iso).toLocaleDateString();
+    return new Date(utc).toLocaleDateString();
 };
 
 const formatDuration = (startedAt, completedAt) => {
     if (!startedAt || !completedAt) return '—';
-    const secs = Math.max(0, Math.round((new Date(completedAt) - new Date(startedAt)) / 1000));
+    const secs = Math.max(0, Math.round((new Date(toUTC(completedAt)) - new Date(toUTC(startedAt))) / 1000));
     if (secs < 60) return `${secs}s`;
     const m = Math.floor(secs / 60); const s = secs % 60;
     return s ? `${m}m ${s}s` : `${m}m`;
@@ -155,6 +164,23 @@ const ScanHistory = ({ refresh }) => {
     }, [q, status, profile, from, to, sort, order, page, pageSize, activeEnv]);
 
     useEffect(() => { fetchPage(); }, [fetchPage, refresh]);
+
+    // Auto-refresh every 30 seconds so new scans appear without a manual reload
+    useEffect(() => {
+        const interval = setInterval(() => fetchPage(), 30_000);
+        return () => clearInterval(interval);
+    }, [fetchPage]);
+
+    // Immediate refresh when a scan completes or starts (new scan appears instantly)
+    useEffect(() => {
+        const handler = () => fetchPage();
+        window.addEventListener('dashboard:scan-complete', handler);
+        window.addEventListener('dashboard:scan-started', handler);
+        return () => {
+            window.removeEventListener('dashboard:scan-complete', handler);
+            window.removeEventListener('dashboard:scan-started', handler);
+        };
+    }, [fetchPage]);
 
     const totalPages = Math.max(1, Math.ceil((data.total || 0) / (data.page_size || pageSize)));
     const hasFilters = q || status || profile || from || to;

@@ -86,7 +86,7 @@ const TopBar = ({ onQuickScan, isScanning }) => {
     const openPalette = () => window.dispatchEvent(new CustomEvent('dashboard:open-palette'));
 
     return (
-        <div className="h-12 border-b border-white/5 bg-[rgba(15,30,40,0.4)] backdrop-blur-xl px-5 flex items-center gap-4 shrink-0 relative z-10">
+        <div className="h-12 border-b border-white/5 px-5 flex items-center gap-4 shrink-0 relative z-10" style={{ background: 'rgb(8, 16, 24)' }}>
             {/* Command palette trigger — opens the real ⌘K palette */}
             <button
                 type="button"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { ZoomIn, ZoomOut, Maximize2, RefreshCw, Move } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Minimize2, RefreshCw, Move, Crosshair } from 'lucide-react';
 import AssetDetailPanel from './AssetDetailPanel';
 import TopologyLegend from './TopologyLegend';
 import { networkService } from '../../services/api';
@@ -20,15 +20,213 @@ const getNodeColor = (node) => {
     return '#00ff88';
 };
 
-// ─── Device icon glyphs ───────────────────────────────────
-const ICON_MAP = {
-    gateway:  '⊕',
-    server:   '▦',
-    firewall: '⬡',
-    desktop:  '▣',
-    mobile:   '◈',
-    router:   '⊞',
-    database: '◉',
+// ─── Canvas device icon renderer ──────────────────────────
+const drawDeviceIcon = (ctx, group, cx, cy, r, color) => {
+    const s = r * 0.52;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle   = color;
+    ctx.lineWidth   = Math.max(1, r * 0.11);
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.shadowBlur  = 0;
+
+    switch (group) {
+        case 'server': {
+            // Three-unit server rack
+            const rw = s * 1.55, rh = s * 0.38, gap = s * 0.18;
+            const startY = cy - (rh * 3 + gap * 2) / 2;
+            for (let i = 0; i < 3; i++) {
+                const ry = startY + i * (rh + gap);
+                ctx.globalAlpha = 0.12;
+                ctx.fillRect(cx - rw / 2, ry, rw, rh);
+                ctx.globalAlpha = 1;
+                ctx.strokeRect(cx - rw / 2, ry, rw, rh);
+                // Status LED
+                ctx.beginPath();
+                ctx.arc(cx + rw / 2 - rh * 0.38, ry + rh / 2, rh * 0.2, 0, Math.PI * 2);
+                ctx.globalAlpha = 0.9;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            break;
+        }
+        case 'router': {
+            // Box with wifi arcs above
+            const bw = s * 1.5, bh = s * 0.65;
+            const by = cy + s * 0.22;
+            ctx.globalAlpha = 0.12;
+            ctx.fillRect(cx - bw / 2, by - bh / 2, bw, bh);
+            ctx.globalAlpha = 1;
+            ctx.strokeRect(cx - bw / 2, by - bh / 2, bw, bh);
+            // Antenna lines
+            ctx.beginPath();
+            ctx.moveTo(cx - bw * 0.28, by - bh / 2);
+            ctx.lineTo(cx - bw * 0.28, by - bh / 2 - s * 0.38);
+            ctx.moveTo(cx + bw * 0.28, by - bh / 2);
+            ctx.lineTo(cx + bw * 0.28, by - bh / 2 - s * 0.38);
+            ctx.stroke();
+            // Antenna dots
+            ctx.beginPath();
+            ctx.arc(cx - bw * 0.28, by - bh / 2 - s * 0.42, s * 0.1, 0, Math.PI * 2);
+            ctx.arc(cx + bw * 0.28, by - bh / 2 - s * 0.42, s * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+            // Port dots
+            [-.25, 0, .25].forEach(o => {
+                ctx.beginPath();
+                ctx.arc(cx + bw * o, by + bh * 0.22, bh * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            break;
+        }
+        case 'gateway': {
+            // Diamond / hub shape: circle with 4 port stubs
+            ctx.beginPath();
+            ctx.arc(cx, cy, s * 0.52, 0, Math.PI * 2);
+            ctx.globalAlpha = 0.15;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+            // 4 directional stubs
+            const stubLen = s * 0.5;
+            [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(([dx, dy]) => {
+                ctx.beginPath();
+                ctx.moveTo(cx + dx * s * 0.52, cy + dy * s * 0.52);
+                ctx.lineTo(cx + dx * (s * 0.52 + stubLen), cy + dy * (s * 0.52 + stubLen));
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(cx + dx * (s * 0.52 + stubLen), cy + dy * (s * 0.52 + stubLen), s * 0.1, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            break;
+        }
+        case 'database': {
+            // Cylinder: top ellipse, sides, bottom ellipse, mid divider
+            const dw = s * 1.35, ey = s * 0.28, bodyH = s * 1.1;
+            const top = cy - bodyH / 2;
+            // Sides
+            ctx.beginPath();
+            ctx.moveTo(cx - dw / 2, top);
+            ctx.lineTo(cx - dw / 2, top + bodyH);
+            ctx.moveTo(cx + dw / 2, top);
+            ctx.lineTo(cx + dw / 2, top + bodyH);
+            ctx.stroke();
+            // Bottom ellipse
+            ctx.beginPath();
+            ctx.ellipse(cx, top + bodyH, dw / 2, ey, 0, 0, Math.PI * 2);
+            ctx.globalAlpha = 0.15;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+            // Mid divider (arc only — lower half visible)
+            ctx.beginPath();
+            ctx.ellipse(cx, top + bodyH * 0.45, dw / 2, ey, 0, 0, Math.PI, true);
+            ctx.stroke();
+            // Top ellipse (on top of sides)
+            ctx.beginPath();
+            ctx.ellipse(cx, top, dw / 2, ey, 0, 0, Math.PI * 2);
+            ctx.globalAlpha = 0.2;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+            break;
+        }
+        case 'firewall': {
+            // Shield shape with lock icon
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - s);
+            ctx.lineTo(cx + s * 0.82, cy - s * 0.48);
+            ctx.lineTo(cx + s * 0.82, cy + s * 0.1);
+            ctx.quadraticCurveTo(cx + s * 0.82, cy + s * 0.72, cx, cy + s);
+            ctx.quadraticCurveTo(cx - s * 0.82, cy + s * 0.72, cx - s * 0.82, cy + s * 0.1);
+            ctx.lineTo(cx - s * 0.82, cy - s * 0.48);
+            ctx.closePath();
+            ctx.globalAlpha = 0.12;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+            // Lock shackle
+            ctx.beginPath();
+            ctx.arc(cx, cy - s * 0.05, s * 0.28, Math.PI, 0, false);
+            ctx.stroke();
+            // Lock body
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(cx - s * 0.3, cy - s * 0.05, s * 0.6, s * 0.42, 2);
+            } else {
+                ctx.rect(cx - s * 0.3, cy - s * 0.05, s * 0.6, s * 0.42);
+            }
+            ctx.globalAlpha = 0.12;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+            break;
+        }
+        case 'mobile': {
+            // Phone outline
+            const pw = s * 0.82, ph = s * 1.55;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(cx - pw / 2, cy - ph / 2, pw, ph, 3);
+            } else {
+                ctx.rect(cx - pw / 2, cy - ph / 2, pw, ph);
+            }
+            ctx.globalAlpha = 0.12;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+            // Speaker slot
+            ctx.beginPath();
+            ctx.moveTo(cx - pw * 0.2, cy - ph / 2 + ph * 0.07);
+            ctx.lineTo(cx + pw * 0.2, cy - ph / 2 + ph * 0.07);
+            ctx.stroke();
+            // Home button circle
+            ctx.beginPath();
+            ctx.arc(cx, cy + ph / 2 - ph * 0.1, ph * 0.07, 0, Math.PI * 2);
+            ctx.stroke();
+            // Screen area
+            ctx.beginPath();
+            ctx.rect(cx - pw * 0.4, cy - ph * 0.3, pw * 0.8, ph * 0.45);
+            ctx.globalAlpha = 0.08;
+            ctx.fill();
+            ctx.globalAlpha = 0.4;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            break;
+        }
+        default: {
+            // Desktop monitor
+            const mw = s * 1.6, mh = s * 1.05;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(cx - mw / 2, cy - mh / 2 - s * 0.1, mw, mh, 2);
+            } else {
+                ctx.rect(cx - mw / 2, cy - mh / 2 - s * 0.1, mw, mh);
+            }
+            ctx.globalAlpha = 0.12;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+            // Inner screen
+            ctx.beginPath();
+            ctx.rect(cx - mw * 0.38, cy - mh * 0.28 - s * 0.1, mw * 0.76, mh * 0.62);
+            ctx.globalAlpha = 0.08;
+            ctx.fill();
+            ctx.globalAlpha = 0.4;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            // Stand
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + mh / 2 - s * 0.1);
+            ctx.lineTo(cx, cy + mh / 2 + s * 0.15);
+            ctx.moveTo(cx - s * 0.4, cy + mh / 2 + s * 0.15);
+            ctx.lineTo(cx + s * 0.4, cy + mh / 2 + s * 0.15);
+            ctx.stroke();
+            break;
+        }
+    }
+
+    ctx.restore();
 };
 
 // ─── Component ────────────────────────────────────────────
@@ -36,7 +234,9 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     const [graphData, setGraphData]     = useState({ nodes: [], links: [] });
     const [loading, setLoading]         = useState(true);
     const [selectedNode, setSelectedNode] = useState(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const fgRef = useRef();
+    const containerRef = useRef();
 
     useEffect(() => { fetchData(); }, [refresh]);
 
@@ -123,6 +323,30 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             fgRef.current.zoom(3.5, 1000);
         }
     }, []);
+
+    // ─── Fit: center the hub at (0,0) then zoom to show all nodes ─────
+    const handleFit = useCallback(() => {
+        const fg = fgRef.current;
+        if (!fg) return;
+        // Step 1: smoothly pan to hub (which is at 0,0)
+        fg.centerAt(0, 0, 400);
+        // Step 2: after pan completes, fit all nodes within view with generous padding
+        setTimeout(() => fg.zoomToFit(600, 80), 450);
+    }, []);
+
+    // ─── Toggle fullscreen ────────────────────────────────
+    const toggleFullscreen = useCallback(() => {
+        setIsFullscreen(f => !f);
+        // After state change, re-fit so graph fills the new container size
+        setTimeout(() => fgRef.current?.zoomToFit(400, 80), 350);
+    }, []);
+
+    // Escape exits fullscreen
+    useEffect(() => {
+        const handler = (e) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isFullscreen]);
 
     // ─── Canvas node renderer — circle style ──────────────
     const drawNode = useCallback((node, ctx, globalScale) => {
@@ -214,16 +438,11 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             ctx.lineWidth   = 1.5 / globalScale;
             ctx.stroke();
 
-            // Icon glyph
-            const icon = ICON_MAP[node.group] || ICON_MAP.desktop;
-            ctx.shadowBlur    = 0;
-            ctx.font          = `bold ${radius * 0.9}px JetBrains Mono`;
-            ctx.fillStyle     = color;
-            ctx.globalAlpha   = isRisk ? 1 : 0.88;
-            ctx.textAlign     = 'center';
-            ctx.textBaseline  = 'middle';
-            ctx.fillText(icon, node.x, node.y);
-            ctx.globalAlpha   = 1;
+            // Device icon
+            ctx.shadowBlur  = 0;
+            ctx.globalAlpha = isRisk ? 1 : 0.82;
+            drawDeviceIcon(ctx, node.group || 'desktop', node.x, node.y, radius, color);
+            ctx.globalAlpha = 1;
         }
 
         ctx.shadowBlur = 0;
@@ -260,19 +479,54 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         </div>
     );
 
+    const graphContainerStyle = isFullscreen
+        ? { position: 'fixed', inset: 0, zIndex: 9999, background: '#0c1c25' }
+        : { minHeight: compact ? 300 : 420 };
+
     return (
         <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6 animate-fade-in w-full h-full`}>
 
-            {/* Graph Container */}
-            <div className={`${compact ? 'lg:col-span-1' : 'lg:col-span-2'} relative overflow-hidden glass-card p-0`} style={{ minHeight: compact ? 300 : 420 }}>
-                {/* Title Bar */}
-                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-2.5"
-                     style={{ borderBottom: '1px solid rgba(0,255,255,0.06)', background:'rgba(2,9,15,0.6)', backdropFilter:'blur(10px)' }}>
+            {/* Details Panel — first in DOM = left column */}
+            {!compact && (
+                <div className={`lg:order-1 transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
+                    {selectedNode && selectedNode.id !== 'hub' ? (
+                        <AssetDetailPanel
+                            node={selectedNode}
+                            onClose={() => { setSelectedNode(null); fgRef.current?.zoomToFit(600); }}
+                        />
+                    ) : (
+                        <div className="h-full glass-card flex flex-col justify-center items-center text-center p-8 border-dashed group">
+                            <div className="p-5 rounded-full mb-6 group-hover:scale-110 transition-transform duration-500"
+                                 style={{ background:'rgba(0,255,255,0.05)', border:'1px solid rgba(0,255,255,0.08)' }}>
+                                <Move className="h-8 w-8" style={{ color:'rgba(0,255,255,0.3)' }} />
+                            </div>
+                            <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">
+                                Infrastructure Insight
+                            </h3>
+                            <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
+                                Click any <span style={{ color:'#00ffff' }}>node</span> on the topology map to view deep packet inspection and AI-generated risk analysis.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Graph Container — flex column so title bar is always in normal flow */}
+            <div
+                ref={containerRef}
+                className={`${compact ? 'lg:col-span-1' : 'lg:col-span-2'} lg:order-2 glass-card p-0 flex flex-col`}
+                style={graphContainerStyle}
+            >
+                {/* Title Bar — normal flow, never clipped */}
+                <div
+                    className="flex items-center justify-between px-4 py-2.5 shrink-0 rounded-t-[18px]"
+                    style={{ borderBottom: '1px solid rgba(0,255,255,0.06)', background:'rgba(2,9,15,0.6)', backdropFilter:'blur(10px)' }}
+                >
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" style={{ boxShadow:'0 0 6px #00ffff' }} />
-                        <span className="text-[10px] font-black text-white uppercase tracking-[0.25em]">Live Network Topology</span>
+                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" style={{ boxShadow:'0 0 6px #00ffff' }} />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Live Network Topology</span>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 shrink-0">
                         <button onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 1.4, 300)}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
                             title="Zoom In">
@@ -283,29 +537,38 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                             title="Zoom Out">
                             <ZoomOut className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => fgRef.current?.zoomToFit(400, 48)}
+                        <button onClick={handleFit}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
-                            title="Fit All / Center">
-                            <Maximize2 className="h-3.5 w-3.5" />
+                            title="Fit — center and zoom to show all devices">
+                            <Crosshair className="h-3.5 w-3.5" />
                         </button>
                         <button onClick={fetchData}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
                             title="Refresh">
                             <RefreshCw className="h-3.5 w-3.5" />
                         </button>
+                        <button
+                            onClick={toggleFullscreen}
+                            className={`p-1.5 rounded-lg transition-all ${isFullscreen ? 'text-cyan-400 bg-cyan-400/15 hover:bg-cyan-400/25' : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'}`}
+                            title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Maximize — full-screen topology'}
+                        >
+                            {isFullscreen
+                                ? <Minimize2 className="h-3.5 w-3.5" />
+                                : <Maximize2 className="h-3.5 w-3.5" />}
+                        </button>
                     </div>
                 </div>
 
-                {/* Floating Legend */}
-                <div className="absolute top-12 left-4 z-20">
-                    <TopologyLegend />
-                </div>
+                {/* Graph area — flex-1 so it fills remaining space, legend floats inside */}
+                <div className="relative flex-1 overflow-hidden">
+                    {/* Floating Legend — top-right, always inside graph area */}
+                    <div className="absolute z-30" style={{ top: 10, right: 12 }}>
+                        <TopologyLegend />
+                    </div>
 
-                {/* Scan-line overlay */}
-                <div className="scanline-overlay" style={{ top: 44 }} />
+                    {/* Scan-line overlay */}
+                    <div className="scanline-overlay" />
 
-                {/* Graph */}
-                <div className="w-full h-full" style={{ marginTop: 44 }}>
                     <ForceGraph2D
                         ref={fgRef}
                         graphData={graphData}
@@ -370,33 +633,8 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         onEngineStop={() => setTimeout(() => fgRef.current?.zoomToFit(300, 60), 100)}
                         onNodeClick={handleNodeClick}
                     />
-                </div>
-            </div>
-
-            {/* Details Panel */}
-            {!compact && (
-                <div className={`transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
-                    {selectedNode && selectedNode.id !== 'hub' ? (
-                        <AssetDetailPanel
-                            node={selectedNode}
-                            onClose={() => { setSelectedNode(null); fgRef.current?.zoomToFit(600); }}
-                        />
-                    ) : (
-                        <div className="h-full glass-card flex flex-col justify-center items-center text-center p-8 border-dashed group">
-                            <div className="p-5 rounded-full mb-6 group-hover:scale-110 transition-transform duration-500"
-                                 style={{ background:'rgba(0,255,255,0.05)', border:'1px solid rgba(0,255,255,0.08)' }}>
-                                <Move className="h-8 w-8" style={{ color:'rgba(0,255,255,0.3)' }} />
-                            </div>
-                            <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">
-                                Infrastructure Insight
-                            </h3>
-                            <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
-                                Click any <span style={{ color:'#00ffff' }}>node</span> on the topology map to view deep packet inspection and AI-generated risk analysis.
-                            </p>
-                        </div>
-                    )}
-                </div>
-            )}
+                </div>{/* end graph area */}
+            </div>{/* end graph container */}
         </div>
     );
 };

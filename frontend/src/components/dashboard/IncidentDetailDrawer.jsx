@@ -251,12 +251,28 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange, nav }) => {
                         )}
                     </div>
 
-                    {/* ─── 2. Description ─── */}
-                    {vuln.description && (
-                        <div className="px-6 py-4 border-b border-white/5">
-                            <p className="text-gray-400 text-sm leading-relaxed">{vuln.description}</p>
-                        </div>
-                    )}
+                    {/* ─── 2. Description ─── always rendered ─── */}
+                    {(() => {
+                        const aiDesc   = vuln.simplified_description;
+                        const rawDesc  = vuln.description;
+                        const typeDesc = vuln.type
+                            ? `A ${vuln.type} vulnerability was detected on ${vuln.url || vuln.host || 'the target system'}. Review the Proof of Concept section below for technical details and apply the remediation steps to resolve it.`
+                            : null;
+                        const fallback = `Security finding detected on ${vuln.url || vuln.host || 'the target system'}. Severity: ${(vuln.severity || 'unknown').toUpperCase()}. Review the remediation advice and proof of concept sections below.`;
+                        const desc   = aiDesc || rawDesc || typeDesc || fallback;
+                        const isAI   = !!aiDesc;
+                        return (
+                            <div className="px-6 py-4 border-b border-white/5">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Description</span>
+                                    {isAI && (
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-black uppercase tracking-wider">AI</span>
+                                    )}
+                                </div>
+                                <p className="text-gray-300 text-sm leading-relaxed">{desc}</p>
+                            </div>
+                        );
+                    })()}
 
                     {/* ─── 2b. Compliance Tags ─── */}
                     {vuln.control_tags && Object.keys(vuln.control_tags).length > 0 && (

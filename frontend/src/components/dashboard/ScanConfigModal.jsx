@@ -207,6 +207,22 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
         }
     }, [open, prefilledTarget?.id]);
 
+    // ── Payload (single source of truth — must stay above the early return so
+    //    useMemo is always called in the same hook slot every render)
+    const payload = useMemo(() => {
+        const p = {
+            scan_type: scanType,
+            tools: scanType === 'custom' ? customTools : null,
+            auto_report: autoReport,
+            siem_forward: siemForward,
+        };
+        if (targetMode === 'existing') p.target_id = selectedTargetId;
+        else p.target_url = targetUrl.trim();
+        if (effectiveCron) p.schedule = effectiveCron;
+        return p;
+    }, [scanType, customTools, autoReport, siemForward, targetMode, selectedTargetId, targetUrl, effectiveCron]);
+
+    // Early return AFTER all hooks — required by React rules of hooks
     if (!open) return null;
 
     // ── Handlers ─────────────────────────────────────────────────────────────
@@ -232,27 +248,16 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
         setCustomTools(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
     };
 
-    // ── Payload (single source of truth — shown in Review) ───────────────────
-    const payload = useMemo(() => {
-        const p = {
-            scan_type: scanType,
-            tools: scanType === 'custom' ? customTools : null,
-            auto_report: autoReport,
-            siem_forward: siemForward,
-        };
-        if (targetMode === 'existing') p.target_id = selectedTargetId;
-        else p.target_url = targetUrl.trim();
-        if (effectiveCron) p.schedule = effectiveCron;
-        return p;
-    }, [scanType, customTools, autoReport, siemForward, targetMode, selectedTargetId, targetUrl, effectiveCron]);
-
     const submit = async () => {
         setSubmitting(true);
         setError(null);
         try {
             const endpoint = effectiveCron ? '/scans/schedule' : '/scans/';
-            await api.post(endpoint, payload);
-            if (onStarted) onStarted();
+            const res = await api.post(endpoint, payload);
+            // Notify ScanHistory (and any other listeners) so the new scan row
+            // appears immediately without waiting for the 30-second auto-refresh.
+            window.dispatchEvent(new CustomEvent('dashboard:scan-started', { detail: res?.data }));
+            if (onStarted) onStarted(res?.data);
             onClose();
         } catch (err) {
             setError(err?.response?.data?.detail || err.message || 'Failed to launch scan.');

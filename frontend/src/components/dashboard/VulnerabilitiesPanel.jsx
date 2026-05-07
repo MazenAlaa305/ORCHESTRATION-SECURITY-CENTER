@@ -159,6 +159,8 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
             const previous = (data?.updated || []).map(r => ({ id: r.id, status: r.previous_status }));
             clearSelection();
             fetchVulnerabilities();
+            // Refresh KPI counts (In Progress card, etc.)
+            window.dispatchEvent(new CustomEvent('dashboard:refresh-kpi'));
 
             // Undo: revert each row to its previous status. 10s window per spec §5.11.
             const undo = async () => {
@@ -810,6 +812,8 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                         try {
                                             await vulnerabilityService.updateWorkflow(vuln.id, { status: newStatus });
                                             fetchVulnerabilities();
+                                            // Refresh KPI counts so In Progress card updates immediately
+                                            window.dispatchEvent(new CustomEvent('dashboard:refresh-kpi'));
                                         } catch (err) {
                                             console.error('Status update failed:', err);
                                         }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Bug, Monitor, Zap, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Bug, Monitor, Zap, AlertTriangle, Wrench } from 'lucide-react';
 import { useRealTime } from '../../context/RealTimeContext';
 
 const SEV_COLORS = {
@@ -113,6 +113,9 @@ const StatCards = ({ latestScan, isScanning }) => {
     // Overdue findings (SLA breaches)
     const overdueCount = realTime.kpi.overdue_findings ?? 0;
 
+    // In-progress vulnerabilities
+    const inProgressCount = realTime.kpi.in_progress_count ?? 0;
+
     // Severity bar segments (proportional)
     const sevSegments = vulnCount > 0
         ? [
@@ -133,7 +136,7 @@ const StatCards = ({ latestScan, isScanning }) => {
     const slaColor = overdueCount > 0 ? '#ff0055' : '#00ff88';
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 animate-fade-in">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4 animate-fade-in">
             <KPICard
                 title="Security Health"
                 value={healthScore}
@@ -150,6 +153,14 @@ const StatCards = ({ latestScan, isScanning }) => {
                 color={vulnCount === 0 ? '#00ff88' : vulnCount > 5 ? '#ff0055' : '#ffaa00'}
                 bar={vulnCount > 0 ? 100 : 0}
                 barSegments={sevSegments}
+            />
+            <KPICard
+                title="In Progress"
+                value={inProgressCount}
+                sub={inProgressCount === 1 ? 'Being fixed' : 'Being fixed'}
+                icon={<Wrench />}
+                color={inProgressCount > 0 ? '#a78bfa' : '#374151'}
+                bar={inProgressCount > 0 ? 100 : 0}
             />
             <KPICard
                 title="SLA Overdue"

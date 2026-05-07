@@ -131,9 +131,13 @@ export default function QuickScanPopover({ isScanning, onScanStarted }) {
                         aria-label="Confirm quick scan"
                         className="absolute right-0 top-full mt-2 w-80 rounded-xl p-4 z-50 animate-fade-in"
                         style={{
-                            background: 'linear-gradient(135deg, rgba(15,30,40,0.98), rgba(10,20,28,0.99))',
+                            background: 'rgb(10, 20, 30)',
                             border: '1px solid rgba(0,255,255,0.2)',
-                            boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,255,255,0.05)',
+                            boxShadow: '0 0 0 1px rgba(0,0,0,1), 0 20px 60px rgba(0,0,0,0.95), 0 0 30px rgba(0,255,255,0.05)',
+                            backdropFilter: 'none',
+                            WebkitBackdropFilter: 'none',
+                            isolation: 'isolate',
+                            opacity: 1,
                         }}
                     >
                         {/* Header */}

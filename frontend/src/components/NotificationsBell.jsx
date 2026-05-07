@@ -97,8 +97,16 @@ export default function NotificationsBell() {
 
             {open && (
                 <div
-                    className="absolute right-0 top-full mt-2 z-50 w-80 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
-                    style={{ background: 'linear-gradient(180deg, rgba(15,30,40,0.98), rgba(10,20,28,0.99))' }}
+                    className="absolute right-0 top-full mt-2 z-50 w-80 rounded-xl overflow-hidden"
+                    style={{
+                        background: 'rgb(10, 20, 30)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,1), 0 20px 60px rgba(0,0,0,0.95)',
+                        backdropFilter: 'none',
+                        WebkitBackdropFilter: 'none',
+                        isolation: 'isolate',
+                        opacity: 1,
+                    }}
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">

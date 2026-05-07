@@ -118,14 +118,21 @@ export const RealTimeProvider = ({ children }) => {
                     case 'RISK_UPDATE':
                         dispatch({ type: 'UPDATE_RISK', payload });
                         dispatch({ type: 'SET_SCAN_STATUS', payload: 'COMPLETED' });
+                        // Notify scan history and KPI listeners that a scan just finished
+                        window.dispatchEvent(new CustomEvent('dashboard:scan-complete'));
+                        window.dispatchEvent(new CustomEvent('dashboard:refresh-kpi'));
                         break;
                     case 'SCAN_STARTED':
                         dispatch({ type: 'SET_SCAN_STATUS', payload: 'RUNNING' });
                         dispatch({ type: 'CLEAR_LOGS' });
                         break;
-                    case 'SCAN_STATUS':
-                        dispatch({ type: 'SET_SCAN_STATUS', payload: payload.status });
+                    case 'SCAN_STATUS': {
+                        const s = payload.status;
+                        // Normalize FAILED/IDLE both to IDLE so the scan button unlocks
+                        const normalized = (s === 'IDLE' || s === 'FAILED') ? 'IDLE' : s;
+                        dispatch({ type: 'SET_SCAN_STATUS', payload: normalized });
                         break;
+                    }
                     case 'LOG_STREAM':
                     case 'SCAN_PROGRESS':
                         dispatch({ type: 'ADD_LOG', payload });
