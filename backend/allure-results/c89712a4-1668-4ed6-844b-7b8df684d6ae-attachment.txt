@@ -1,0 +1,1 @@
+2026-05-08T21:45:45 [INFO] [rid=-] httpx: HTTP Request: POST http://testserver/api/v1/rbac/users "HTTP/1.1 201 Created"

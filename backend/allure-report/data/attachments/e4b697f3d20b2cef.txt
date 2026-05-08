@@ -1,0 +1,1 @@
+WARNING  app.services.alert_correlator:alert_correlator.py:49 alert_correlator query failed: type object 'Vulnerability' has no attribute 'scan_asset_id'

@@ -1,13 +1,7 @@
 """
 Integration tests for /api/v1/vulnerabilities/ — list and bulk update.
-
-Coverage:
-- GET  /vulnerabilities/         (authenticated, filter params)
-- PATCH /vulnerabilities/bulk    (analyst + admin only)
-- Auth gate: unauthenticated → 401/403
-- RBAC gate: viewer cannot bulk-update
-- Validation: empty ids, missing field → 400
 """
+import allure
 import uuid
 from app.models.scan import Vulnerability, Scan, ScanStatus, SeverityLevel, VulnStatus, Target
 
@@ -51,11 +45,21 @@ def _seed_scan_with_vulns(db, count=3, environment_type="production"):
 
 # ── Auth gate ─────────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Authentication")
+@allure.title("List vulnerabilities requires authentication")
+@allure.severity(allure.severity_level.BLOCKER)
 def test_list_vulns_requires_auth(client):
     r = client.get("/api/v1/vulnerabilities/")
     assert r.status_code in (401, 403)
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Authentication")
+@allure.title("Bulk update requires authentication")
+@allure.severity(allure.severity_level.BLOCKER)
 def test_bulk_update_requires_auth(client):
     r = client.patch(
         "/api/v1/vulnerabilities/bulk",
@@ -66,17 +70,32 @@ def test_bulk_update_requires_auth(client):
 
 # ── LIST ──────────────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("List Vulnerabilities")
+@allure.title("List vulnerabilities returns a list")
+@allure.severity(allure.severity_level.NORMAL)
 def test_list_returns_list(client, admin_headers):
     r = client.get("/api/v1/vulnerabilities/", headers=admin_headers)
     assert r.status_code == 200
     assert isinstance(r.json(), list)
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("List Vulnerabilities")
+@allure.title("Analyst can list vulnerabilities")
+@allure.severity(allure.severity_level.NORMAL)
 def test_authenticated_user_can_list_vulnerabilities(client, analyst_headers):
     r = client.get("/api/v1/vulnerabilities/", headers=analyst_headers)
     assert r.status_code == 200
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Filtering")
+@allure.title("Filter by scan_id returns only that scan's vulnerabilities")
+@allure.severity(allure.severity_level.NORMAL)
 def test_list_filter_by_scan_id(client, admin_headers, db_session):
     scan_id, _ = _seed_scan_with_vulns(db_session, count=2)
     r = client.get(f"/api/v1/vulnerabilities/?scan_id={scan_id}", headers=admin_headers)
@@ -87,6 +106,11 @@ def test_list_filter_by_scan_id(client, admin_headers, db_session):
         assert v["scan_id"] == scan_id
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Filtering")
+@allure.title("Filter by severity returns only matching vulnerabilities")
+@allure.severity(allure.severity_level.NORMAL)
 def test_list_filter_by_severity(client, admin_headers, db_session):
     scan_id, _ = _seed_scan_with_vulns(db_session, count=2)
     r = client.get("/api/v1/vulnerabilities/?severity=high", headers=admin_headers)
@@ -95,6 +119,11 @@ def test_list_filter_by_severity(client, admin_headers, db_session):
         assert v["severity"] == "high"
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Filtering")
+@allure.title("Filter by environment type returns a list")
+@allure.severity(allure.severity_level.NORMAL)
 def test_list_filter_by_environment(client, admin_headers, db_session):
     _seed_scan_with_vulns(db_session, count=1, environment_type="lab")
     r = client.get("/api/v1/vulnerabilities/?environment=lab", headers=admin_headers)
@@ -102,6 +131,11 @@ def test_list_filter_by_environment(client, admin_headers, db_session):
     assert isinstance(r.json(), list)
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Filtering")
+@allure.title("limit parameter restricts the number of vulnerabilities returned")
+@allure.severity(allure.severity_level.NORMAL)
 def test_list_limit_respected(client, admin_headers, db_session):
     _seed_scan_with_vulns(db_session, count=5)
     r = client.get("/api/v1/vulnerabilities/?limit=2", headers=admin_headers)
@@ -111,6 +145,11 @@ def test_list_limit_respected(client, admin_headers, db_session):
 
 # ── BULK UPDATE ───────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Bulk Update")
+@allure.title("Viewer cannot perform bulk update (403)")
+@allure.severity(allure.severity_level.BLOCKER)
 def test_viewer_cannot_bulk_update(client, viewer_headers, db_session):
     _, ids = _seed_scan_with_vulns(db_session, count=1)
     r = client.patch(
@@ -121,6 +160,11 @@ def test_viewer_cannot_bulk_update(client, viewer_headers, db_session):
     assert r.status_code == 403
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Bulk Update")
+@allure.title("Analyst can bulk update vulnerability status")
+@allure.severity(allure.severity_level.NORMAL)
 def test_analyst_can_bulk_update_status(client, analyst_headers, db_session):
     _, ids = _seed_scan_with_vulns(db_session, count=2)
     r = client.patch(
@@ -134,6 +178,11 @@ def test_analyst_can_bulk_update_status(client, analyst_headers, db_session):
     assert len(body["updated"]) == 2
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Bulk Update")
+@allure.title("Admin can bulk update remediation text")
+@allure.severity(allure.severity_level.NORMAL)
 def test_admin_can_bulk_update_remediation(client, admin_headers, db_session):
     _, ids = _seed_scan_with_vulns(db_session, count=1)
     r = client.patch(
@@ -145,6 +194,11 @@ def test_admin_can_bulk_update_remediation(client, admin_headers, db_session):
     assert len(r.json()["updated"]) == 1
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Bulk Update")
+@allure.title("Ghost IDs are returned in not_found list")
+@allure.severity(allure.severity_level.NORMAL)
 def test_bulk_update_returns_not_found_for_ghost_ids(client, admin_headers):
     ghost_id = str(uuid.uuid4())
     r = client.patch(
@@ -157,6 +211,11 @@ def test_bulk_update_returns_not_found_for_ghost_ids(client, admin_headers):
     assert ghost_id in body["not_found"]
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Bulk Update")
+@allure.title("Empty ids list returns 400 or 422")
+@allure.severity(allure.severity_level.NORMAL)
 def test_bulk_update_empty_ids_returns_400(client, admin_headers):
     r = client.patch(
         "/api/v1/vulnerabilities/bulk",
@@ -166,6 +225,11 @@ def test_bulk_update_empty_ids_returns_400(client, admin_headers):
     assert r.status_code in (400, 422)
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Bulk Update")
+@allure.title("Missing both status and remediation returns 400")
+@allure.severity(allure.severity_level.NORMAL)
 def test_bulk_update_missing_both_fields_returns_400(client, admin_headers, db_session):
     _, ids = _seed_scan_with_vulns(db_session, count=1)
     r = client.patch(
@@ -176,6 +240,11 @@ def test_bulk_update_missing_both_fields_returns_400(client, admin_headers, db_s
     assert r.status_code == 400
 
 
+@allure.epic("API")
+@allure.feature("Vulnerabilities API")
+@allure.story("Bulk Update")
+@allure.title("Bulk update response includes previous_status for each updated item")
+@allure.severity(allure.severity_level.NORMAL)
 def test_bulk_update_preserves_previous_status_in_response(client, analyst_headers, db_session):
     _, ids = _seed_scan_with_vulns(db_session, count=1)
     r = client.patch(

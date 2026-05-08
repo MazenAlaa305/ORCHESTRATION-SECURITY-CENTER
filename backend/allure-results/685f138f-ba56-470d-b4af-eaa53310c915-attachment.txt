@@ -1,0 +1,1 @@
+2026-05-08T21:49:22 [INFO] [rid=-] httpx: HTTP Request: POST http://testserver/api/v1/reports/7c74cffa-11fb-41f3-b1a9-f16cb7ca61a5/generate "HTTP/1.1 401 Unauthorized"

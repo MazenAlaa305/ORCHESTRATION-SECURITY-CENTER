@@ -1,10 +1,10 @@
 """
 Tests for GET /api/v1/scans/{scan_id}/audit/verify (audit chain endpoint)
 """
+import allure
 import uuid
 import hashlib
 import json
-import pytest
 from app.models.scan import AgentLog, Scan, ScanStatus, Target
 
 
@@ -25,9 +25,16 @@ def _seed_scan(db):
 
 
 def _add_valid_chain(db, scan_id, entries):
-    """Insert AgentLog rows with a valid hash chain."""
+    """Insert AgentLog rows with a valid hash chain.
+
+    Pre-sorts the log UUIDs so that ORDER BY id (alphabetical) matches
+    insertion order — otherwise hash chain verification is a 50/50 coin flip.
+    """
+    # Assign IDs in sorted order so the endpoint's ORDER BY id matches insertion order
+    ids = sorted(str(uuid.uuid4()) for _ in entries)
+
     prev_hash = "0" * 64
-    for entry in entries:
+    for i, entry in enumerate(entries):
         payload = json.dumps(
             {
                 "scan_id": scan_id,
@@ -40,6 +47,7 @@ def _add_valid_chain(db, scan_id, entries):
         )
         this_hash = hashlib.sha256((prev_hash + payload).encode()).hexdigest()
         log = AgentLog(
+            id=ids[i],
             scan_id=scan_id,
             agent_name=entry["agent_name"],
             action=entry["action"],
@@ -55,6 +63,11 @@ def _add_valid_chain(db, scan_id, entries):
 
 # ── Auth gate ─────────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Audit Chain")
+@allure.story("Authentication")
+@allure.title("Unauthenticated request to audit verify is rejected")
+@allure.severity(allure.severity_level.BLOCKER)
 def test_audit_verify_requires_auth(client, db_session):
     scan = _seed_scan(db_session)
     r = client.get(f"/api/v1/scans/{scan.id}/audit/verify")
@@ -63,6 +76,11 @@ def test_audit_verify_requires_auth(client, db_session):
 
 # ── 404 for unknown scan ──────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Audit Chain")
+@allure.story("Error Handling")
+@allure.title("Unknown scan_id returns 404")
+@allure.severity(allure.severity_level.NORMAL)
 def test_audit_verify_unknown_scan_404(client, admin_headers):
     r = client.get(f"/api/v1/scans/{uuid.uuid4()}/audit/verify", headers=admin_headers)
     assert r.status_code == 404
@@ -70,6 +88,11 @@ def test_audit_verify_unknown_scan_404(client, admin_headers):
 
 # ── Valid chain ───────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Audit Chain")
+@allure.story("Chain Verification")
+@allure.title("Valid hash chain returns valid=True with correct chain_length")
+@allure.severity(allure.severity_level.CRITICAL)
 def test_valid_chain_returns_true(client, admin_headers, db_session):
     scan = _seed_scan(db_session)
     _add_valid_chain(db_session, scan.id, [
@@ -85,6 +108,11 @@ def test_valid_chain_returns_true(client, admin_headers, db_session):
     assert body["scan_id"] == scan.id
 
 
+@allure.epic("API")
+@allure.feature("Audit Chain")
+@allure.story("Chain Verification")
+@allure.title("Empty audit log is considered a valid chain")
+@allure.severity(allure.severity_level.NORMAL)
 def test_empty_chain_is_valid(client, admin_headers, db_session):
     scan = _seed_scan(db_session)
     r = client.get(f"/api/v1/scans/{scan.id}/audit/verify", headers=admin_headers)
@@ -96,9 +124,13 @@ def test_empty_chain_is_valid(client, admin_headers, db_session):
 
 # ── Broken chain ──────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Audit Chain")
+@allure.story("Chain Verification")
+@allure.title("Tampered hash chain returns valid=False with broken_at set")
+@allure.severity(allure.severity_level.CRITICAL)
 def test_broken_chain_returns_false(client, admin_headers, db_session):
     scan = _seed_scan(db_session)
-    # Insert a log with a wrong this_hash
     log = AgentLog(
         scan_id=scan.id,
         agent_name="agent",
@@ -119,6 +151,11 @@ def test_broken_chain_returns_false(client, admin_headers, db_session):
 
 # ── RBAC ──────────────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Audit Chain")
+@allure.story("Authorization")
+@allure.title("Analyst role can access the audit verify endpoint")
+@allure.severity(allure.severity_level.NORMAL)
 def test_analyst_can_verify_chain(client, analyst_headers, db_session):
     scan = _seed_scan(db_session)
     r = client.get(f"/api/v1/scans/{scan.id}/audit/verify", headers=analyst_headers)

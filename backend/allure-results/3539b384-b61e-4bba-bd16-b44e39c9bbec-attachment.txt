@@ -1,0 +1,1 @@
+2026-05-08T21:45:46 [INFO] [rid=-] httpx: HTTP Request: POST http://testserver/api/v1/reports/e7b0c1a0-ae7f-4366-a108-96eb3cc121ca/generate "HTTP/1.1 200 OK"

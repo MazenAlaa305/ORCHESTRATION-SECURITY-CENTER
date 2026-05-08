@@ -3,7 +3,7 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { ZoomIn, ZoomOut, Maximize2, Minimize2, RefreshCw, Move, Crosshair } from 'lucide-react';
 import AssetDetailPanel from './AssetDetailPanel';
 import TopologyLegend from './TopologyLegend';
-import { networkService } from '../../services/api';
+import { networkService, labService } from '../../services/api';
 
 // ─── Color resolver ───────────────────────────────────────
 const getNodeColor = (node) => {
@@ -229,69 +229,155 @@ const drawDeviceIcon = (ctx, group, cx, cy, r, color) => {
     ctx.restore();
 };
 
+// ─── Static demo nodes shown when APIs are unavailable ────
+const DEMO_GRAPH = (() => {
+    const hub = { id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0, fx:0, fy:0, x:0, y:0 };
+    const devices = [
+        { id:'d1', name:'WEB-01',    ip:'192.168.1.10', group:'server',   riskScore:72, criticality:'HIGH',     vulnCount:4 },
+        { id:'d2', name:'DB-PRIMARY',ip:'192.168.1.20', group:'database', riskScore:88, criticality:'CRITICAL',  vulnCount:7 },
+        { id:'d3', name:'FIREWALL',  ip:'192.168.1.1',  group:'firewall', riskScore:18, criticality:'LOW',      vulnCount:0 },
+        { id:'d4', name:'ROUTER-01', ip:'192.168.1.254',group:'router',   riskScore:35, criticality:'MEDIUM',   vulnCount:2 },
+        { id:'d5', name:'APP-SRV',   ip:'192.168.1.30', group:'server',   riskScore:55, criticality:'HIGH',     vulnCount:3 },
+        { id:'d6', name:'DEV-PC',    ip:'192.168.1.50', group:'desktop',  riskScore:12, criticality:'LOW',      vulnCount:1 },
+    ];
+    const count = devices.length, radius = 180;
+    const nodes = [hub, ...devices.map((d, i) => {
+        const angle = (2 * Math.PI * i) / count - Math.PI / 2;
+        return { ...d, val:10, infoCount:0, fx: Math.cos(angle)*radius, fy: Math.sin(angle)*radius,
+                  x: Math.cos(angle)*radius, y: Math.sin(angle)*radius };
+    })];
+    const links = devices.map(d => ({ source:'hub', target:d.id, value:2 }));
+    return { nodes, links };
+})();
+
+// ─── Safe roundRect polyfill ──────────────────────────────
+const safeRoundRect = (ctx, x, y, w, h, r) => {
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.moveTo(x + rr, y);
+    ctx.lineTo(x + w - rr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+    ctx.lineTo(x + w, y + h - rr);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+    ctx.lineTo(x + rr, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+    ctx.lineTo(x, y + rr);
+    ctx.quadraticCurveTo(x, y, x + rr, y);
+    ctx.closePath();
+};
+
 // ─── Component ────────────────────────────────────────────
 const NetworkTopology = ({ refresh, compact = false }) => {
-    const [graphData, setGraphData]     = useState({ nodes: [], links: [] });
-    const [loading, setLoading]         = useState(true);
+    // Start with DEMO_GRAPH so canvas is never blank on first paint
+    const [graphData, setGraphData]       = useState(DEMO_GRAPH);
     const [selectedNode, setSelectedNode] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-    const fgRef = useRef();
-    const containerRef = useRef();
+    // Start with safe fallback dimensions; ResizeObserver will update them
+    const [dims, setDims] = useState({ w: 900, h: compact ? 270 : 410 });
+    const fgRef        = useRef();
     const graphAreaRef = useRef();
-    const fitTimers = useRef([]);
+    const fitTimer     = useRef(null);
 
-    const fitAll = useCallback(() => {
-        fgRef.current?.zoomToFit(300, 60);
+    const doFit = useCallback(() => {
+        clearTimeout(fitTimer.current);
+        fitTimer.current = setTimeout(() => fgRef.current?.zoomToFit(400, 40), 300);
     }, []);
 
-    // Schedule multiple zoomToFit retries — at least one will land when canvas is ready
-    const scheduleFit = useCallback(() => {
-        fitTimers.current.forEach(clearTimeout);
-        fitTimers.current = [
-            setTimeout(() => fitAll(), 50),
-            setTimeout(() => fitAll(), 250),
-            setTimeout(() => fitAll(), 600),
-            setTimeout(() => fitAll(), 1200),
-        ];
-    }, [fitAll]);
-
-    useEffect(() => {
-        fetchData();
-        return () => fitTimers.current.forEach(clearTimeout);
-    }, [refresh]);
-
-    // Fire fit retries whenever BOTH data and real dimensions are ready
-    useEffect(() => {
-        if (!loading && graphData.nodes.length > 0 && containerSize.width > 0) {
-            scheduleFit();
-        }
-    }, [loading, graphData, containerSize]);
-
-    // Measure the graph area — only mount ForceGraph2D once we have real px dimensions
+    // Measure graph area and keep dims in sync (handles fullscreen toggle too)
     useEffect(() => {
         const el = graphAreaRef.current;
         if (!el) return;
+        // Set dims from actual element size immediately
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) setDims({ w: rect.width, h: rect.height });
         const ro = new ResizeObserver(entries => {
             const { width, height } = entries[0].contentRect;
-            if (width > 0 && height > 0) {
-                setContainerSize({ width, height });
-            }
+            if (width > 10 && height > 10) setDims({ w: width, h: height });
         });
         ro.observe(el);
         return () => ro.disconnect();
-    }, []);
+    }, [isFullscreen]); // re-measure when fullscreen toggles
+
+    // Auto-fit whenever graph data or dims change
+    useEffect(() => { doFit(); }, [graphData, dims]);
+
+    // Cleanup on unmount
+    useEffect(() => () => clearTimeout(fitTimer.current), []);
 
     const fetchData = async () => {
         try {
-            setLoading(true);
             const { data: assets } = await networkService.getAssets();
-            transformDataToGraph(assets);
-        } catch (err) {
-            console.error('Topology fetch failed', err);
-        } finally {
-            setLoading(false);
+            if (assets?.length > 0) { transformDataToGraph(assets); return; }
+            const { data: labData } = await labService.getTargets();
+            if (labData?.targets?.length > 0) { transformLabTargetsToGraph(labData.targets); return; }
+            // APIs returned empty — keep demo data
+        } catch (_) {
+            try {
+                const { data: labData } = await labService.getTargets();
+                if (labData?.targets?.length > 0) { transformLabTargetsToGraph(labData.targets); return; }
+            } catch (__) { /* keep demo */ }
         }
+    };
+
+    useEffect(() => { fetchData(); }, [refresh]);
+
+    // Map lab target objects into the same graph node format
+    const transformLabTargetsToGraph = (targets) => {
+        const nodes = [];
+        const links = [];
+
+        nodes.push({ id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0, fx:0, fy:0 });
+
+
+        const count = targets.length;
+        const radius = 180;
+
+        targets.forEach((t, i) => {
+            const angle = (2 * Math.PI * i) / count - Math.PI / 2;
+            const fx = Math.cos(angle) * radius;
+            const fy = Math.sin(angle) * radius;
+            const nodeId = `lab_${t.container}`;
+
+            // Determine group from protocol
+            let group = 'server';
+            if (t.protocol === 'dns') group = 'router';
+            else if (t.protocol === 'postgresql' || t.protocol === 'redis') group = 'database';
+            else if (t.protocol === 'smtp') group = 'server';
+            else if (t.protocol === 'smb') group = 'server';
+
+            // Map CVSS to risk score (0-100 scale)
+            const riskScore = (t.cvss || 0) * 10;
+
+            nodes.push({
+                id:          nodeId,
+                name:        t.name || t.hostname,
+                ip:          t.hostname,
+                group,
+                vulnCount:   (t.vulns || []).length,
+                infoCount:   0,
+                val:         10,
+                riskScore,
+                criticality: t.cvss >= 9 ? 'CRITICAL' : t.cvss >= 7 ? 'HIGH' : t.cvss >= 4 ? 'MEDIUM' : 'LOW',
+                details: {
+                    ip_address:  t.hostname,
+                    hostname:    t.name,
+                    device_type: group,
+                    os_name:     t.protocol,
+                    status:      'active',
+                    open_ports:  String(t.port),
+                    risk_score:  riskScore,
+                    criticality: t.cvss >= 9 ? 'CRITICAL' : t.cvss >= 7 ? 'HIGH' : 'MEDIUM',
+                    zone:        t.zone,
+                    vulns:       t.vulns,
+                    description: t.description,
+                },
+                fx, fy,
+                x: fx, y: fy,
+            });
+            links.push({ source: 'hub', target: nodeId, value: 2 });
+        });
+
+        setGraphData({ nodes, links });
     };
 
     const transformDataToGraph = (assets) => {
@@ -346,19 +432,16 @@ const NetworkTopology = ({ refresh, compact = false }) => {
 
     const handleNodeClick = useCallback(async (node) => {
         if (node.id === 'hub') { setSelectedNode(node); return; }
-        // Immediately show the node with basic info, then enrich asynchronously
         setSelectedNode(node);
         if (node.id && typeof node.id === 'number') {
             try {
                 const { data: detail } = await networkService.getAssetDetail(node.id);
                 setSelectedNode(prev =>
-                    prev && prev.id === node.id
+                    prev?.id === node.id
                         ? { ...prev, details: detail, vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0 }
                         : prev
                 );
-            } catch (err) {
-                console.warn('Asset detail fetch failed', err);
-            }
+            } catch (_) {}
         }
         if (fgRef.current) {
             fgRef.current.centerAt(node.x, node.y, 800);
@@ -366,27 +449,19 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         }
     }, []);
 
-    // ─── Fit: zoom to show all nodes ──────────────────────
-    const handleFit = useCallback(() => {
-        scheduleFit();
-    }, [scheduleFit]);
-
-    // ─── Toggle fullscreen ────────────────────────────────
     const toggleFullscreen = useCallback(() => {
         setIsFullscreen(f => !f);
-        setTimeout(() => scheduleFit(), 350);
-    }, [scheduleFit]);
+        setTimeout(() => doFit(), 400);
+    }, [doFit]);
 
-    // Escape exits fullscreen
     useEffect(() => {
-        const handler = (e) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+        const handler = (e) => { if (e.key === 'Escape') setIsFullscreen(false); };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [isFullscreen]);
+    }, []);
 
-    // ─── Canvas node renderer — circle style ──────────────
     const drawNode = useCallback((node, ctx, globalScale) => {
-        if (node.x === undefined || node.y === undefined) return;
+        if (node.x == null || node.y == null) return;
 
         const color  = getNodeColor(node);
         const radius = (node.val || 10) * 0.9;
@@ -395,87 +470,63 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         const isCrit = node.riskScore > 75;
         const t      = Date.now() / 800;
 
-        // 1. Glow shadow
         ctx.shadowColor = color;
         ctx.shadowBlur  = isCrit ? 32 : isRisk ? 22 : isHub ? 20 : 12;
 
         if (isHub) {
-            // ── Hub: large circle with two concentric rings + pulsing core ──
-            // Outer decorative ring
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius * 1.6, 0, 2 * Math.PI);
             ctx.strokeStyle = `${color}22`;
             ctx.lineWidth   = 1.5 / globalScale;
             ctx.stroke();
 
-            // Mid ring
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius * 1.2, 0, 2 * Math.PI);
             ctx.strokeStyle = `${color}40`;
             ctx.lineWidth   = 1 / globalScale;
             ctx.stroke();
 
-            // Main filled circle
             const bg = ctx.createRadialGradient(node.x, node.y - radius * 0.3, 0, node.x, node.y, radius);
             bg.addColorStop(0, 'rgba(0,45,55,0.98)');
             bg.addColorStop(1, 'rgba(0,20,28,0.99)');
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-            ctx.fillStyle   = bg;
-            ctx.fill();
-            ctx.strokeStyle = color;
-            ctx.lineWidth   = 2.5 / globalScale;
-            ctx.stroke();
+            ctx.fillStyle = bg; ctx.fill();
+            ctx.strokeStyle = color; ctx.lineWidth = 2.5 / globalScale; ctx.stroke();
 
-            // Pulsing inner ring
             const pulse = (Math.sin(t * 1.8) + 1) / 2;
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius * (0.48 + pulse * 0.08), 0, 2 * Math.PI);
             ctx.strokeStyle = `${color}${Math.floor((0.35 + pulse * 0.45) * 255).toString(16).padStart(2, '0')}`;
-            ctx.lineWidth   = 1.5 / globalScale;
-            ctx.stroke();
+            ctx.lineWidth = 1.5 / globalScale; ctx.stroke();
 
-            // Solid center dot
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius * 0.22, 0, 2 * Math.PI);
-            ctx.fillStyle = color;
-            ctx.fill();
-
+            ctx.fillStyle = color; ctx.fill();
         } else {
-            // ── Regular node: circle with optional pulse ring ──
-
-            // Pulsing danger ring for risky nodes
             if (isRisk) {
                 const pulse = (Math.sin(t) + 1) / 2;
                 ctx.beginPath();
                 ctx.arc(node.x, node.y, radius * (1.3 + pulse * 0.3), 0, 2 * Math.PI);
                 const alpha = isCrit ? (0.25 + pulse * 0.3) : (0.1 + pulse * 0.2);
                 ctx.strokeStyle = `${color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
-                ctx.lineWidth   = (isCrit ? 2 : 1.5) / globalScale;
-                ctx.stroke();
+                ctx.lineWidth = (isCrit ? 2 : 1.5) / globalScale; ctx.stroke();
             }
 
-            // Main filled circle
             const bg = ctx.createRadialGradient(node.x, node.y - radius * 0.25, 0, node.x, node.y, radius);
             bg.addColorStop(0, 'rgba(20,32,44,0.95)');
             bg.addColorStop(1, 'rgba(8,14,22,0.98)');
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-            ctx.fillStyle   = bg;
-            ctx.fill();
+            ctx.fillStyle = bg; ctx.fill();
             ctx.strokeStyle = color;
-            ctx.lineWidth   = (isCrit ? 2.5 : isRisk ? 2 : 1.8) / globalScale;
-            ctx.stroke();
+            ctx.lineWidth = (isCrit ? 2.5 : isRisk ? 2 : 1.8) / globalScale; ctx.stroke();
 
-            // Thin inner highlight arc (top-left quarter)
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius * 0.75, -Math.PI * 0.85, -Math.PI * 0.15);
-            ctx.strokeStyle = `${color}30`;
-            ctx.lineWidth   = 1.5 / globalScale;
-            ctx.stroke();
+            ctx.strokeStyle = `${color}30`; ctx.lineWidth = 1.5 / globalScale; ctx.stroke();
 
-            // Device icon
-            ctx.shadowBlur  = 0;
+            ctx.shadowBlur = 0;
             ctx.globalAlpha = isRisk ? 1 : 0.82;
             drawDeviceIcon(ctx, node.group || 'desktop', node.x, node.y, radius, color);
             ctx.globalAlpha = 1;
@@ -483,52 +534,39 @@ const NetworkTopology = ({ refresh, compact = false }) => {
 
         ctx.shadowBlur = 0;
 
-        // 2. Label — always visible (small), brighter when selected/zoomed
+        // Label with safe roundRect
         const label    = node.name || '';
         const fontSize = Math.max(8, 9 / globalScale);
-        ctx.font          = `600 ${fontSize}px Outfit, sans-serif`;
-        ctx.textAlign     = 'center';
-        ctx.textBaseline  = 'top';
-
+        ctx.font = `600 ${fontSize}px Outfit, sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         const textW  = ctx.measureText(label).width + 10;
         const labelY = node.y + radius + 6 / globalScale;
 
-        // Pill background
         ctx.fillStyle   = 'rgba(2,9,15,0.82)';
         ctx.strokeStyle = `${color}44`;
         ctx.lineWidth   = 0.7 / globalScale;
         ctx.beginPath();
-        ctx.roundRect(node.x - textW / 2, labelY - 2 / globalScale, textW, fontSize + 4 / globalScale, 4 / globalScale);
-        ctx.fill();
-        ctx.stroke();
+        safeRoundRect(ctx, node.x - textW / 2, labelY - 2 / globalScale, textW, fontSize + 4 / globalScale, 4 / globalScale);
+        ctx.fill(); ctx.stroke();
 
         ctx.fillStyle = selectedNode?.id === node.id ? '#ffffff' : 'rgba(255,255,255,0.72)';
         ctx.fillText(label, node.x, labelY);
     }, [selectedNode]);
 
-    if (loading) return (
-        <div className="flex flex-col justify-center items-center h-full min-h-[450px] glass-card border-dashed">
-            <div className="w-10 h-10 border-2 border-transparent border-t-cyan-400 rounded-full animate-spin mb-4" />
-            <span className="text-[10px] font-black text-cyan-400/60 animate-pulse tracking-[0.3em] uppercase">
-                Mapping Neural Network...
-            </span>
-        </div>
-    );
-
     const graphContainerStyle = isFullscreen
         ? { position: 'fixed', top: '48px', right: 0, bottom: 0, left: 'var(--sidebar-width, 208px)', zIndex: 9999, background: '#0c1c25' }
-        : { minHeight: compact ? 300 : 420 };
+        : { height: compact ? 320 : 460 };
 
     return (
-        <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6 animate-fade-in w-full h-full`}>
+        <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6 animate-fade-in w-full`}>
 
-            {/* Details Panel — first in DOM = left column */}
+            {/* Details Panel */}
             {!compact && (
                 <div className={`lg:order-1 transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
                     {selectedNode && selectedNode.id !== 'hub' ? (
                         <AssetDetailPanel
                             node={selectedNode}
-                            onClose={() => { setSelectedNode(null); fgRef.current?.zoomToFit(600); }}
+                            onClose={() => { setSelectedNode(null); doFit(); }}
                         />
                     ) : (
                         <div className="h-full glass-card flex flex-col justify-center items-center text-center p-8 border-dashed group">
@@ -536,9 +574,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                                  style={{ background:'rgba(0,255,255,0.05)', border:'1px solid rgba(0,255,255,0.08)' }}>
                                 <Move className="h-8 w-8" style={{ color:'rgba(0,255,255,0.3)' }} />
                             </div>
-                            <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">
-                                Infrastructure Insight
-                            </h3>
+                            <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">Infrastructure Insight</h3>
                             <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
                                 Click any <span style={{ color:'#00ffff' }}>node</span> on the topology map to view deep packet inspection and AI-generated risk analysis.
                             </p>
@@ -547,13 +583,12 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 </div>
             )}
 
-            {/* Graph Container — flex column so title bar is always in normal flow */}
+            {/* Graph Container */}
             <div
-                ref={containerRef}
                 className={`${compact ? 'lg:col-span-1' : 'lg:col-span-2'} lg:order-2 glass-card p-0 flex flex-col`}
                 style={graphContainerStyle}
             >
-                {/* Title Bar — normal flow, never clipped */}
+                {/* Title Bar */}
                 <div
                     className="flex items-center justify-between px-4 py-2.5 shrink-0 rounded-t-[18px]"
                     style={{ borderBottom: '1px solid rgba(0,255,255,0.06)', background:'rgba(2,9,15,0.6)', backdropFilter:'blur(10px)' }}
@@ -563,119 +598,76 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         <span className="text-[10px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Live Network Topology</span>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                        <button onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 1.4, 300)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
-                            title="Zoom In">
+                        <button onClick={() => { const k = (fgRef.current?.zoom() ?? 1) * 1.4; fgRef.current?.zoom(k, 300); }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all" title="Zoom In">
                             <ZoomIn className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => fgRef.current?.zoom(fgRef.current.zoom() / 1.4, 300)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
-                            title="Zoom Out">
+                        <button onClick={() => { const k = (fgRef.current?.zoom() ?? 1) / 1.4; fgRef.current?.zoom(Math.max(k, 0.1), 300); }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all" title="Zoom Out">
                             <ZoomOut className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={handleFit}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
-                            title="Fit — center and zoom to show all devices">
+                        <button onClick={doFit}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all" title="Fit to screen">
                             <Crosshair className="h-3.5 w-3.5" />
                         </button>
                         <button onClick={fetchData}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
-                            title="Refresh">
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all" title="Refresh">
                             <RefreshCw className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                            onClick={toggleFullscreen}
+                        <button onClick={toggleFullscreen}
                             className={`p-1.5 rounded-lg transition-all ${isFullscreen ? 'text-cyan-400 bg-cyan-400/15 hover:bg-cyan-400/25' : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'}`}
-                            title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Maximize — full-screen topology'}
-                        >
-                            {isFullscreen
-                                ? <Minimize2 className="h-3.5 w-3.5" />
-                                : <Maximize2 className="h-3.5 w-3.5" />}
+                            title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen'}>
+                            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                         </button>
                     </div>
                 </div>
 
-                {/* Graph area — flex-1 so it fills remaining space, legend floats inside */}
-                <div ref={graphAreaRef} className="relative flex-1 overflow-hidden">
-                    {/* Floating Legend — top-left, always inside graph area */}
+                {/* Graph area */}
+                <div
+                    ref={graphAreaRef}
+                    className="relative overflow-hidden"
+                    style={{ flex: '1 1 0', minHeight: compact ? 260 : 400 }}
+                >
                     <div className="absolute z-30" style={{ top: 10, left: 12 }}>
                         <TopologyLegend />
                     </div>
-
-                    {/* Scan-line overlay */}
                     <div className="scanline-overlay" />
 
-                    {/* Only mount ForceGraph2D once the container has real pixel dimensions */}
-                    {containerSize.width > 0 && (
                     <ForceGraph2D
                         ref={fgRef}
                         graphData={graphData}
-                        width={containerSize.width}
-                        height={containerSize.height}
+                        width={dims.w}
+                        height={dims.h}
                         backgroundColor="#0c1c25"
                         nodeCanvasObject={drawNode}
                         nodeCanvasObjectMode={() => 'replace'}
                         nodeLabel={(node) => {
-                            if (node.id === 'hub') return `
-                                <div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.2);border-radius:10px;font-family:Outfit,sans-serif">
-                                    <div style="font-size:11px;font-weight:800;color:#00ffff;text-transform:uppercase;letter-spacing:.08em">Gateway Hub</div>
-                                    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Central network node</div>
-                                </div>`;
-
-                            // Derive effective risk from riskScore OR criticality
+                            if (node.id === 'hub') return `<div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.2);border-radius:10px;font-family:Outfit,sans-serif"><div style="font-size:11px;font-weight:800;color:#00ffff;text-transform:uppercase">Gateway Hub</div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Central network node</div></div>`;
                             const crit = (node.criticality || '').toUpperCase();
                             const critRisk = crit === 'CRITICAL' ? 90 : crit === 'HIGH' ? 70 : crit === 'MEDIUM' ? 40 : crit === 'LOW' ? 15 : 0;
-                            const effectiveRisk = node.riskScore > 0 ? node.riskScore : critRisk;
-                            const label       = effectiveRisk >= 75 ? 'CRITICAL' : effectiveRisk >= 50 ? 'HIGH' : effectiveRisk >= 20 ? 'MEDIUM' : effectiveRisk > 0 ? 'LOW' : 'NONE';
-                            const riskColor   = effectiveRisk >= 75 ? '#ff0055' : effectiveRisk >= 50 ? '#ff6a00' : effectiveRisk >= 20 ? '#ffaa00' : effectiveRisk > 0 ? '#00ccff' : '#00ff88';
-                            const vulns     = node.vulnCount || 0;
-                            const infoVulns = node.infoCount || 0;
-
-                            const riskBar = `
-                                <div style="margin-top:2px;height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden">
-                                    <div style="height:100%;width:${effectiveRisk}%;background:${riskColor};border-radius:2px;transition:width .4s"></div>
-                                </div>`;
-
-                            const vulnLine = vulns > 0
-                                ? `<div style="margin-top:8px;font-size:10px;color:${riskColor}">⚠ ${vulns} vulnerabilit${vulns === 1 ? 'y' : 'ies'} detected</div>`
-                                : '';
-                            const infoLine = infoVulns > 0
-                                ? `<div style="margin-top:${vulns > 0 ? 4 : 8}px;font-size:10px;color:#666">ℹ ${infoVulns} info finding${infoVulns === 1 ? '' : 's'}</div>`
-                                : '';
-
-                            return `
-                            <div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${riskColor}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:200px">
-                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-                                    <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.06em">${node.name}</div>
-                                    <div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${riskColor}22;border:1px solid ${riskColor}66;color:${riskColor}">${label}</div>
-                                </div>
-                                <div style="font-size:10px;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;margin-bottom:8px">${node.ip || 'INTERNAL'}</div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                                    <span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk Score</span>
-                                    <span style="font-size:11px;font-weight:800;color:${riskColor}">${effectiveRisk}%</span>
-                                </div>
-                                ${riskBar}
-                                ${vulnLine}${infoLine}
-                            </div>`;
+                            const eff = node.riskScore > 0 ? node.riskScore : critRisk;
+                            const lbl = eff >= 75 ? 'CRITICAL' : eff >= 50 ? 'HIGH' : eff >= 20 ? 'MEDIUM' : eff > 0 ? 'LOW' : 'NONE';
+                            const rc  = eff >= 75 ? '#ff0055' : eff >= 50 ? '#ff6a00' : eff >= 20 ? '#ffaa00' : eff > 0 ? '#00ccff' : '#00ff88';
+                            const v = node.vulnCount || 0;
+                            return `<div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${rc}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:180px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase">${node.name}</div><div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${rc}22;border:1px solid ${rc}66;color:${rc}">${lbl}</div></div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px">${node.ip || 'INTERNAL'}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk</span><span style="font-size:11px;font-weight:800;color:${rc}">${eff}%</span></div><div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden"><div style="height:100%;width:${eff}%;background:${rc};border-radius:2px"></div></div>${v > 0 ? `<div style="margin-top:8px;font-size:10px;color:${rc}">⚠ ${v} vuln${v === 1 ? '' : 's'}</div>` : ''}</div>`;
                         }}
                         linkColor={() => 'rgba(0,255,255,0.18)'}
                         linkWidth={1.2}
                         linkDirectionalParticles={3}
                         linkDirectionalParticleWidth={2}
                         linkDirectionalParticleColor={(link) => {
-                            const r = link.target?.riskScore || 0;
+                            const r = (typeof link.target === 'object' ? link.target?.riskScore : 0) || 0;
                             return r > 75 ? '#ff0055' : r > 50 ? '#ffaa00' : '#00ffff';
                         }}
                         linkDirectionalParticleSpeed={0.005}
-                        d3AlphaDecay={0.018}
-                        d3VelocityDecay={0.32}
-                        warmupTicks={200}
-                        cooldownTicks={0}
+                        d3AlphaDecay={0.02}
+                        d3VelocityDecay={0.4}
+                        warmupTicks={60}
+                        cooldownTicks={Infinity}
                         onNodeClick={handleNodeClick}
                     />
-                    )}{/* end containerSize gate */}
-                </div>{/* end graph area */}
-            </div>{/* end graph container */}
+                </div>
+            </div>
         </div>
     );
 };

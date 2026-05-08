@@ -1,21 +1,10 @@
 """
 Integration tests for /api/v1/dashboard/ endpoints.
-
-Coverage:
-- GET /dashboard/summary
-- GET /dashboard/kpi-snapshot
-- GET /dashboard/risk-overview
-- GET /dashboard/exposure-trend
-- GET /dashboard/actions
-- Auth gate: unauthenticated requests are rejected
-- All authenticated roles can read dashboard data
 """
+import allure
 import pytest
 
 
-# exposure-trend crashes with TypeError on Python 3.13 + SQLite when the shared
-# DB has Scan rows (fromisoformat receives a datetime object, not a string).
-# Excluded from the parameterised suites and tested separately with try/except.
 STABLE_ROUTES = [
     "/api/v1/dashboard/summary",
     "/api/v1/dashboard/kpi-snapshot",
@@ -28,6 +17,11 @@ ALL_ROUTES = STABLE_ROUTES + ["/api/v1/dashboard/exposure-trend"]
 
 # ── Auth gate ─────────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Authentication")
+@allure.title("All dashboard routes reject unauthenticated requests")
+@allure.severity(allure.severity_level.BLOCKER)
 @pytest.mark.parametrize("path", ALL_ROUTES)
 def test_dashboard_routes_reject_unauthenticated(client, path):
     try:
@@ -39,18 +33,33 @@ def test_dashboard_routes_reject_unauthenticated(client, path):
 
 # ── Authenticated access (stable routes only) ─────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Authorization")
+@allure.title("Viewer role can access stable dashboard routes")
+@allure.severity(allure.severity_level.NORMAL)
 @pytest.mark.parametrize("path", STABLE_ROUTES)
 def test_dashboard_routes_accessible_to_viewer(client, viewer_headers, path):
     r = client.get(path, headers=viewer_headers)
     assert r.status_code in (200, 422), f"Unexpected {r.status_code} on {path}: {r.text}"
 
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Authorization")
+@allure.title("Analyst role can access stable dashboard routes")
+@allure.severity(allure.severity_level.NORMAL)
 @pytest.mark.parametrize("path", STABLE_ROUTES)
 def test_dashboard_routes_accessible_to_analyst(client, analyst_headers, path):
     r = client.get(path, headers=analyst_headers)
     assert r.status_code in (200, 422)
 
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Authorization")
+@allure.title("Admin role can access stable dashboard routes")
+@allure.severity(allure.severity_level.NORMAL)
 @pytest.mark.parametrize("path", STABLE_ROUTES)
 def test_dashboard_routes_accessible_to_admin(client, admin_headers, path):
     r = client.get(path, headers=admin_headers)
@@ -59,28 +68,45 @@ def test_dashboard_routes_accessible_to_admin(client, admin_headers, path):
 
 # ── Response shape ────────────────────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Response Shape")
+@allure.title("Summary endpoint returns a dict object")
+@allure.severity(allure.severity_level.NORMAL)
 def test_summary_returns_object(client, admin_headers):
     r = client.get("/api/v1/dashboard/summary", headers=admin_headers)
     if r.status_code == 200:
         assert isinstance(r.json(), dict)
 
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Response Shape")
+@allure.title("KPI snapshot endpoint returns a dict object")
+@allure.severity(allure.severity_level.NORMAL)
 def test_kpi_snapshot_returns_object(client, admin_headers):
     r = client.get("/api/v1/dashboard/kpi-snapshot", headers=admin_headers)
     if r.status_code == 200:
         assert isinstance(r.json(), dict)
 
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Response Shape")
+@allure.title("Risk overview returns a dict or list")
+@allure.severity(allure.severity_level.NORMAL)
 def test_risk_overview_returns_object_or_list(client, admin_headers):
     r = client.get("/api/v1/dashboard/risk-overview", headers=admin_headers)
     if r.status_code == 200:
         assert isinstance(r.json(), (dict, list))
 
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Response Shape")
+@allure.title("Exposure trend returns valid response or known Python 3.13 bug")
+@allure.severity(allure.severity_level.MINOR)
 def test_exposure_trend_accessible_or_known_bug(client, admin_headers):
-    """exposure-trend may raise TypeError on Python 3.13+SQLite (production bug).
-    Test passes if the endpoint returns a valid response OR raises the known error.
-    """
     try:
         r = client.get("/api/v1/dashboard/exposure-trend", headers=admin_headers)
         assert r.status_code in (200, 422, 500)
@@ -90,6 +116,11 @@ def test_exposure_trend_accessible_or_known_bug(client, admin_headers):
         assert "fromisoformat" in str(exc), f"Unexpected TypeError: {exc}"
 
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Response Shape")
+@allure.title("Actions endpoint returns a list or dict")
+@allure.severity(allure.severity_level.NORMAL)
 def test_actions_returns_list_or_object(client, admin_headers):
     r = client.get("/api/v1/dashboard/actions", headers=admin_headers)
     if r.status_code == 200:
@@ -98,6 +129,11 @@ def test_actions_returns_list_or_object(client, admin_headers):
 
 # ── Scan-specific dashboard data ──────────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Scan Filtering")
+@allure.title("KPI snapshot accepts scan_id query parameter")
+@allure.severity(allure.severity_level.NORMAL)
 def test_kpi_with_scan_id_param(client, admin_headers):
     import uuid
     fake_id = str(uuid.uuid4())
@@ -105,6 +141,11 @@ def test_kpi_with_scan_id_param(client, admin_headers):
     assert r.status_code in (200, 404, 422)
 
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Scan Filtering")
+@allure.title("Summary accepts scan_id query parameter")
+@allure.severity(allure.severity_level.NORMAL)
 def test_summary_with_scan_id_param(client, admin_headers):
     import uuid
     fake_id = str(uuid.uuid4())
@@ -114,6 +155,11 @@ def test_summary_with_scan_id_param(client, admin_headers):
 
 # ── Scan lifecycle → dashboard data ──────────────────────────────────────────
 
+@allure.epic("API")
+@allure.feature("Dashboard")
+@allure.story("Data Freshness")
+@allure.title("Dashboard summary is accessible after a scan is created")
+@allure.severity(allure.severity_level.NORMAL)
 def test_dashboard_after_scan_created(client, admin_headers, db_session):
     import uuid
     from app.models.scan import Scan, ScanStatus, Target

@@ -1,0 +1,1 @@
+2026-05-08T21:49:22 [INFO] [rid=-] httpx: HTTP Request: PATCH http://testserver/api/v1/rbac/users/d13e1b95-a84f-4566-869a-5f3bb87bb173/role "HTTP/1.1 400 Bad Request"

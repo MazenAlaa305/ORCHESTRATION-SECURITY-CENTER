@@ -1,0 +1,4 @@
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings/?limit=2&offset=0 "HTTP/1.1 307 Temporary Redirect"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings?limit=2&offset=0 "HTTP/1.1 200 OK"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings/?limit=2&offset=2 "HTTP/1.1 307 Temporary Redirect"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings?limit=2&offset=2 "HTTP/1.1 200 OK"

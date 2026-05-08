@@ -1,0 +1,1 @@
+2026-05-08T21:49:30 [INFO] [rid=-] app.services.ws_manager: WebSocket disconnected — total: 1

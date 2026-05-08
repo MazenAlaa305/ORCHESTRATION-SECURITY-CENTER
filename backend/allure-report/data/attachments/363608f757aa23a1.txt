@@ -1,0 +1,1 @@
+2026-05-08T21:45:53 [ERROR] [rid=-] app.services.wazuh_integration: Failed to connect to Wazuh API: boom

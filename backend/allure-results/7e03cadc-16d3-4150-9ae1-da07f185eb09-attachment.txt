@@ -1,0 +1,1 @@
+2026-05-08T21:45:55 [INFO] [rid=-] httpx: HTTP Request: PATCH http://testserver/api/v1/vulnerabilities/bulk "HTTP/1.1 200 OK"

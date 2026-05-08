@@ -1,0 +1,1 @@
+INFO     httpx:_client.py:1025 HTTP Request: DELETE http://testserver/api/v1/targets/00000000-0000-0000-0000-000000000000 "HTTP/1.1 404 Not Found"

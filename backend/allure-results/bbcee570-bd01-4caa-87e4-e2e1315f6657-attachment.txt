@@ -1,0 +1,2 @@
+WARNING  app.services.event_publisher:event_publisher.py:57 EventPublisher: Failed to publish 'SLA_BREACH': object MagicMock can't be used in 'await' expression
+INFO     app.services.sla:sla.py:137 SLA breach check: 1 new overdue action items created.

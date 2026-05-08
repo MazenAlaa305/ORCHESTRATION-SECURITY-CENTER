@@ -1,0 +1,1 @@
+2026-05-08T21:45:44 [INFO] [rid=-] app.services.finding_dedup: Dedup complete for scan 5f0ab0d7-6515-4f45-bdfe-25b246454690: 3 vulns processed, 3 new findings created

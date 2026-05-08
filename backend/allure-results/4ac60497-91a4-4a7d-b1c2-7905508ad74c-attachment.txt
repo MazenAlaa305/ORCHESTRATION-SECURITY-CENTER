@@ -1,0 +1,1 @@
+2026-05-08T21:49:29 [WARNING] [rid=-] app.services.alert_correlator: alert_correlator query failed: type object 'Vulnerability' has no attribute 'scan_asset_id'

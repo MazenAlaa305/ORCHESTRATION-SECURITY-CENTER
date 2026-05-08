@@ -1,0 +1,1 @@
+[33mWARNING [0m app.services.report_signer:report_signer.py:50 REPORT_SIGNING_KEY is not set — PDF will not be signed

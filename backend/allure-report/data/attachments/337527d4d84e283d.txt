@@ -1,0 +1,1 @@
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/reports/21dcddbe-c33b-44e8-97e8-4088fffde0d8/generate "HTTP/1.1 404 Not Found"

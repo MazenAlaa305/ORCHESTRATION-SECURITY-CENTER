@@ -1,0 +1,7 @@
+[32mINFO    [0m alembic.runtime.plugins:plugins.py:37 setup plugin alembic.autogenerate.schemas
+[32mINFO    [0m alembic.runtime.plugins:plugins.py:37 setup plugin alembic.autogenerate.tables
+[32mINFO    [0m alembic.runtime.plugins:plugins.py:37 setup plugin alembic.autogenerate.types
+[32mINFO    [0m alembic.runtime.plugins:plugins.py:37 setup plugin alembic.autogenerate.constraints
+[32mINFO    [0m alembic.runtime.plugins:plugins.py:37 setup plugin alembic.autogenerate.defaults
+[32mINFO    [0m alembic.runtime.plugins:plugins.py:37 setup plugin alembic.autogenerate.comments
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"

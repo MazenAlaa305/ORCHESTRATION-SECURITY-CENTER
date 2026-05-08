@@ -1,0 +1,2 @@
+2026-05-08T21:49:20 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/findings/?scan_id=3de268a8-f278-4c0f-9df2-7be3aeaec634 "HTTP/1.1 307 Temporary Redirect"
+2026-05-08T21:49:20 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/findings?scan_id=3de268a8-f278-4c0f-9df2-7be3aeaec634 "HTTP/1.1 200 OK"

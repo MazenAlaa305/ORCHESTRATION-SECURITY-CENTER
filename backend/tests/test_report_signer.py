@@ -2,6 +2,7 @@
 Tests for app/services/report_signer.py
 — canonical_findings_hash, sign_pdf, verify_signature
 """
+import allure
 import pytest
 from app.services.report_signer import canonical_findings_hash, sign_pdf, verify_signature
 
@@ -15,33 +16,48 @@ SAMPLE_FINDINGS = [
 
 # ── canonical_findings_hash ───────────────────────────────────────────────────
 
+@allure.epic("Security")
+@allure.feature("PDF Report Signing")
+@allure.story("Findings Hash")
 class TestCanonicalFindingsHash:
+    @allure.title("Hash is a 64-character lowercase hex string")
+    @allure.severity(allure.severity_level.NORMAL)
     def test_returns_64_char_hex(self):
         h = canonical_findings_hash(SAMPLE_FINDINGS)
         assert len(h) == 64
         assert all(c in "0123456789abcdef" for c in h)
 
+    @allure.title("Same findings produce identical hash")
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_same_findings_same_hash(self):
         h1 = canonical_findings_hash(SAMPLE_FINDINGS)
         h2 = canonical_findings_hash(SAMPLE_FINDINGS)
         assert h1 == h2
 
+    @allure.title("Hash is order-independent (sorted by id)")
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_order_independent(self):
         reversed_findings = list(reversed(SAMPLE_FINDINGS))
         h1 = canonical_findings_hash(SAMPLE_FINDINGS)
         h2 = canonical_findings_hash(reversed_findings)
         assert h1 == h2
 
+    @allure.title("Empty findings list produces a valid hash")
+    @allure.severity(allure.severity_level.NORMAL)
     def test_empty_list(self):
         h = canonical_findings_hash([])
         assert len(h) == 64
 
+    @allure.title("Different findings produce different hashes")
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_different_findings_different_hash(self):
         modified = [dict(SAMPLE_FINDINGS[0], severity="critical")]
         h1 = canonical_findings_hash(SAMPLE_FINDINGS)
         h2 = canonical_findings_hash(modified)
         assert h1 != h2
 
+    @allure.title("Single finding produces a valid hash")
+    @allure.severity(allure.severity_level.NORMAL)
     def test_single_finding(self):
         h = canonical_findings_hash([SAMPLE_FINDINGS[0]])
         assert len(h) == 64
@@ -49,32 +65,47 @@ class TestCanonicalFindingsHash:
 
 # ── sign_pdf ──────────────────────────────────────────────────────────────────
 
+@allure.epic("Security")
+@allure.feature("PDF Report Signing")
+@allure.story("PDF Signing")
 class TestSignPdf:
+    @allure.title("sign_pdf returns a 64-char hex string")
+    @allure.severity(allure.severity_level.NORMAL)
     def test_returns_hex_string(self):
         sig = sign_pdf(b"hello world", key=SAMPLE_KEY)
         assert isinstance(sig, str)
         assert len(sig) == 64
 
+    @allure.title("Same bytes and key produce identical signature")
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_same_bytes_same_signature(self):
         s1 = sign_pdf(b"data", key=SAMPLE_KEY)
         s2 = sign_pdf(b"data", key=SAMPLE_KEY)
         assert s1 == s2
 
+    @allure.title("Different byte content produces different signatures")
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_different_bytes_different_signature(self):
         s1 = sign_pdf(b"data1", key=SAMPLE_KEY)
         s2 = sign_pdf(b"data2", key=SAMPLE_KEY)
         assert s1 != s2
 
+    @allure.title("Different keys produce different signatures")
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_different_key_different_signature(self):
         s1 = sign_pdf(b"data", key="key1")
         s2 = sign_pdf(b"data", key="key2")
         assert s1 != s2
 
+    @allure.title("No signing key configured returns empty string")
+    @allure.severity(allure.severity_level.NORMAL)
     def test_no_key_returns_empty(self, monkeypatch):
         from app.core.config import settings
         monkeypatch.setattr(settings, "REPORT_SIGNING_KEY", None)
         assert sign_pdf(b"data") == ""
 
+    @allure.title("Empty bytes input still produces valid signature")
+    @allure.severity(allure.severity_level.MINOR)
     def test_empty_bytes(self):
         sig = sign_pdf(b"", key=SAMPLE_KEY)
         assert len(sig) == 64
@@ -82,24 +113,37 @@ class TestSignPdf:
 
 # ── verify_signature ──────────────────────────────────────────────────────────
 
+@allure.epic("Security")
+@allure.feature("PDF Report Signing")
+@allure.story("Signature Verification")
 class TestVerifySignature:
+    @allure.title("Valid signature verifies to True")
+    @allure.severity(allure.severity_level.BLOCKER)
     def test_valid_signature_returns_true(self):
         pdf = b"report content"
         sig = sign_pdf(pdf, key=SAMPLE_KEY)
         assert verify_signature(pdf, sig, key=SAMPLE_KEY) is True
 
+    @allure.title("Tampered PDF content fails verification")
+    @allure.severity(allure.severity_level.BLOCKER)
     def test_tampered_pdf_returns_false(self):
         pdf = b"report content"
         sig = sign_pdf(pdf, key=SAMPLE_KEY)
         assert verify_signature(b"tampered content", sig, key=SAMPLE_KEY) is False
 
+    @allure.title("Signature created with different key fails verification")
+    @allure.severity(allure.severity_level.BLOCKER)
     def test_wrong_key_returns_false(self):
         pdf = b"report content"
         sig = sign_pdf(pdf, key="correct-key")
         assert verify_signature(pdf, sig, key="wrong-key") is False
 
+    @allure.title("Empty stored signature returns False")
+    @allure.severity(allure.severity_level.NORMAL)
     def test_empty_stored_sig_returns_false(self):
         assert verify_signature(b"data", "", key=SAMPLE_KEY) is False
 
+    @allure.title("Garbage signature string returns False")
+    @allure.severity(allure.severity_level.NORMAL)
     def test_garbage_sig_returns_false(self):
         assert verify_signature(b"data", "notahexdigest", key=SAMPLE_KEY) is False
