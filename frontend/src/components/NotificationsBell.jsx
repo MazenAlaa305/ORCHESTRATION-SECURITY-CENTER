@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, X, Check } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 
 const LAST_SEEN_KEY = 'notif.lastSeenAt';
+
+const BG        = '#0b1623';
+const BG_HOVER  = '#111e2d';
+const BORDER    = '#1e2d3d';
+const TEXT_DIM  = '#4a5a6a';
+const TEXT_MID  = '#6a7a8a';
 
 const SEV_COLOR = {
     critical: '#ff0055',
@@ -30,10 +37,12 @@ export default function NotificationsBell() {
     const alerts = realTime.alerts || [];
 
     const [open, setOpen] = useState(false);
+    const [pos, setPos] = useState({ top: 56, right: 16 });
     const [lastSeenAt, setLastSeenAt] = useState(() => {
         try { return parseInt(localStorage.getItem(LAST_SEEN_KEY) || '0', 10) || 0; }
         catch { return 0; }
     });
+    const buttonRef  = useRef(null);
     const dropdownRef = useRef(null);
 
     const unreadCount = alerts.filter(a => {
@@ -47,22 +56,28 @@ export default function NotificationsBell() {
         try { localStorage.setItem(LAST_SEEN_KEY, String(now)); } catch {}
     };
 
-    // Mark read when dropdown opens
     useEffect(() => {
-        if (open) markAllRead();
+        if (open) {
+            markAllRead();
+            if (buttonRef.current) {
+                const r = buttonRef.current.getBoundingClientRect();
+                setPos({ top: r.bottom + 8, right: window.innerWidth - r.right });
+            }
+        }
     }, [open]);
 
-    // Close on outside click
     useEffect(() => {
         if (!open) return;
         const handler = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false);
+            if (
+                dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+                buttonRef.current  && !buttonRef.current.contains(e.target)
+            ) setOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, [open]);
 
-    // External open trigger (e.g. command palette)
     useEffect(() => {
         const handler = () => setOpen(true);
         window.addEventListener('dashboard:open-notifications', handler);
@@ -70,10 +85,12 @@ export default function NotificationsBell() {
     }, []);
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <>
             <button
+                ref={buttonRef}
                 onClick={() => setOpen(o => !o)}
-                className="relative p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                className="relative p-1.5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                style={{ background: open ? BG_HOVER : 'transparent' }}
                 aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
                 title="Notifications"
             >
@@ -81,101 +98,96 @@ export default function NotificationsBell() {
                 {unreadCount > 0 && (
                     <span
                         className="absolute -top-0.5 -right-0.5 text-[8px] font-black rounded-full leading-tight flex items-center justify-center"
-                        style={{
-                            background: '#ff0055',
-                            color: 'white',
-                            minWidth: '14px',
-                            height: '14px',
-                            padding: '0 3px',
-                            boxShadow: '0 0 6px rgba(255,0,85,0.6)',
-                        }}
+                        style={{ background: '#ff0055', color: '#fff', minWidth: 14, height: 14, padding: '0 3px' }}
                     >
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
             </button>
 
-            {open && (
+            {open && createPortal(
                 <div
-                    className="absolute right-0 top-full mt-2 z-50 w-80 rounded-xl overflow-hidden"
+                    ref={dropdownRef}
                     style={{
-                        background: 'rgb(10, 20, 30)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        boxShadow: '0 0 0 1px rgba(0,0,0,1), 0 20px 60px rgba(0,0,0,0.95)',
-                        backdropFilter: 'none',
-                        WebkitBackdropFilter: 'none',
-                        isolation: 'isolate',
-                        opacity: 1,
+                        position: 'fixed',
+                        top: pos.top,
+                        right: pos.right,
+                        width: 320,
+                        zIndex: 9999,
+                        background: BG,
+                        border: `1px solid ${BORDER}`,
+                        borderRadius: 12,
+                        boxShadow: '0 16px 48px #000, 0 2px 8px #000',
+                        overflow: 'hidden',
                     }}
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                        <div className="flex items-center gap-2">
-                            <Bell className="h-3.5 w-3.5 text-gray-400" />
-                            <span className="text-xs font-black uppercase tracking-wider text-gray-300">Notifications</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${BORDER}`, background: BG }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Bell size={13} color={TEXT_MID} />
+                            <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c8d8e8' }}>Notifications</span>
                             {alerts.length > 0 && unreadCount === 0 && (
-                                <span className="text-[9px] text-gray-600 font-mono">all read</span>
+                                <span style={{ fontSize: 9, color: TEXT_DIM, fontFamily: 'monospace' }}>all read</span>
                             )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {alerts.length > 0 && (
                                 <button
                                     onClick={markAllRead}
-                                    className="flex items-center gap-1 text-[9px] text-gray-500 hover:text-cyan-400 font-bold uppercase tracking-wider transition-colors"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: TEXT_MID, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'none', border: 'none', cursor: 'pointer' }}
                                 >
-                                    <Check className="h-2.5 w-2.5" /> Mark read
+                                    <Check size={10} /> Mark read
                                 </button>
                             )}
                             <button
                                 onClick={() => setOpen(false)}
-                                className="p-0.5 rounded hover:bg-white/10 text-gray-600 hover:text-white transition-colors"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DIM, padding: 2, borderRadius: 4 }}
                             >
-                                <X className="h-3.5 w-3.5" />
+                                <X size={13} />
                             </button>
                         </div>
                     </div>
 
                     {/* Body */}
-                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                    <div style={{ maxHeight: 320, overflowY: 'auto', background: BG }}>
                         {alerts.length === 0 ? (
-                            <div className="px-4 py-8 text-center">
-                                <Bell className="h-8 w-8 mx-auto mb-2 text-gray-700" />
-                                <p className="text-xs text-gray-500">No notifications yet</p>
-                                <p className="text-[10px] text-gray-700 mt-1">
-                                    Security events appear here as they happen
-                                </p>
+                            <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+                                <Bell size={28} color={TEXT_DIM} style={{ margin: '0 auto 8px' }} />
+                                <p style={{ fontSize: 11, color: TEXT_MID, margin: 0 }}>No notifications yet</p>
+                                <p style={{ fontSize: 10, color: TEXT_DIM, marginTop: 4 }}>Security events appear here as they happen</p>
                             </div>
                         ) : (
-                            <ul className="divide-y divide-white/5">
+                            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                                 {alerts.map((alert, idx) => {
                                     const sev = (alert.severity || alert.level || 'info').toLowerCase();
                                     const dot = sevColor(sev);
                                     const ts = alert.timestamp ? new Date(alert.timestamp).getTime() : 0;
                                     const isUnread = ts > lastSeenAt;
                                     return (
-                                        <li key={idx} className={`px-4 py-3 transition-colors ${isUnread ? 'bg-white/[0.025]' : ''}`}>
-                                            <div className="flex items-start gap-2.5">
-                                                <div
-                                                    className="mt-1.5 h-2 w-2 rounded-full shrink-0"
-                                                    style={{
-                                                        background: dot,
-                                                        boxShadow: isUnread ? `0 0 6px ${dot}80` : 'none',
-                                                    }}
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`text-xs leading-snug font-semibold ${isUnread ? 'text-white' : 'text-gray-400'}`}>
+                                        <li
+                                            key={idx}
+                                            style={{
+                                                padding: '10px 16px',
+                                                borderBottom: `1px solid ${BORDER}`,
+                                                background: isUnread ? BG_HOVER : BG,
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                                <div style={{ marginTop: 5, width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: dot }} />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{ fontSize: 11, fontWeight: 600, color: isUnread ? '#e8f0f8' : '#8899aa', margin: 0, lineHeight: 1.4 }}>
                                                         {alert.title || alert.message || 'Security alert'}
                                                     </p>
                                                     {alert.message && alert.title && (
-                                                        <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-2 font-mono">
+                                                        <p style={{ fontSize: 10, color: TEXT_MID, marginTop: 2, fontFamily: 'monospace', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                                                             {alert.message}
                                                         </p>
                                                     )}
                                                     {alert.target && (
-                                                        <p className="text-[9px] text-gray-600 font-mono mt-0.5 truncate">{alert.target}</p>
+                                                        <p style={{ fontSize: 9, color: TEXT_DIM, marginTop: 2, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.target}</p>
                                                     )}
                                                 </div>
-                                                <span className="text-[9px] text-gray-600 font-mono shrink-0 mt-0.5">
+                                                <span style={{ fontSize: 9, color: TEXT_DIM, fontFamily: 'monospace', flexShrink: 0, marginTop: 2 }}>
                                                     {fmtTime(alert.timestamp)}
                                                 </span>
                                             </div>
@@ -188,14 +200,15 @@ export default function NotificationsBell() {
 
                     {/* Footer */}
                     {alerts.length > 0 && (
-                        <div className="px-4 py-2 border-t border-white/5">
-                            <p className="text-[9px] text-gray-600 font-mono text-center">
+                        <div style={{ padding: '8px 16px', borderTop: `1px solid ${BORDER}`, background: BG, textAlign: 'center' }}>
+                            <span style={{ fontSize: 9, color: TEXT_DIM, fontFamily: 'monospace' }}>
                                 {alerts.length} event{alerts.length === 1 ? '' : 's'} · live from WebSocket
-                            </p>
+                            </span>
                         </div>
                     )}
-                </div>
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     );
 }

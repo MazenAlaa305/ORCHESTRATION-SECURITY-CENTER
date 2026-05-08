@@ -206,6 +206,17 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         scan.status = ScanStatus.FAILED
         scan.failure_reason = "concurrency_limit"
         db.commit()
+        _blocked_url = (scan.target.base_url if scan.target else None) or scan.target_url or str(scan.target_id)
+        try:
+            publisher.publish_sync("ALERT_NEW", {
+                "title": "Scan Blocked — Concurrent Scan Already Running",
+                "severity": "medium",
+                "message": f"A scan for {_blocked_url} is already in progress. New request rejected to prevent conflicts. Wait for the current scan to finish.",
+                "target": _blocked_url,
+                "timestamp": datetime.utcnow().isoformat(),
+            })
+        except Exception:
+            pass
         db.close()
         logger.warning(
             "[Scan %s] Rejected — target %s already has a running scan.",
@@ -214,6 +225,7 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         return
 
     vuln_count = 0
+    raw_target = None  # initialised early so the except block can reference it
     acquired_lock = bool(scan.target_id)  # track whether we need to release
 
     try:
@@ -230,6 +242,15 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         if not raw_target:
             raise ValueError(f"No valid target URL for scan {scan_id}")
         clean_target = _sanitise_target(raw_target)
+
+        # Alert: scan pipeline started
+        publisher.publish_sync("ALERT_NEW", {
+            "title": f"Scan Started — {clean_target}",
+            "severity": "info",
+            "message": f"Security scan initiated on {raw_target}. Running: Nmap recon → Nuclei web scan → Risk scoring.",
+            "target": raw_target,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
 
         # ── Tool selection (Part C) ───────────────────────────────────────────
         # The scan's `configuration["tools"]` overrides the default pipeline when
@@ -262,8 +283,19 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
                 "message": f"[RECON] Starting Nmap reconnaissance on {clean_target}…",
                 "scan_id": scan_id,
             })
-            scanner = NmapWrapper()
-            results = scanner.scan_target(clean_target, scan.scan_type)
+            try:
+                scanner = NmapWrapper()
+                results = scanner.scan_target(clean_target, scan.scan_type)
+            except Exception as _nmap_err:
+                publisher.publish_sync("ALERT_NEW", {
+                    "title": f"Tool Error — Nmap Reconnaissance Failed",
+                    "severity": "high",
+                    "message": f"Nmap could not scan {clean_target}: {str(_nmap_err)[:150]}. Results may be incomplete.",
+                    "target": clean_target,
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
+                results = []
+                logger.warning("[Scan %s] Nmap failed: %s", scan_id, _nmap_err)
         else:
             logger.info("[Scan %s] Phase 1: Nmap skipped (disabled)", scan_id)
 
@@ -454,6 +486,13 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
                 "message": f"[INTELLIGENCE] AI advisory skipped (no valid API key or network error)",
                 "scan_id": scan_id,
             })
+            publisher.publish_sync("ALERT_NEW", {
+                "title": "Tool Warning — AI Intelligence Analysis Unavailable",
+                "severity": "medium",
+                "message": "AI-powered advisory analysis could not run (missing API key or network error). Manual review of findings is recommended.",
+                "target": clean_target,
+                "timestamp": datetime.utcnow().isoformat(),
+            })
 
         # ── Phase 3: Nuclei deep scan ──────────────────────────────────────
         # Use the full URL (raw_target) so Nuclei scans the correct port,
@@ -486,8 +525,25 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
                         "cve_id": finding.get("cve_id", ""),
                         "description": finding["description"],
                     })
+                    # Immediate alert for critical/high nuclei findings
+                    if finding["severity"].lower() in ("critical", "high"):
+                        _cve = finding.get("cve_id", "")
+                        publisher.publish_sync("ALERT_NEW", {
+                            "title": f"[Nuclei] {finding.get('type', 'Web Vulnerability')} — {finding['severity'].title()}" + (f" ({_cve})" if _cve else ""),
+                            "severity": finding["severity"].lower(),
+                            "message": finding["description"][:160],
+                            "target": finding.get("url", nuclei_target)[:100],
+                            "timestamp": datetime.utcnow().isoformat(),
+                        })
             except Exception as exc:
                 logger.warning("[Scan %s] Nuclei scan skipped: %s", scan_id, exc)
+                publisher.publish_sync("ALERT_NEW", {
+                    "title": "Tool Error — Nuclei Web Scanner Failed",
+                    "severity": "high",
+                    "message": f"Nuclei web vulnerability scanner encountered an error on {nuclei_target}: {str(exc)[:150]}. Web vulnerabilities may not have been detected.",
+                    "target": nuclei_target,
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
 
         # Commit nuclei findings before risk engine's async session reads them
         db.commit()
@@ -529,6 +585,13 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
             _run_async(_risk_analysis())
         except Exception as exc:
             logger.error("[Scan %s] Risk Engine failed: %s", scan_id, exc)
+            publisher.publish_sync("ALERT_NEW", {
+                "title": "Tool Error — Risk Scoring Engine Failed",
+                "severity": "high",
+                "message": f"The Risk Engine could not score findings for this scan: {str(exc)[:150]}. Risk scores and action items may be missing.",
+                "target": clean_target,
+                "timestamp": datetime.utcnow().isoformat(),
+            })
 
         _write_agent_log(
             db, scan_id, "validation_agent", "Risk Scoring Completed",
@@ -585,26 +648,35 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         )
         cumulative_health = round(max(0.0, 100.0 - _risk), 2)
 
-        # Publish ALERT_NEW for critical/high findings so the notifications bell populates
+        # Publish per-finding ALERT_NEW for critical/high nmap findings (nuclei already fired inline)
         _now_iso = datetime.utcnow().isoformat()
-        _alerted_sevs = {"critical", "high"}
-        _alerted_vulns = [v for v in all_vulns if v.get("severity", "").lower() in _alerted_sevs]
-        for _av in _alerted_vulns[:15]:
+        _nmap_alerted = [v for v in all_vulns if v.get("severity", "").lower() in {"critical", "high"} and not v.get("cve_id")]
+        for _av in _nmap_alerted[:10]:
             publisher.publish_sync("ALERT_NEW", {
-                "title": f"{_av['severity'].title()} — {_av['description'][:80]}",
+                "title": f"Exposed Service — {_av['severity'].title()} Risk on {_av.get('host', clean_target)}",
                 "severity": _av["severity"].lower(),
                 "message": _av["description"],
                 "target": _av.get("host", raw_target),
                 "timestamp": _now_iso,
             })
-        # Always publish a scan-complete summary notification
+        # Medium nmap findings (cap at 5 to avoid noise)
+        _med_vulns = [v for v in all_vulns if v.get("severity", "").lower() == "medium" and not v.get("cve_id")]
+        for _mv in _med_vulns[:5]:
+            publisher.publish_sync("ALERT_NEW", {
+                "title": f"Exposed Service — Medium Risk on {_mv.get('host', clean_target)}",
+                "severity": "medium",
+                "message": _mv["description"],
+                "target": _mv.get("host", raw_target),
+                "timestamp": _now_iso,
+            })
+        # Scan-complete summary — always published
         _top_sev = "critical" if counts["critical"] > 0 else "high" if counts["high"] > 0 else "medium" if counts["medium"] > 0 else "info"
         publisher.publish_sync("ALERT_NEW", {
             "title": f"Scan Complete — {vuln_count} finding(s) on {_sanitise_target(raw_target)}",
             "severity": _top_sev,
             "message": (
-                f"{counts['critical']} critical, {counts['high']} high, "
-                f"{counts['medium']} medium, {counts['low']} low"
+                f"{counts['critical']} critical · {counts['high']} high · "
+                f"{counts['medium']} medium · {counts['low']} low · {counts['info']} info"
             ),
             "target": raw_target,
             "timestamp": _now_iso,
@@ -626,9 +698,20 @@ def run_scan_task(self, scan_id: str, mode: str = "nmap"):
         scan.status = ScanStatus.FAILED
         scan.failure_reason = str(exc)[:120]
         scan.risk_score = 0
+        _fail_target = raw_target or str(scan_id)
         # Notify frontend so the scan button unlocks immediately
         try:
             publisher.publish_sync("SCAN_STATUS", {"scan_id": scan_id, "status": "IDLE"})
+        except Exception:
+            pass
+        try:
+            publisher.publish_sync("ALERT_NEW", {
+                "title": f"Scan Failed — {_sanitise_target(_fail_target)}",
+                "severity": "critical",
+                "message": f"Scan pipeline terminated with an unexpected error: {str(exc)[:180]}",
+                "target": _fail_target,
+                "timestamp": datetime.utcnow().isoformat(),
+            })
         except Exception:
             pass
         try:

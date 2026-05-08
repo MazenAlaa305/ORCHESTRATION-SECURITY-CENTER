@@ -235,10 +235,52 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     const [loading, setLoading]         = useState(true);
     const [selectedNode, setSelectedNode] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const fgRef = useRef();
     const containerRef = useRef();
+    const graphAreaRef = useRef();
+    const fitTimers = useRef([]);
 
-    useEffect(() => { fetchData(); }, [refresh]);
+    const fitAll = useCallback(() => {
+        fgRef.current?.zoomToFit(300, 60);
+    }, []);
+
+    // Schedule multiple zoomToFit retries — at least one will land when canvas is ready
+    const scheduleFit = useCallback(() => {
+        fitTimers.current.forEach(clearTimeout);
+        fitTimers.current = [
+            setTimeout(() => fitAll(), 50),
+            setTimeout(() => fitAll(), 250),
+            setTimeout(() => fitAll(), 600),
+            setTimeout(() => fitAll(), 1200),
+        ];
+    }, [fitAll]);
+
+    useEffect(() => {
+        fetchData();
+        return () => fitTimers.current.forEach(clearTimeout);
+    }, [refresh]);
+
+    // Fire fit retries whenever BOTH data and real dimensions are ready
+    useEffect(() => {
+        if (!loading && graphData.nodes.length > 0 && containerSize.width > 0) {
+            scheduleFit();
+        }
+    }, [loading, graphData, containerSize]);
+
+    // Measure the graph area — only mount ForceGraph2D once we have real px dimensions
+    useEffect(() => {
+        const el = graphAreaRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(entries => {
+            const { width, height } = entries[0].contentRect;
+            if (width > 0 && height > 0) {
+                setContainerSize({ width, height });
+            }
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
 
     const fetchData = async () => {
         try {
@@ -324,22 +366,16 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         }
     }, []);
 
-    // ─── Fit: center the hub at (0,0) then zoom to show all nodes ─────
+    // ─── Fit: zoom to show all nodes ──────────────────────
     const handleFit = useCallback(() => {
-        const fg = fgRef.current;
-        if (!fg) return;
-        // Step 1: smoothly pan to hub (which is at 0,0)
-        fg.centerAt(0, 0, 400);
-        // Step 2: after pan completes, fit all nodes within view with generous padding
-        setTimeout(() => fg.zoomToFit(600, 80), 450);
-    }, []);
+        scheduleFit();
+    }, [scheduleFit]);
 
     // ─── Toggle fullscreen ────────────────────────────────
     const toggleFullscreen = useCallback(() => {
         setIsFullscreen(f => !f);
-        // After state change, re-fit so graph fills the new container size
-        setTimeout(() => fgRef.current?.zoomToFit(400, 80), 350);
-    }, []);
+        setTimeout(() => scheduleFit(), 350);
+    }, [scheduleFit]);
 
     // Escape exits fullscreen
     useEffect(() => {
@@ -480,7 +516,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     );
 
     const graphContainerStyle = isFullscreen
-        ? { position: 'fixed', inset: 0, zIndex: 9999, background: '#0c1c25' }
+        ? { position: 'fixed', top: '48px', right: 0, bottom: 0, left: 'var(--sidebar-width, 208px)', zIndex: 9999, background: '#0c1c25' }
         : { minHeight: compact ? 300 : 420 };
 
     return (
@@ -560,18 +596,22 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 </div>
 
                 {/* Graph area — flex-1 so it fills remaining space, legend floats inside */}
-                <div className="relative flex-1 overflow-hidden">
-                    {/* Floating Legend — top-right, always inside graph area */}
-                    <div className="absolute z-30" style={{ top: 10, right: 12 }}>
+                <div ref={graphAreaRef} className="relative flex-1 overflow-hidden">
+                    {/* Floating Legend — top-left, always inside graph area */}
+                    <div className="absolute z-30" style={{ top: 10, left: 12 }}>
                         <TopologyLegend />
                     </div>
 
                     {/* Scan-line overlay */}
                     <div className="scanline-overlay" />
 
+                    {/* Only mount ForceGraph2D once the container has real pixel dimensions */}
+                    {containerSize.width > 0 && (
                     <ForceGraph2D
                         ref={fgRef}
                         graphData={graphData}
+                        width={containerSize.width}
+                        height={containerSize.height}
                         backgroundColor="#0c1c25"
                         nodeCanvasObject={drawNode}
                         nodeCanvasObjectMode={() => 'replace'}
@@ -629,10 +669,11 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         linkDirectionalParticleSpeed={0.005}
                         d3AlphaDecay={0.018}
                         d3VelocityDecay={0.32}
-                        cooldownTicks={1}
-                        onEngineStop={() => setTimeout(() => fgRef.current?.zoomToFit(300, 60), 100)}
+                        warmupTicks={200}
+                        cooldownTicks={0}
                         onNodeClick={handleNodeClick}
                     />
+                    )}{/* end containerSize gate */}
                 </div>{/* end graph area */}
             </div>{/* end graph container */}
         </div>

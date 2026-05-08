@@ -8,22 +8,22 @@ const NAV_SECTIONS = [
     {
         label: 'Security',
         items: [
-            { icon: <LayoutDashboard />, label: 'Command Center', id: 'overview'      },
-            { icon: <Activity />,        label: 'Threat Center',  id: 'threat-center' },
+            { icon: <LayoutDashboard />, label: 'Command Center', id: 'overview' },
+            { icon: <Activity />, label: 'Threat Center', id: 'threat-center' },
         ],
     },
     {
         label: 'Operations',
         items: [
-            { icon: <Scan />,  label: 'Scanner',  id: 'operations' },
-            { icon: <Brain />, label: 'AI Brain',  id: 'ai-brain'   },
+            { icon: <Scan />, label: 'Scanner', id: 'operations' },
+            { icon: <Brain />, label: 'AI Brain', id: 'ai-brain' },
         ],
     },
     {
         label: 'System',
         items: [
-            { icon: <FileText />,  label: 'Reports',  id: 'reports'  },
-            { icon: <Settings />,  label: 'Settings', id: 'settings' },
+            { icon: <FileText />, label: 'Reports', id: 'reports' },
+            { icon: <Settings />, label: 'Settings', id: 'settings' },
         ],
     },
 ];
@@ -112,8 +112,8 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         try { return localStorage.getItem('sidebar-collapsed') === 'true'; } catch { return false; }
     });
 
-    const isScanning   = realTime.scanStatus === 'RUNNING';
-    const isConnected  = realTime.isConnected;
+    const isScanning = realTime.scanStatus === 'RUNNING';
+    const isConnected = realTime.isConnected;
     const overdueCount = realTime.kpi?.overdue_findings ?? 0;
 
     // Pinned views — read from localStorage, re-read when the panel mutates them.
@@ -124,11 +124,15 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         return () => window.removeEventListener(VIEWS_CHANGED_EVENT, refresh);
     }, []);
 
+    useEffect(() => {
+        document.documentElement.style.setProperty('--sidebar-width', collapsed ? '56px' : '208px');
+    }, [collapsed]);
+
     // Persist collapse state
     const toggleCollapse = () => {
         setCollapsed(prev => {
             const next = !prev;
-            try { localStorage.setItem('sidebar-collapsed', String(next)); } catch {}
+            try { localStorage.setItem('sidebar-collapsed', String(next)); } catch { }
             return next;
         });
     };
@@ -137,8 +141,8 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         <aside
             className={`relative h-screen z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-14' : 'w-52'}`}
             style={{
-                background:     'linear-gradient(180deg, rgba(18,38,48,0.92), rgba(10,24,32,0.96))',
-                borderRight:    '1px solid rgba(255,255,255,0.05)',
+                background: 'linear-gradient(180deg, rgba(18,38,48,0.92), rgba(10,24,32,0.96))',
+                borderRight: '1px solid rgba(255,255,255,0.05)',
                 backdropFilter: 'blur(24px)',
             }}
         >
