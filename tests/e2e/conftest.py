@@ -7,7 +7,14 @@ Run prerequisites:
 """
 import os
 import pytest
-from playwright.sync_api import sync_playwright
+
+# Skip the entire e2e suite when playwright is not installed so that
+# running `pytest` from the project root does not crash with a collection error.
+playwright = pytest.importorskip(
+    "playwright",
+    reason="playwright not installed — run: pip install playwright && playwright install chromium",
+)
+from playwright.sync_api import sync_playwright  # noqa: E402
 
 BASE_URL = os.environ.get("E2E_BASE_URL", "https://localhost")
 

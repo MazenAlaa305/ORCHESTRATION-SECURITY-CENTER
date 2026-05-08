@@ -16,6 +16,30 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
+
+# ── Compatibility shim: aioredis crashes on Python 3.13 ──────────────────────
+# aioredis < 3.x defines `class TimeoutError(asyncio.TimeoutError, builtins.TimeoutError)`
+# which is a duplicate base class error in Python 3.11+. Mock the whole module
+# before any app code imports it so the test process never loads the real package.
+if sys.version_info >= (3, 11):
+    _aioredis_mock = MagicMock()
+    _aioredis_mock.from_url = MagicMock(return_value=MagicMock())
+    _aioredis_mock.Redis = MagicMock()
+    sys.modules.setdefault("aioredis", _aioredis_mock)
+
+# ── Stub optional heavy packages that may not be installed locally ────────────
+# google-genai: only needed at runtime by intelligence_agent; never needed in tests.
+try:
+    from google import genai  # noqa: F401
+except (ImportError, AttributeError):
+    _genai_mock = MagicMock()
+    _google_mock = sys.modules.get("google", MagicMock())
+    _google_mock.genai = _genai_mock
+    sys.modules["google"] = _google_mock
+    sys.modules["google.genai"] = _genai_mock
+    sys.modules["google.genai.types"] = MagicMock()
+    sys.modules["google.generativeai"] = MagicMock()
 
 # ── Test-only environment (must be set BEFORE any app import) ────────────────
 os.environ["SKIP_SECRET_VALIDATION"] = "1"
