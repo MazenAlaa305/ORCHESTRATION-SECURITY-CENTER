@@ -1,0 +1,2 @@
+2026-05-09T17:25:26 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/findings/?status=banana "HTTP/1.1 307 Temporary Redirect"
+2026-05-09T17:25:26 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/findings?status=banana "HTTP/1.1 422 Unprocessable Entity"

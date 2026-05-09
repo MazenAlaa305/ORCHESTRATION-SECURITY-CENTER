@@ -1,0 +1,1 @@
+[31m[1mERROR   [0m app.core.crypto:crypto.py:99 Failed to decrypt auth_credentials:

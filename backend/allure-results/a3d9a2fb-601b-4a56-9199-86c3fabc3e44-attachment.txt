@@ -1,0 +1,2 @@
+[33mWARNING [0m app.api.v1.endpoints.audit:audit.py:71 Audit chain broken at log c3c7df66-47bb-4586-8739-32cf4886aa7f for scan 47af6e34-72ca-4e52-b106-d68ad6dd3896 — stored=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa expected=3d7c454fddf3b9614822f1ad292abb796a0a2857443183674ce0f26ca321b24d
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/scans/47af6e34-72ca-4e52-b106-d68ad6dd3896/audit/verify "HTTP/1.1 200 OK"

@@ -1,0 +1,1 @@
+[32mINFO    [0m app.services.ws_manager:ws_manager.py:34 WebSocket disconnected — total: 1

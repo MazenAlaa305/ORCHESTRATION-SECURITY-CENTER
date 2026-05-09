@@ -1,0 +1,1 @@
+2026-05-09T17:25:26 [WARNING] [rid=-] app.services.report_signer: REPORT_SIGNING_KEY is not set — PDF will not be signed
