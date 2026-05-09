@@ -1,0 +1,322 @@
+"""
+PentesterFlow Pydantic Schemas
+Request/Response models for API endpoints
+"""
+from pydantic import BaseModel, Field, HttpUrl
+from typing import List, Optional, Dict, Any, Union
+from datetime import datetime
+from enum import Enum
+
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+class ScanStatus(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class SeverityLevel(str, Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    INFO = "info"
+
+
+class VulnStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    FIXED = "fixed"
+    FALSE_POSITIVE = "false_positive"
+    ACCEPTED = "accepted"
+
+
+# ============================================================================
+# TARGET SCHEMAS
+# ============================================================================
+
+class TargetCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    base_url: str
+    auth_method: Optional[str] = None
+    auth_credentials: Optional[Dict[str, Any]] = None
+    asset_value: Optional[str] = "MEDIUM"            # CRITICAL/HIGH/MEDIUM/LOW
+    data_sensitivity: Optional[str] = "NONE"         # PII/FINANCIAL/NONE
+    environment_type: Optional[str] = "lab"          # lab/production/staging/development
+    compliance_tags: Optional[List[str]] = None      # ["pci-dss", "hipaa", "iso-27001"]
+    scope_allowlist: Optional[List[str]] = None
+    max_rps: Optional[int] = 10
+    notes: Optional[str] = None
+
+
+class TargetResponse(BaseModel):
+    id: str
+    name: str
+    base_url: str
+    tech_stack: Optional[Dict[str, Any]] = None
+    auth_method: Optional[str] = None
+    asset_value: Optional[str] = None
+    data_sensitivity: Optional[str] = None
+    environment_type: Optional[str] = None
+    compliance_tags: Optional[List[str]] = None
+    scope_allowlist: Optional[List[str]] = None
+    max_rps: Optional[int] = None
+    notes: Optional[str] = None
+    last_scanned_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TargetDetail(TargetResponse):
+    endpoints: List["EndpointResponse"] = []
+    scans: List["ScanSummary"] = []
+
+
+# ============================================================================
+# SCAN SCHEMAS
+# ============================================================================
+
+class ScanCreate(BaseModel):
+    target_id: Optional[str] = None
+    target_url: Optional[str] = None  # Legacy support
+    scan_type: str = "full"              # "quick", "standard", "full", "custom"
+    tools: Optional[List[str]] = None    # ["nmap", "nuclei", "openvas", "ai_validation"]
+    configuration: Optional[Dict[str, Any]] = None
+    schedule: Optional[str] = None       # cron expression for recurring scans
+    auto_report: bool = False            # generate PDF when the scan completes
+    siem_forward: bool = False           # forward findings to Elasticsearch
+
+
+class ScanSummary(BaseModel):
+    id: str
+    status: ScanStatus
+    scan_type: str
+    target_url: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    risk_score: float = 0.0
+    target_display: Optional[str] = "Unknown"
+    vulnerabilities_count: Optional[int] = 0
+    assets_count: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+
+class ScanResponse(ScanSummary):
+    target_id: Optional[str] = None
+    target_url: Optional[str] = None
+    configuration: Optional[Dict[str, Any]] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+class ScanListPage(BaseModel):
+    """
+    Uniform paginated envelope for the scan list (Phase 4).
+    Enforces the `{items, total, page, page_size}` shape required by the
+    refactored History tab.
+    """
+    items: List[ScanSummary]
+    total: int
+    page: int
+    page_size: int
+
+
+class ScanDetail(ScanResponse):
+    agent_thoughts: Optional[Dict[str, Any]] = None
+    vulnerabilities: List["VulnerabilityResponse"] = []
+    agent_logs: List["AgentLogResponse"] = []
+    assets: List["ScanAssetResponse"] = []
+    actions: List["ActionItemResponse"] = []
+
+
+# ============================================================================
+# VULNERABILITY SCHEMAS
+# ============================================================================
+
+class VulnerabilityBase(BaseModel):
+    type: Optional[str] = None
+    severity: SeverityLevel = SeverityLevel.LOW
+    url: str
+    parameter: Optional[str] = None
+    description: Optional[str] = None
+
+
+class VulnerabilityCreate(VulnerabilityBase):
+    scan_id: str
+    evidence: Optional[Dict[str, Any]] = None
+
+
+class VulnerabilityResponse(VulnerabilityBase):
+    id: str
+    scan_id: str
+    status: VulnStatus
+    confidence_score: Optional[float] = None
+    ai_validation_result: Optional[Dict[str, Any]] = None
+    proof_of_concept: Optional[str] = None
+    remediation: Optional[str] = None
+    created_at: datetime
+
+    title: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    service: Optional[str] = None
+    cve_id: Optional[str] = None
+    cvss_score: Optional[float] = None
+    cvss_vector: Optional[str] = None
+    template_id: Optional[str] = None
+    detected_by: Optional[str] = None
+
+    # Finding deduplication & compliance (Phase 4.2 / 5.3)
+    finding_id: Optional[str] = None
+    control_tags: Optional[Dict[str, str]] = None
+    simplified_description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class VulnerabilityUpdate(BaseModel):
+    status: Optional[VulnStatus] = None
+    remediation: Optional[str] = None
+
+
+# ============================================================================
+# AGENT LOG SCHEMAS
+# ============================================================================
+
+class AgentLogCreate(BaseModel):
+    scan_id: str
+    agent_name: str
+    action: str
+    # `reasoning` is written as either a free-form string (most agents emit a
+    # single sentence) or a structured dict (intelligence agent). Keep both shapes.
+    reasoning: Union[Dict[str, Any], str, None] = None
+    input_data: Optional[Dict[str, Any]] = None
+    output_data: Optional[Dict[str, Any]] = None
+
+
+class AgentLogResponse(BaseModel):
+    id: str
+    scan_id: str
+    agent_name: str
+    action: str
+    reasoning: Union[Dict[str, Any], str, None] = None
+    input_data: Optional[Dict[str, Any]] = None
+    output_data: Optional[Dict[str, Any]] = None
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# ENDPOINT SCHEMAS
+# ============================================================================
+
+class EndpointCreate(BaseModel):
+    target_id: str
+    url: str
+    method: str = "GET"
+    parameters: Optional[Dict[str, Any]] = None
+    authentication_required: bool = False
+
+
+class EndpointResponse(BaseModel):
+    id: str
+    target_id: str
+    url: str
+    method: str
+    parameters: Optional[Dict[str, Any]] = None
+    authentication_required: bool
+    discovered_at: datetime
+    last_tested: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# LEGACY SCHEMAS (backward compatibility)
+# ============================================================================
+
+class AssetServiceResponse(BaseModel):
+    port: int
+    protocol: str
+    state: str
+    service_name: Optional[str] = None
+    product: Optional[str] = None
+    version: Optional[str] = None
+    cpe: Optional[str] = None
+    extra_info: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ScanAssetResponse(BaseModel):
+    id: int
+    scan_id: str
+    
+    # Identity
+    ip_address: str
+    hostname: Optional[str] = None
+    mac_address: Optional[str] = None
+    mac_vendor: Optional[str] = None
+    
+    # OS
+    os_name: Optional[str] = None
+    os_family: Optional[str] = None
+    os_accuracy: Optional[int] = None
+    
+    # Meta
+    device_type: str = "unknown"
+    uptime: Optional[str] = None
+    is_new: Optional[str] = "false"
+    ai_insight: Optional[Dict[str, Any]] = None
+    
+    # Nested Services
+    services: List[AssetServiceResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# OPENVAS SCHEMAS (backward compatibility)
+# ============================================================================
+
+class OpenVASScanCreate(BaseModel):
+    target_ip: str
+    target_name: str
+
+class OpenVASScanResponse(BaseModel):
+    task_id: str
+    report_id: Optional[str] = None
+    status: str = "success"
+
+class ActionItemResponse(BaseModel):
+    id: int
+    scan_id: str
+    title: str
+    description: Optional[str] = None
+    priority: str
+    status: str
+    type: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Forward reference updates
+TargetDetail.model_rebuild()
+ScanDetail.model_rebuild()

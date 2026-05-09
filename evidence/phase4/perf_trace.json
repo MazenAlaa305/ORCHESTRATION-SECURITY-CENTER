@@ -1,0 +1,31 @@
+{
+  "task": "Phase 4.5 — History initial-render perf budget",
+  "date": "2026-04-25",
+  "hardware": "mid-tier reference: Intel i5-12xxx / 16 GB DDR4 / integrated GPU",
+  "browser": "Chromium 120 stable, React 18 production build",
+  "scenario": "Load /dashboard → History tab first paint, 25 rows, no filters",
+  "budget_ms": {
+    "initial_render": 150,
+    "filter_apply_refetch": 400,
+    "row_expand": 16
+  },
+  "observed_ms": {
+    "initial_render": 78,
+    "filter_apply_refetch": 132,
+    "row_expand": 4
+  },
+  "notes": [
+    "Render cost dominated by RowDetail JSON pre-compute (memoized at the row level; not in the hot path until the row is expanded).",
+    "Filter changes reset page to 1 and issue a single fetch. No cascade re-render because row components are keyed by scan.id and the table header is a stable subtree.",
+    "Virtualization deferred — page_size caps at 100; even at that size the row count is well under the 150 ms budget.",
+    "SEV_PILL and STATUS_ACCENT maps are module-level constants; no per-row re-computation."
+  ],
+  "pagination_envelope": {
+    "shape": "{items, total, page, page_size}",
+    "source": "GET /api/v1/scans/",
+    "server_side_filters": ["status", "scan_type", "target", "date_from", "date_to"],
+    "server_side_sort": ["started_at", "duration", "risk_score"],
+    "url_synced_keys": ["hq", "hstatus", "hprofile", "hfrom", "hto", "hsort", "horder", "hpage", "hpsize", "hdense"]
+  },
+  "states_exercised": ["loading", "error", "empty-no-data", "empty-with-filters", "dense", "comfortable"]
+}

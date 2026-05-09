@@ -1,0 +1,2 @@
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings/?scan_id=24168c55-0eaa-4d14-bc0a-e0fafea2014d "HTTP/1.1 307 Temporary Redirect"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings?scan_id=24168c55-0eaa-4d14-bc0a-e0fafea2014d "HTTP/1.1 200 OK"

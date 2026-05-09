@@ -1,0 +1,6 @@
+ID,Name,Email,Department,Salary,SSN,Start Date
+1,Jane Smith,jane.smith@sme-corp.com,HR,85000,123-45-6789,2019-03-15
+2,Bob Johnson,bob.johnson@sme-corp.com,Engineering,72000,234-56-7890,2020-07-01
+3,Alice Williams,alice.w@sme-corp.com,Finance,95000,345-67-8901,2018-11-20
+4,Carlos Garcia,carlos.g@sme-corp.com,IT Support,68000,456-78-9012,2021-01-10
+5,Sarah Chen,sarah.chen@sme-corp.com,Engineering,110000,567-89-0123,2017-06-15

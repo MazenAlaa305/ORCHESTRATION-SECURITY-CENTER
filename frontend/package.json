@@ -1,0 +1,51 @@
+{
+    "name": "sme-cyber-dashboard-frontend",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:ui": "vitest --ui",
+        "test:coverage": "vitest run --coverage"
+    },
+    "dependencies": {
+        "@tanstack/react-query": "^5.0.0",
+        "@tanstack/react-query-devtools": "^5.0.0",
+        "axios": "^1.6.2",
+        "d3-ease": "^3.0.1",
+        "d3-force": "^3.0.0",
+        "d3-hierarchy": "^3.1.2",
+        "d3-selection": "^3.0.0",
+        "d3-transition": "^3.0.1",
+        "framer-motion": "^11.0.0",
+        "ldrs": "^1.0.1",
+        "lucide-react": "^0.294.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-force-graph-2d": "^1.25.4",
+        "react-router-dom": "^7.14.2",
+        "react-window": "^1.8.10",
+        "recharts": "^2.10.3",
+        "zustand": "^4.4.7"
+    },
+    "devDependencies": {
+        "@testing-library/jest-dom": "^6.4.2",
+        "@testing-library/react": "^15.0.6",
+        "@testing-library/user-event": "^14.5.2",
+        "@types/react": "^18.2.37",
+        "@types/react-dom": "^18.2.15",
+        "@vitejs/plugin-react": "^4.2.0",
+        "@vitest/coverage-v8": "^1.6.0",
+        "autoprefixer": "^10.4.16",
+        "jsdom": "^24.0.0",
+        "msw": "^2.3.1",
+        "postcss": "^8.4.32",
+        "tailwindcss": "^3.3.6",
+        "vite": "^5.0.0",
+        "vitest": "^1.6.0"
+    }
+}

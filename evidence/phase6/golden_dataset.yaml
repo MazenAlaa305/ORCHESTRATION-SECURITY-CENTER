@@ -1,0 +1,200 @@
+# Phase 6.4 — Golden dataset of planted vulnerabilities
+# Source: docker-compose.lab.yml `lab.*` labels and lab/config/ fixtures.
+# Each entry is the truth we expect the scanner pipeline to detect.
+#
+# Schema:
+#   host            — container_name
+#   hostname        — docker service hostname
+#   ip              — fixed IP in the lab network
+#   zone            — dmz | corp | data | mgmt
+#   service         — protocol/app detected
+#   port            — target port (container-side)
+#   expected:
+#     severity      — critical | high | medium | low
+#     cwe           — one or more CWE IDs
+#     cve           — when a specific CVE is planted (else null)
+#     signature:    — scanner + template/plugin ID expected to fire
+#
+# Baseline targets (Phase 1): recall(critical/high) >= 0.95; recall(all) >= 0.90;
+# precision >= 0.80.
+
+dataset_version: "2026-04-25"
+frozen_lab_images:
+  bkimminich/juice-shop: "latest (2026-04-25)"
+  nginx: "alpine (2026-04-25)"
+  dperson/samba: "latest (2026-04-25)"
+  postgres: "13-alpine"
+  redis: "6.0-alpine"
+  coredns/coredns: "latest"
+  greenmail/standalone: "2.0.1"
+
+entries:
+  - id: juice-shop-sqli
+    host: lab_webserver
+    hostname: webserver.sme-lab.local
+    ip: 10.10.10.10
+    zone: dmz
+    service: http/juice-shop
+    port: 3000
+    expected:
+      severity: critical
+      cwe: ["CWE-89"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: owasp-juice-shop-sqli
+      sev_bucket_hint: "OWASP A03:2021 — Injection"
+
+  - id: juice-shop-xss
+    host: lab_webserver
+    hostname: webserver.sme-lab.local
+    ip: 10.10.10.10
+    zone: dmz
+    service: http/juice-shop
+    port: 3000
+    expected:
+      severity: high
+      cwe: ["CWE-79"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: reflected-xss
+
+  - id: juice-shop-bola
+    host: lab_webserver
+    hostname: webserver.sme-lab.local
+    ip: 10.10.10.10
+    zone: dmz
+    service: http/juice-shop
+    port: 3000
+    expected:
+      severity: high
+      cwe: ["CWE-639"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: bola-api-users
+
+  - id: api-gw-info-disclosure
+    host: lab_api_gateway
+    hostname: api-gw.sme-lab.local
+    ip: 10.10.10.20
+    zone: dmz
+    service: http/nginx
+    port: 8081
+    expected:
+      severity: medium
+      cwe: ["CWE-200"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: exposed-swagger
+
+  - id: fileserver-weak-creds
+    host: lab_fileserver
+    hostname: fileserver.sme-lab.local
+    ip: 10.10.20.10
+    zone: corp
+    service: smb
+    port: 445
+    expected:
+      severity: high
+      cwe: ["CWE-521"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: smb-default-login
+
+  - id: fileserver-smb-enum
+    host: lab_fileserver
+    hostname: fileserver.sme-lab.local
+    ip: 10.10.20.10
+    zone: corp
+    service: smb
+    port: 445
+    expected:
+      severity: medium
+      cwe: ["CWE-200"]
+      cve: null
+      signature:
+        scanner: nmap
+        template: smb-enum-shares
+
+  - id: db-weak-creds
+    host: lab_database
+    hostname: db.sme-lab.local
+    ip: 10.10.30.10
+    zone: data
+    service: postgres
+    port: 5432
+    expected:
+      severity: critical
+      cwe: ["CWE-521", "CWE-319"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: postgres-default-login
+
+  - id: redis-no-auth
+    host: lab_redis_cache
+    hostname: cache.sme-lab.local
+    ip: 10.10.30.20
+    zone: data
+    service: redis
+    port: 6380
+    expected:
+      severity: high
+      cwe: ["CWE-306"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: redis-unauth
+
+  # Profile: full-lab — only scored when the full-lab compose profile is up.
+  - id: dns-zone-transfer
+    profile: full-lab
+    host: lab_dns_server
+    hostname: dns.sme-lab.local
+    ip: 10.10.10.30
+    zone: dmz
+    service: dns
+    port: 53
+    expected:
+      severity: medium
+      cwe: ["CWE-200"]
+      cve: null
+      signature:
+        scanner: nmap
+        template: dns-zone-transfer
+
+  - id: mail-plaintext-auth
+    profile: full-lab
+    host: lab_mailserver
+    hostname: mail.sme-lab.local
+    ip: 10.10.20.20
+    zone: corp
+    service: smtp
+    port: 3025
+    expected:
+      severity: medium
+      cwe: ["CWE-319"]
+      cve: null
+      signature:
+        scanner: nmap
+        template: smtp-auth-plain
+
+  - id: workstation-info-disclosure
+    profile: full-lab
+    host: lab_workstation
+    hostname: ws01.sme-lab.local
+    ip: 10.10.20.40
+    zone: corp
+    service: http
+    port: 80
+    expected:
+      severity: low
+      cwe: ["CWE-200"]
+      cve: null
+      signature:
+        scanner: nuclei
+        template: exposed-internal-info

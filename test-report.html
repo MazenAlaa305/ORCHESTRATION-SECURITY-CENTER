@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Report — SME Cyber Dashboard</title>
+  <link rel="stylesheet" href="test-report.css" />
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>SME Cyber Dashboard &mdash; Test Report</h1>
+      <div class="header-meta">
+        <span class="badge fail">FAIL</span>
+        <span class="timestamp">Generated: 2026-05-09 12:25:24</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="summary">
+      <div class="stat-card total">
+        <div class="stat-num">379</div>
+        <div class="stat-label">Total Tests</div>
+      </div>
+      <div class="stat-card passed">
+        <div class="stat-num">357</div>
+        <div class="stat-label">Passed</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-num">18</div>
+        <div class="stat-label">Failed</div>
+      </div>
+      <div class="stat-card skipped">
+        <div class="stat-num">4</div>
+        <div class="stat-label">Skipped</div>
+      </div>
+    </section>
+
+    <section class="test-section">
+      <div class="section-header">
+        <h2>Backend &amp; E2E Tests <span class="section-label">pytest</span></h2>
+        <span class="run-status fail">FAIL</span>
+      </div>
+      <div class="suites">
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_agents</span> <span
+                class="suite-path">all_tests/backend/test_agents.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Lightweight tests for the agent layer.
+
+            The full agent pipeline depends on Gemini and live tool execution; here we
+            only verify that the expected modules import, exposed classes can be
+            instantiated against the in-memory test session, and pure helpers behave
+            deterministically. No network is touched.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_intelligence_agent_imports</span><span class="tc-time">0.008s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_validation_probe_imports</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_validation_result_dataclass_fields</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_intelligence_agent_init_without_api_key</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_finding_dedup_fingerprint_is_deterministic</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_finding_dedup_normalises_url</span><span class="tc-time">0.000s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_audit_api</span> <span
+                class="suite-path">all_tests/backend/test_audit_api.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.44s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for GET /api/v1/scans/{scan_id}/audit/verify (audit chain endpoint)</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_audit_verify_requires_auth</span><span class="tc-time">0.027s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_audit_verify_unknown_scan_404</span><span class="tc-time">0.194s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_valid_chain_returns_true</span><span class="tc-time">0.010s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_chain_is_valid</span><span class="tc-time">0.008s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_broken_chain_returns_false</span><span class="tc-time">0.008s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_analyst_can_verify_chain</span><span class="tc-time">0.189s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_auth</span> <span
+                class="suite-path">all_tests/backend/test_auth.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">5 passed</span> <span class="stat time">1.27s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for password hashing and JWT helpers in app.core.security.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_hash_round_trip</span><span class="tc-time">0.542s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_hash_is_salted</span><span class="tc-time">0.728s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_jwt_round_trip</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_jwt_rejects_tampered_token</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_jwt_rejects_expired_token</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_auth_flow</span> <span
+                class="suite-path">all_tests/backend/test_auth_flow.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">1.12s</span>
+            </div>
+          </div>
+          <p class="suite-desc">End-to-end tests for the auth lifecycle: login → me → change password → re-login.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_login_success</span><span class="tc-time">0.189s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_login_wrong_password</span><span class="tc-time">0.187s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_login_unknown_email</span><span class="tc-time">0.005s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_logout_returns_204</span><span class="tc-time">0.004s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_change_password_then_login_with_new</span><span class="tc-time">0.553s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_change_password_rejects_wrong_current</span><span class="tc-time">0.186s</span>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_crypto.TestCryptoWithKey</span> <span
+                class="suite-path">all_tests/backend/test_crypto.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">8 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/core/crypto.py — Fernet credential encryption/decryption.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_encrypt_returns_string</span><span class="tc-time">0.002s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_round_trip_simple_dict</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_round_trip_nested_dict</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_encrypt_none_returns_none</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_decrypt_none_returns_none</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_ciphertext_differs_each_call</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_empty_dict</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_decrypt_garbage_returns_none</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_crypto.TestCryptoPlaintextFallback</span>
+              <span class="suite-path">all_tests/backend/test_crypto.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/core/crypto.py — Fernet credential encryption/decryption.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_encrypt_returns_plain_json</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_decrypt_plain_json_string</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_decrypt_none_is_none</span><span class="tc-time">0.003s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_cvss.TestParseVector</span> <span
+                class="suite-path">all_tests/backend/test_cvss.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">5 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.cvss — CVSS v3.1 Base Score and Environmental Score.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_full_prefix_stripped</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_short_form_no_prefix</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_missing_metrics_filled_with_defaults</span><span class="tc-time">0.000s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_environmental_keys_default_to_x</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_case_insensitive_input</span><span class="tc-time">0.000s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_cvss.TestBaseScore</span> <span
+                class="suite-path">all_tests/backend/test_cvss.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">10 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.cvss — CVSS v3.1 Base Score and Environmental Score.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_critical_10</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_high_8_8</span><span
+                class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_no_impact_is_zero</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_accepts_dict_input</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_accepts_string_input</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_score_in_valid_range</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_physical_access_lower_than_network</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_high_complexity_lower_than_low_complexity</span><span class="tc-time">0.000s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_scope_changed_higher_than_unchanged_same_impacts</span><span
+                class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_roundup_one_decimal_place</span><span class="tc-time">0.000s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_cvss.TestEnvironmentalScore</span> <span
+                class="suite-path">all_tests/backend/test_cvss.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.cvss — CVSS v3.1 Base Score and Environmental Score.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_critical_asset_raises_score</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_pii_data_raises_confidentiality_impact</span><span class="tc-time">0.000s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_internal_exposure_lowers_score</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_environmental_score_in_range</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_accepts_dict_input</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_original_dict_not_mutated</span><span class="tc-time">0.000s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_cvss.TestSeverityToDefaultVector</span>
+              <span class="suite-path">all_tests/backend/test_cvss.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">9 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.cvss — CVSS v3.1 Base Score and Environmental Score.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_known_severities_return_valid_vector[critical]</span><span
+                class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_known_severities_return_valid_vector[high]</span><span
+                class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_known_severities_return_valid_vector[medium]</span><span
+                class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_known_severities_return_valid_vector[low]</span><span class="tc-time">0.000s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_known_severities_return_valid_vector[info]</span><span
+                class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_case_insensitive</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_unknown_severity_falls_back_to_low</span><span class="tc-time">0.000s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_critical_vector_scores_higher_than_low</span><span class="tc-time">0.000s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_info_vector_scores_zero</span><span class="tc-time">0.000s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_dashboard_api</span> <span
+                class="suite-path">all_tests/backend/test_dashboard_api.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">25 passed</span> <span class="stat time">0.37s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Integration tests for /api/v1/dashboard/ endpoints.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/summary]</span><span
+                class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/kpi-snapshot]</span><span
+                class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/risk-overview]</span><span
+                class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/actions]</span><span
+                class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/exposure-trend]</span><span
+                class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/summary]</span><span
+                class="tc-time">0.201s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/kpi-snapshot]</span><span
+                class="tc-time">0.010s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/risk-overview]</span><span
+                class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/actions]</span><span
+                class="tc-time">0.008s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/summary]</span><span
+                class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/kpi-snapshot]</span><span
+                class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/risk-overview]</span><span
+                class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/actions]</span><span
+                class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/summary]</span><span
+                class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/kpi-snapshot]</span><span
+                class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/risk-overview]</span><span
+                class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/actions]</span><span
+                class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_summary_returns_object</span><span class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_kpi_snapshot_returns_object</span><span class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_risk_overview_returns_object_or_list</span><span class="tc-time">0.006s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_exposure_trend_accessible_or_known_bug</span><span class="tc-time">0.007s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_actions_returns_list_or_object</span><span class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_kpi_with_scan_id_param</span><span class="tc-time">0.010s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_summary_with_scan_id_param</span><span class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_after_scan_created</span><span class="tc-time">0.010s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_e2e_scans</span> <span
+                class="suite-path">all_tests/backend/test_e2e_scans.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat skip">4 skipped</span>
+              <span class="stat time">4.08s</span> </div>
+          </div>
+          <div class="testcases">
+            <div class="testcase skipped"><span class="tc-icon">⊘</span><span
+                class="tc-name">test_api_health</span><span class="tc-time">4.078s</span>
+              <div class="tc-msg">API server not running at localhost:8000 — start with 'docker compose up -d'</div>
+            </div>
+            <div class="testcase skipped"><span class="tc-icon">⊘</span><span
+                class="tc-name">test_trigger_scan</span><span class="tc-time">0.001s</span>
+              <div class="tc-msg">API server not running at localhost:8000 — start with 'docker compose up -d'</div>
+            </div>
+            <div class="testcase skipped"><span class="tc-icon">⊘</span><span
+                class="tc-name">test_scan_completion_and_assets</span><span class="tc-time">0.001s</span>
+              <div class="tc-msg">API server not running at localhost:8000 — start with 'docker compose up -d'</div>
+            </div>
+            <div class="testcase skipped"><span class="tc-icon">⊘</span><span
+                class="tc-name">test_report_generation</span><span class="tc-time">0.001s</span>
+              <div class="tc-msg">API server not running at localhost:8000 — start with 'docker compose up -d'</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_endpoints</span> <span
+                class="suite-path">all_tests/backend/test_endpoints.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">14 passed</span> <span class="stat time">0.35s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Smoke tests covering one happy-path + one auth-failure per major router.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_health_open</span><span class="tc-time">0.214s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_root_open</span><span
+                class="tc-time">0.008s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_protected_routes_reject_unauthenticated[/api/v1/scans/]</span><span
+                class="tc-time">0.008s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_protected_routes_reject_unauthenticated[/api/v1/targets/]</span><span
+                class="tc-time">0.007s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_protected_routes_reject_unauthenticated[/api/v1/findings/]</span><span
+                class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_protected_routes_reject_unauthenticated[/api/v1/dashboard/kpi-snapshot]</span><span
+                class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_protected_routes_reject_unauthenticated[/api/v1/reports/dummy-scan-id]</span><span
+                class="tc-time">0.007s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_protected_routes_reject_unauthenticated[/api/v1/vulnerabilities/]</span><span
+                class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_me_returns_current_user</span><span class="tc-time">0.012s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_me_rejects_garbage_token</span><span class="tc-time">0.008s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_targets_list_empty</span><span class="tc-time">0.014s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_dashboard_kpi_returns_object</span><span class="tc-time">0.017s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_scans_list_empty</span><span class="tc-time">0.021s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_config_public_open</span><span class="tc-time">0.007s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_finding_dedup.TestNormaliseUrl</span> <span
+                class="suite-path">all_tests/backend/test_finding_dedup.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit + integration tests for app.services.finding_dedup.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_strips_query_string</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_strips_fragment</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_strips_both_query_and_fragment</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_preserves_scheme_host_path</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_string_returns_empty</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_none_handled_via_caller</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_finding_dedup.TestFingerprint</span> <span
+                class="suite-path">all_tests/backend/test_finding_dedup.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">12 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit + integration tests for app.services.finding_dedup.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_returns_hex_sha256</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_deterministic</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_different_target_ids_produce_different_fingerprints</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_different_vuln_types_produce_different_fingerprints</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_url_query_string_ignored_in_fingerprint</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_url_fragment_ignored</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_template_id_takes_precedence_over_description</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_description_used_when_no_template_id</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_description_truncated_to_64_chars</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_none_inputs_handled</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_vuln_type_case_normalised</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_fingerprint_matches_expected_sha256</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_finding_dedup.TestDeduplicateScan</span>
+              <span class="suite-path">all_tests/backend/test_finding_dedup.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">5 passed</span> <span class="stat time">0.07s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit + integration tests for app.services.finding_dedup.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_creates_new_finding_for_new_vuln</span><span class="tc-time">0.027s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_does_not_create_duplicate_finding_on_rescan</span><span
+                class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_vuln_gets_finding_id_linked</span><span class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_returns_zero_for_empty_scan</span><span class="tc-time">0.005s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_multiple_different_vulns_create_multiple_findings</span><span
+                class="tc-time">0.015s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_findings_api</span> <span
+                class="suite-path">all_tests/backend/test_findings_api.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">16 passed</span> <span class="stat time">0.33s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Integration tests for GET /api/v1/findings/</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_findings_requires_auth</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_findings_returns_envelope</span><span class="tc-time">0.025s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_findings_list_analyst_can_access</span><span class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_findings_list_viewer_can_access</span><span class="tc-time">0.017s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_filter_by_status_open</span><span class="tc-time">0.024s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_filter_by_status_fixed</span><span class="tc-time">0.018s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_invalid_status_returns_422</span><span class="tc-time">0.015s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_filter_by_scan_id</span><span class="tc-time">0.026s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_filter_by_nonexistent_scan_id_returns_empty</span><span
+                class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_filter_by_framework_and_control</span><span class="tc-time">0.027s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_framework_without_control_returns_400</span><span class="tc-time">0.022s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_control_without_framework_returns_400</span><span class="tc-time">0.019s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_unknown_framework_returns_400</span><span class="tc-time">0.018s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_framework_aliases_work</span><span class="tc-time">0.021s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_limit_respected</span><span class="tc-time">0.021s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_offset_works</span><span class="tc-time">0.037s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span
+                class="suite-name">backend.test_framework_tagger.TestKnownVulnerabilityTypes</span> <span
+                class="suite-path">all_tests/backend/test_framework_tagger.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">10 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.framework_tagger.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_sql_injection_variants[sqli]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_sql_injection_variants[SQLi]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_sql_injection_variants[SQL Injection]</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_sql_injection_variants[sql]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_xss_variants[xss]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_xss_variants[XSS]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_xss_variants[Cross
+                Site Scripting]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_ssrf_type</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_rce_type</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_lfi_type</span><span
+                class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_framework_tagger.TestTemplateIdPrefix</span>
+              <span class="suite-path">all_tests/backend/test_framework_tagger.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.framework_tagger.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_sqli_template_prefix</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_xss_template_prefix</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_ssrf_template_prefix</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_framework_tagger.TestCategoryOverride</span>
+              <span class="suite-path">all_tests/backend/test_framework_tagger.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">2 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.framework_tagger.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explicit_category_takes_priority</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_unknown_category_returns_empty</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_framework_tagger.TestUnknownInputs</span>
+              <span class="suite-path">all_tests/backend/test_framework_tagger.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">4 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.framework_tagger.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_all_none_returns_empty_dict</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_unknown_vuln_type_returns_empty_dict</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_unknown_template_id_returns_empty_dict</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_strings_return_empty_dict</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span
+                class="suite-name">backend.test_framework_tagger.TestReturnTypeGuarantees</span> <span
+                class="suite-path">all_tests/backend/test_framework_tagger.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.framework_tagger.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_always_returns_dict</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_result_is_independent_copy</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_never_raises</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span
+                class="suite-name">backend.test_framework_tagger.TestAliasNormalisation</span> <span
+                class="suite-path">all_tests/backend/test_framework_tagger.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">7 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.framework_tagger.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alias_resolves_same_as_canonical[sqlinjection-sqli]</span><span
+                class="tc-time">0.002s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alias_resolves_same_as_canonical[crosssitescripting-xss]</span><span
+                class="tc-time">0.002s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alias_resolves_same_as_canonical[remotecommandexecution-rce]</span><span
+                class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alias_resolves_same_as_canonical[localfileinclusion-lfi]</span><span
+                class="tc-time">0.002s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alias_resolves_same_as_canonical[informationdisclosure-exposure]</span><span
+                class="tc-time">0.002s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alias_resolves_same_as_canonical[openredirect-redirect]</span><span
+                class="tc-time">0.002s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alias_resolves_same_as_canonical[defaultcredentials-default-logins]</span><span
+                class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_nmap_wrapper</span> <span
+                class="suite-path">all_tests/backend/test_nmap_wrapper.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for NmapWrapper.
+
+            The wrapper depends on python-nmap's PortScanner which shells out to the real
+            nmap binary. We do NOT execute scans here — instead we test the result-parsing
+            path by injecting a fake `nm` (PortScanner-shaped object) into the wrapper.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_parse_results_extracts_ports_and_services</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_parse_results_handles_empty_scan</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_parse_results_attaches_mac_vendor_when_present</span><span
+                class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_rbac</span> <span
+                class="suite-path">all_tests/backend/test_rbac.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">9 passed</span> <span class="stat time">0.36s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for the /rbac/* admin endpoints and role enforcement on key routes.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_can_list_users</span><span class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_viewer_cannot_list_users</span><span class="tc-time">0.012s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_analyst_cannot_list_users</span><span class="tc-time">0.012s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_can_create_user</span><span class="tc-time">0.250s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_create_user_rejects_duplicate_email</span><span class="tc-time">0.014s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_cannot_demote_self</span><span class="tc-time">0.017s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_can_change_other_user_role</span><span class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_can_disable_user</span><span class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_viewer_cannot_create_user</span><span class="tc-time">0.011s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span
+                class="suite-name">backend.test_report_signer.TestCanonicalFindingsHash</span> <span
+                class="suite-path">all_tests/backend/test_report_signer.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/report_signer.py
+            — canonical_findings_hash, sign_pdf, verify_signature</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_returns_64_char_hex</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_same_findings_same_hash</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_order_independent</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span class="tc-name">test_empty_list</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_different_findings_different_hash</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_single_finding</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_report_signer.TestSignPdf</span> <span
+                class="suite-path">all_tests/backend/test_report_signer.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/report_signer.py
+            — canonical_findings_hash, sign_pdf, verify_signature</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_returns_hex_string</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_same_bytes_same_signature</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_different_bytes_different_signature</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_different_key_different_signature</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_no_key_returns_empty</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_bytes</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_report_signer.TestVerifySignature</span>
+              <span class="suite-path">all_tests/backend/test_report_signer.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">5 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/report_signer.py
+            — canonical_findings_hash, sign_pdf, verify_signature</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_valid_signature_returns_true</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_tampered_pdf_returns_false</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_wrong_key_returns_false</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_stored_sig_returns_false</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_garbage_sig_returns_false</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_reports_api</span> <span
+                class="suite-path">all_tests/backend/test_reports_api.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">15 passed</span> <span class="stat time">0.68s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for /api/v1/reports/ endpoints:
+            POST /{scan_id}/generate
+            GET /{report_id}/meta
+            GET /{report_id}/pdf
+            GET /{report_id}/verify
+            GET /{scan_id} (legacy)</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_generate_requires_auth</span><span class="tc-time">0.009s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_meta_requires_auth</span><span class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_pdf_requires_auth</span><span class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_verify_requires_auth</span><span class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_generate_unknown_scan_404</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_meta_unknown_report_404</span><span class="tc-time">0.012s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_pdf_unknown_report_404</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_verify_unknown_report_404</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_generate_report_returns_metadata</span><span class="tc-time">0.226s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_get_report_meta_after_generate</span><span class="tc-time">0.091s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_download_pdf_after_generate</span><span class="tc-time">0.089s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_verify_report_returns_valid</span><span class="tc-time">0.095s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_legacy_get_report_returns_ai_analysis_field</span><span
+                class="tc-time">0.015s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_legacy_unknown_scan_404</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_analyst_can_generate_report</span><span class="tc-time">0.084s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_risk</span> <span
+                class="suite-path">all_tests/backend/test_risk.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">1 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_risk_score_calculation</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_risk_engine</span> <span
+                class="suite-path">all_tests/backend/test_risk_engine.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">11 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for UnifiedRiskEngine constants and the scoring_explainer pure-function module.
+          </p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_severity_weight_ordering</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_high_risk_ports_includes_classics</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_high_risk_ports_have_name_and_weight</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_asset_value_multipliers_are_monotonic</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explain_returns_string_for_critical_score</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explain_handles_zero_findings</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explain_band_thresholds[95-CRITICAL]</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explain_band_thresholds[70-HIGH]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explain_band_thresholds[40-MEDIUM]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explain_band_thresholds[10-LOW]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explain_band_thresholds[0-INFO]</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_risk_engine_manual</span> <span
+                class="suite-path">all_tests/backend/test_risk_engine_manual.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Manual unit test for UnifiedRiskEngine.
+            Tests score/penalty logic without requiring a database session.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_high_risk_port_weights</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_severity_weights</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_asset_value_multipliers</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scan_reaper</span> <span
+                class="suite-path">all_tests/backend/test_scan_reaper.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.03s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/scan_reaper.py — reap_orphan_scans (async)</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_no_orphans_returns_zero</span><span class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_orphans_found_returns_count</span><span class="tc-time">0.005s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_commit_always_called</span><span class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_execute_called_once</span><span class="tc-time">0.004s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_custom_stale_minutes_accepted</span><span class="tc-time">0.005s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_none_rowcount_treated_as_zero</span><span class="tc-time">0.005s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scan_tasks</span> <span
+                class="suite-path">all_tests/backend/test_scan_tasks.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.02s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Celery task tests in eager mode (no Redis broker required).</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_scan_tasks_module_imports</span><span class="tc-time">0.004s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_run_ai_scan_is_registered</span><span class="tc-time">0.015s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_celery_broker_url_uses_redis_setting</span><span class="tc-time">0.001s</span>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span
+                class="suite-name">backend.test_scope_guard.TestScopeGuardConstruction</span> <span
+                class="suite-path">all_tests/backend/test_scope_guard.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">4 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.scope_guard — ScopeGuard and ScopeViolation.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explicit_allowlist_used</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_derives_hostname_from_base_url</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_allowlist_when_no_base_and_no_list</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_explicit_allowlist_overrides_base_url</span><span class="tc-time">0.001s</span>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scope_guard.TestIsInScope</span> <span
+                class="suite-path">all_tests/backend/test_scope_guard.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">7 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.scope_guard — ScopeGuard and ScopeViolation.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_exact_hostname_match</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_subdomain_of_allowed_host</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_deep_subdomain_allowed</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_different_host_blocked</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_partial_hostname_not_allowed</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_multiple_entries_in_allowlist</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_http_and_https_same_host</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scope_guard.TestCIDRScope</span> <span
+                class="suite-path">all_tests/backend/test_scope_guard.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">4 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.scope_guard — ScopeGuard and ScopeViolation.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_ip_inside_cidr_is_in_scope</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_ip_outside_cidr_is_blocked</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_exact_ip_match_via_cidr</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_mixed_hostname_and_cidr</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scope_guard.TestAssertInScope</span> <span
+                class="suite-path">all_tests/backend/test_scope_guard.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">4 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.scope_guard — ScopeGuard and ScopeViolation.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_in_scope_url_passes_silently</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_out_of_scope_raises_scope_violation</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_scope_violation_message_contains_url</span><span class="tc-time">0.001s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_scope_violation_is_exception</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scope_guard.TestScopeGuardEdgeCases</span>
+              <span class="suite-path">all_tests/backend/test_scope_guard.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.00s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Unit tests for app.services.scope_guard — ScopeGuard and ScopeViolation.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_url_string</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_url_without_scheme</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_base_url_with_port_derives_correct_host</span><span class="tc-time">0.001s</span>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scoring_explainer.TestBand</span> <span
+                class="suite-path">all_tests/backend/test_scoring_explainer.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">9 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/scoring_explainer.py — explain() and _band()</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[100-CRITICAL]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[80-CRITICAL]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[79-HIGH]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[60-HIGH]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[59-MEDIUM]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[30-MEDIUM]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[29-LOW]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[1-LOW]</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_band_thresholds[0-INFO]</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_scoring_explainer.TestExplain</span> <span
+                class="suite-path">all_tests/backend/test_scoring_explainer.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">15 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/scoring_explainer.py — explain() and _band()</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_returns_string</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_contains_risk_band</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_contains_score</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_no_factors_still_returns_sentence</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_severity_counts_critical</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_severity_counts_high</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_zero_severity_counts_not_mentioned</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_high_risk_port_mentioned</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_safe_port_not_mentioned</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_critical_asset_mentioned</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_low_asset_criticality_not_mentioned</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_high_cvss_mentioned</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_low_cvss_not_mentioned</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_none_factors_ok</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_all_factors_combined</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_security_core.TestPasswordHashing</span>
+              <span class="suite-path">all_tests/backend/test_security_core.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">8 passed</span> <span class="stat time">3.10s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/core/security.py — JWT creation/decoding and password hashing.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_hash_returns_string</span><span class="tc-time">0.218s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_hash_is_not_plaintext</span><span class="tc-time">0.218s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_verify_correct_password</span><span class="tc-time">0.445s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_verify_wrong_password</span><span class="tc-time">0.461s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_string_password</span><span class="tc-time">0.664s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_two_hashes_of_same_password_differ</span><span class="tc-time">0.442s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_verify_garbage_hash_returns_false</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_unicode_password</span><span class="tc-time">0.650s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_security_core.TestJWT</span> <span
+                class="suite-path">all_tests/backend/test_security_core.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">9 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/core/security.py — JWT creation/decoding and password hashing.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_create_and_decode_round_trip</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_payload_contains_exp_and_iat</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_custom_expiry_is_respected</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_expired_token_raises</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_tampered_token_raises</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_garbage_token_raises</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_empty_string_raises</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_different_subjects_produce_different_tokens</span><span
+                class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_role_preserved_exactly</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_siem_integration</span> <span
+                class="suite-path">all_tests/backend/test_siem_integration.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.10s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for the Wazuh SIEM client + alert correlator.
+
+            We mock the network-layer calls; no Wazuh instance is required.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_wazuh_integration_imports</span><span class="tc-time">0.002s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_wazuh_integration_uses_settings</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_wazuh_get_token_returns_none_on_network_error</span><span
+                class="tc-time">0.088s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alert_correlator_imports</span><span class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alert_correlator_returns_alerts_with_match_field</span><span
+                class="tc-time">0.004s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_alert_correlator_handles_missing_fields</span><span class="tc-time">0.003s</span>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_sla.TestDueDateFor</span> <span
+                class="suite-path">all_tests/backend/test_sla.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">8 passed</span> <span class="stat time">0.01s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/sla.py — due_date_for and check_and_action_breaches</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_critical_is_7_days</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_high_is_30_days</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_medium_is_90_days</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_low_is_180_days</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_info_returns_none</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_string_severity_critical</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_string_severity_high</span><span class="tc-time">0.001s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_unknown_string_defaults_to_180</span><span class="tc-time">0.001s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_sla.TestCheckAndActionBreaches</span> <span
+                class="suite-path">all_tests/backend/test_sla.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">6 passed</span> <span class="stat time">0.03s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Tests for app/services/sla.py — due_date_for and check_and_action_breaches</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_no_findings_returns_zero</span><span class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_open_overdue_finding_creates_action_item</span><span class="tc-time">0.008s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_fixed_finding_not_actioned</span><span class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_finding_with_no_due_date_not_actioned</span><span class="tc-time">0.003s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_future_due_date_not_actioned</span><span class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_duplicate_breach_not_created_twice</span><span class="tc-time">0.007s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_targets_api</span> <span
+                class="suite-path">all_tests/backend/test_targets_api.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">17 passed</span> <span class="stat time">0.31s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Integration tests for /api/v1/targets/ — full CRUD lifecycle.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_targets_requires_auth</span><span class="tc-time">0.007s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_create_target_requires_auth</span><span class="tc-time">0.006s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_viewer_cannot_create_target</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_analyst_cannot_create_target</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_viewer_cannot_delete_target</span><span class="tc-time">0.025s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_creates_target_successfully</span><span class="tc-time">0.014s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_create_target_returns_masked_credentials</span><span class="tc-time">0.014s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_create_duplicate_url_rejected</span><span class="tc-time">0.023s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_targets_returns_list</span><span class="tc-time">0.013s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_authenticated_user_can_list_targets</span><span class="tc-time">0.013s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_targets_pagination</span><span class="tc-time">0.047s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_get_target_by_id</span><span class="tc-time">0.029s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_get_nonexistent_target_returns_404</span><span class="tc-time">0.011s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_can_update_target</span><span class="tc-time">0.027s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_update_nonexistent_target_returns_404</span><span class="tc-time">0.012s</span>
+            </div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_can_delete_target</span><span class="tc-time">0.035s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_delete_nonexistent_target_returns_404</span><span class="tc-time">0.013s</span>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_vulnerabilities_api</span> <span
+                class="suite-path">all_tests/backend/test_vulnerabilities_api.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">15 passed</span> <span class="stat time">0.23s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Integration tests for /api/v1/vulnerabilities/ — list and bulk update.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_vulns_requires_auth</span><span class="tc-time">0.007s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_bulk_update_requires_auth</span><span class="tc-time">0.012s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_returns_list</span><span class="tc-time">0.020s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_authenticated_user_can_list_vulnerabilities</span><span
+                class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_filter_by_scan_id</span><span class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_filter_by_severity</span><span class="tc-time">0.024s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_filter_by_environment</span><span class="tc-time">0.017s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_list_limit_respected</span><span class="tc-time">0.015s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_viewer_cannot_bulk_update</span><span class="tc-time">0.012s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_analyst_can_bulk_update_status</span><span class="tc-time">0.022s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_admin_can_bulk_update_remediation</span><span class="tc-time">0.016s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_bulk_update_returns_not_found_for_ghost_ids</span><span
+                class="tc-time">0.013s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_bulk_update_empty_ids_returns_400</span><span class="tc-time">0.014s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_bulk_update_missing_both_fields_returns_400</span><span
+                class="tc-time">0.014s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_bulk_update_preserves_previous_status_in_response</span><span
+                class="tc-time">0.017s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-pass">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">backend.test_websocket</span> <span
+                class="suite-path">all_tests/backend/test_websocket.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">3 passed</span> <span class="stat time">0.02s</span>
+            </div>
+          </div>
+          <p class="suite-desc">Verify that the ConnectionManager broadcast envelope is well-formed.
+
+            We do NOT test the live /ws/logs endpoint here because the lifespan that
+            wires Redis would need a real broker. Instead we test the manager directly
+            — that's where defect W-001 lived.</p>
+          <div class="testcases">
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_broadcast_event_envelope_shape</span><span class="tc-time">0.003s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_broadcast_event_seq_is_monotonic</span><span class="tc-time">0.005s</span></div>
+            <div class="testcase passed"><span class="tc-icon">✓</span><span
+                class="tc-name">test_broadcast_event_prunes_dead_clients</span><span class="tc-time">0.009s</span></div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">e2e.test_login_flow</span> <span
+                class="suite-path">all_tests/e2e/test_login_flow.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">2 failed</span>
+              <span class="stat time">5.61s</span> </div>
+          </div>
+          <p class="suite-desc">Smoke: a valid admin can sign in and reach the dashboard.</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_login_succeeds</span><span class="tc-time">3.220s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_login_fails_with_bad_password</span><span class="tc-time">2.386s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">e2e.test_report_export</span> <span
+                class="suite-path">all_tests/e2e/test_report_export.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">1 failed</span>
+              <span class="stat time">2.38s</span> </div>
+          </div>
+          <p class="suite-desc">Smoke: a logged-in user can export a PDF report.</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_pdf_download</span><span class="tc-time">2.379s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">e2e.test_scan_trigger</span> <span
+                class="suite-path">all_tests/e2e/test_scan_trigger.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">1 failed</span>
+              <span class="stat time">2.40s</span> </div>
+          </div>
+          <p class="suite-desc">Smoke: a logged-in user can trigger a scan and see it appear in history.</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_scan_appears_in_history</span><span class="tc-time">2.403s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">e2e.test_target_management.TestTargetCRUD</span> <span
+                class="suite-path">all_tests/e2e/test_target_management.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">6 failed</span>
+              <span class="stat time">14.38s</span> </div>
+          </div>
+          <p class="suite-desc">E2E tests for the Target Management workflow.
+
+            Tests the full cycle via the API (using Playwright's request context) and
+            the UI navigation where possible.
+
+            Prerequisites:
+            pip install pytest playwright
+            playwright install chromium
+            docker compose up -d</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_create_target</span><span class="tc-time">2.403s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_list_targets_returns_list</span><span class="tc-time">2.398s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_get_target_by_id</span><span class="tc-time">2.393s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_get_nonexistent_target_404</span><span class="tc-time">2.392s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_delete_target</span><span class="tc-time">2.401s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_duplicate_url_rejected</span><span class="tc-time">2.395s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">e2e.test_target_management.TestTargetManagementUI</span>
+              <span class="suite-path">all_tests/e2e/test_target_management.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">2 failed</span>
+              <span class="stat time">4.81s</span> </div>
+          </div>
+          <p class="suite-desc">E2E tests for the Target Management workflow.
+
+            Tests the full cycle via the API (using Playwright's request context) and
+            the UI navigation where possible.
+
+            Prerequisites:
+            pip install pytest playwright
+            playwright install chromium
+            docker compose up -d</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_targets_section_visible_on_dashboard</span><span class="tc-time">2.399s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_no_error_boundary_on_targets_page</span><span class="tc-time">2.409s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span
+                class="suite-name">e2e.test_vulnerability_workflow.TestVulnerabilityList</span> <span
+                class="suite-path">all_tests/e2e/test_vulnerability_workflow.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">3 failed</span>
+              <span class="stat time">7.17s</span> </div>
+          </div>
+          <p class="suite-desc">E2E tests for the Vulnerability Management workflow.
+
+            Prerequisites (same as other e2e tests):
+            pip install pytest playwright
+            playwright install chromium
+            docker compose up -d</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_vulnerability_tab_visible_after_login</span><span class="tc-time">2.400s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_vulnerability_list_loads</span><span class="tc-time">2.396s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_severity_filter_visible</span><span class="tc-time">2.378s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span
+                class="suite-name">e2e.test_vulnerability_workflow.TestVulnerabilityDetail</span> <span
+                class="suite-path">all_tests/e2e/test_vulnerability_workflow.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">1 failed</span>
+              <span class="stat time">2.40s</span> </div>
+          </div>
+          <p class="suite-desc">E2E tests for the Vulnerability Management workflow.
+
+            Prerequisites (same as other e2e tests):
+            pip install pytest playwright
+            playwright install chromium
+            docker compose up -d</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_clicking_vulnerability_opens_detail</span><span class="tc-time">2.402s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+        <div class="suite suite-fail">
+          <div class="suite-header">
+            <div class="suite-title"> <span class="suite-name">e2e.test_vulnerability_workflow.TestBulkUpdate</span>
+              <span class="suite-path">all_tests/e2e/test_vulnerability_workflow.py</span> </div>
+            <div class="suite-stats"> <span class="stat pass">0 passed</span> <span class="stat fail">2 failed</span>
+              <span class="stat time">4.91s</span> </div>
+          </div>
+          <p class="suite-desc">E2E tests for the Vulnerability Management workflow.
+
+            Prerequisites (same as other e2e tests):
+            pip install pytest playwright
+            playwright install chromium
+            docker compose up -d</p>
+          <div class="testcases">
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_bulk_update_api_responds</span><span class="tc-time">2.408s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+            <div class="testcase failed"><span class="tc-icon">✗</span><span
+                class="tc-name">test_bulk_update_with_nonexistent_ids</span><span class="tc-time">2.503s</span>
+              <div class="tc-msg">playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at
+                https://localhost/login
+                Call log:
+                - navigating to &quot;https://localhost/login&quot;, waiting until &quot;load&quot;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="test-section">
+      <div class="section-header">
+        <h2>Frontend Tests <span class="section-label">vitest</span></h2>
+        <span class="run-status fail">FAIL</span>
+      </div>
+      <div class="suites">
+        <p class="no-results">No frontend test results found.</p>
+      </div>
+    </section>
+
+  </main>
+</body>
+
+</html>

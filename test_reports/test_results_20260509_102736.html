@@ -1,0 +1,3356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Project - Test Execution Report</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease;
+        }
+        
+        h1 {
+            color: var(--accent);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .timestamp {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stat-card h3 {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin: 0 0 0.5rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .stat-card .value {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+        
+        .val-total { color: var(--accent); }
+        .val-passed { color: var(--success); }
+        .val-failed { color: var(--error); }
+        .val-skipped { color: var(--warning); }
+        
+        .file-section {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            animation: fadeIn 1s ease;
+        }
+        
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .file-name {
+            font-size: 1.5rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin: 0;
+            font-family: monospace;
+        }
+        
+        .file-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .badge {
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .badge-passed { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-failed { background: rgba(239, 68, 68, 0.15); color: var(--error); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-skipped { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+        
+        .description-box {
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 4px solid var(--accent);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+        
+        .description-box strong {
+            color: var(--accent);
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .test-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+        
+        .test-item {
+            padding: 1rem 1.25rem;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .test-item:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: var(--border);
+            transform: translateX(5px);
+        }
+        
+        .test-name {
+            font-family: monospace;
+            font-size: 0.95rem;
+            word-break: break-all;
+            color: #e2e8f0;
+        }
+        
+        .test-passed { border-left: 4px solid var(--success); }
+        .test-failed { border-left: 4px solid var(--error); }
+        .test-skipped { border-left: 4px solid var(--warning); }
+        
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Glassmorphism utilities */
+        .glass {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Test Execution Report</h1>
+            <div class="timestamp">Generated on May 09, 2026 at 10:27 AM</div>
+        </header>
+
+        <div class="dashboard">
+            <div class="stat-card glass">
+                <h3>Total Tests</h3>
+                <div class="value val-total">361</div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Passed</h3>
+                <div class="value val-passed">357</div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Failed</h3>
+                <div class="value val-failed">0</div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Skipped</h3>
+                <div class="value val-skipped">4</div>
+            </div>
+        </div>
+
+        <div class="details">
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_agents.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 6 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Lightweight tests for the agent layer.<br/><br/>The full agent pipeline depends on Gemini and live tool execution; here we<br/>only verify that the expected modules import, exposed classes can be<br/>instantiated against the in-memory test session, and pure helpers behave<br/>deterministically. No network is touched.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_intelligence_agent_imports</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_validation_probe_imports</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_validation_result_dataclass_fields</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_intelligence_agent_init_without_api_key</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_finding_dedup_fingerprint_is_deterministic</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_finding_dedup_normalises_url</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_audit_api.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 6 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for GET /api/v1/scans/{scan_id}/audit/verify (audit chain endpoint)
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_audit_verify_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_audit_verify_unknown_scan_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_valid_chain_returns_true</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_chain_is_valid</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_broken_chain_returns_false</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_analyst_can_verify_chain</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_auth.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 5 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Unit tests for password hashing and JWT helpers in app.core.security.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_hash_round_trip</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_hash_is_salted</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_jwt_round_trip</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_jwt_rejects_tampered_token</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_jwt_rejects_expired_token</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_auth_flow.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 6 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    End-to-end tests for the auth lifecycle: login → me → change password → re-login.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_login_success</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_login_wrong_password</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_login_unknown_email</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_logout_returns_204</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_change_password_then_login_with_new</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_change_password_rejects_wrong_current</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_crypto.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 11 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for app/core/crypto.py — Fernet credential encryption/decryption.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_encrypt_returns_string</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_round_trip_simple_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_round_trip_nested_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_encrypt_none_returns_none</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_decrypt_none_returns_none</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_ciphertext_differs_each_call</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_decrypt_garbage_returns_none</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_encrypt_returns_plain_json</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_decrypt_plain_json_string</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_decrypt_none_is_none</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_cvss.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 30 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Unit tests for app.services.cvss — CVSS v3.1 Base Score and Environmental Score.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_full_prefix_stripped</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_short_form_no_prefix</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_missing_metrics_filled_with_defaults</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_environmental_keys_default_to_x</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_case_insensitive_input</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_critical_10</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_8_8</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_no_impact_is_zero</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_accepts_dict_input</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_accepts_string_input</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_score_in_valid_range</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_physical_access_lower_than_network</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_complexity_lower_than_low_complexity</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_scope_changed_higher_than_unchanged_same_impacts</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_roundup_one_decimal_place</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_critical_asset_raises_score</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_pii_data_raises_confidentiality_impact</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_internal_exposure_lowers_score</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_environmental_score_in_range</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_accepts_dict_input</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_original_dict_not_mutated</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_known_severities_return_valid_vector[critical]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_known_severities_return_valid_vector[high]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_known_severities_return_valid_vector[medium]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_known_severities_return_valid_vector[low]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_known_severities_return_valid_vector[info]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_case_insensitive</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_unknown_severity_falls_back_to_low</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_critical_vector_scores_higher_than_low</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_info_vector_scores_zero</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_dashboard_api.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 25 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Integration tests for /api/v1/dashboard/ endpoints.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/summary]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/kpi-snapshot]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/risk-overview]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/actions]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/exposure-trend]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/summary]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/kpi-snapshot]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/risk-overview]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/actions]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/summary]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/kpi-snapshot]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/risk-overview]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/actions]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/summary]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/kpi-snapshot]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/risk-overview]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/actions]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_summary_returns_object</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_kpi_snapshot_returns_object</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_risk_overview_returns_object_or_list</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_exposure_trend_accessible_or_known_bug</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_actions_returns_list_or_object</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_kpi_with_scan_id_param</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_summary_with_scan_id_param</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_after_scan_created</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_e2e_scans.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 0 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 4 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    No specific description available for this test file. Please review the file's test cases to see what is being tested.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-skipped">
+                        <span class="test-name">test_api_health</span>
+                        <span style="color: var(--warning); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ⚠ SKIPPED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-skipped">
+                        <span class="test-name">test_trigger_scan</span>
+                        <span style="color: var(--warning); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ⚠ SKIPPED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-skipped">
+                        <span class="test-name">test_scan_completion_and_assets</span>
+                        <span style="color: var(--warning); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ⚠ SKIPPED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-skipped">
+                        <span class="test-name">test_report_generation</span>
+                        <span style="color: var(--warning); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ⚠ SKIPPED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_endpoints.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 14 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Smoke tests covering one happy-path + one auth-failure per major router.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_health_open</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_root_open</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_protected_routes_reject_unauthenticated[/api/v1/scans/]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_protected_routes_reject_unauthenticated[/api/v1/targets/]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_protected_routes_reject_unauthenticated[/api/v1/findings/]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_protected_routes_reject_unauthenticated[/api/v1/dashboard/kpi-snapshot]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_protected_routes_reject_unauthenticated[/api/v1/reports/dummy-scan-id]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_protected_routes_reject_unauthenticated[/api/v1/vulnerabilities/]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_me_returns_current_user</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_me_rejects_garbage_token</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_targets_list_empty</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_dashboard_kpi_returns_object</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_scans_list_empty</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_config_public_open</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_finding_dedup.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 23 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Unit + integration tests for app.services.finding_dedup.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_strips_query_string</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_strips_fragment</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_strips_both_query_and_fragment</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_preserves_scheme_host_path</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_string_returns_empty</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_none_handled_via_caller</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_returns_hex_sha256</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_deterministic</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_different_target_ids_produce_different_fingerprints</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_different_vuln_types_produce_different_fingerprints</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_url_query_string_ignored_in_fingerprint</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_url_fragment_ignored</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_template_id_takes_precedence_over_description</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_description_used_when_no_template_id</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_description_truncated_to_64_chars</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_none_inputs_handled</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_vuln_type_case_normalised</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_fingerprint_matches_expected_sha256</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_creates_new_finding_for_new_vuln</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_does_not_create_duplicate_finding_on_rescan</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_vuln_gets_finding_id_linked</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_returns_zero_for_empty_scan</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_multiple_different_vulns_create_multiple_findings</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_findings_api.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 16 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Integration tests for GET /api/v1/findings/
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_findings_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_findings_returns_envelope</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_findings_list_analyst_can_access</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_findings_list_viewer_can_access</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_filter_by_status_open</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_filter_by_status_fixed</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_invalid_status_returns_422</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_filter_by_scan_id</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_filter_by_nonexistent_scan_id_returns_empty</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_filter_by_framework_and_control</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_framework_without_control_returns_400</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_control_without_framework_returns_400</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_unknown_framework_returns_400</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_framework_aliases_work</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_limit_respected</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_offset_works</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_framework_tagger.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 29 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Unit tests for app.services.framework_tagger.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_sql_injection_variants[sqli]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_sql_injection_variants[SQLi]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_sql_injection_variants[SQL Injection]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_sql_injection_variants[sql]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_xss_variants[xss]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_xss_variants[XSS]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_xss_variants[Cross Site Scripting]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_ssrf_type</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_rce_type</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_lfi_type</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_sqli_template_prefix</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_xss_template_prefix</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_ssrf_template_prefix</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explicit_category_takes_priority</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_unknown_category_returns_empty</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_all_none_returns_empty_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_unknown_vuln_type_returns_empty_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_unknown_template_id_returns_empty_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_strings_return_empty_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_always_returns_dict</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_result_is_independent_copy</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_never_raises</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alias_resolves_same_as_canonical[sqlinjection-sqli]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alias_resolves_same_as_canonical[crosssitescripting-xss]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alias_resolves_same_as_canonical[remotecommandexecution-rce]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alias_resolves_same_as_canonical[localfileinclusion-lfi]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alias_resolves_same_as_canonical[informationdisclosure-exposure]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alias_resolves_same_as_canonical[openredirect-redirect]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alias_resolves_same_as_canonical[defaultcredentials-default-logins]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_nmap_wrapper.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 3 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for NmapWrapper.<br/><br/>The wrapper depends on python-nmap's PortScanner which shells out to the real<br/>nmap binary. We do NOT execute scans here — instead we test the result-parsing<br/>path by injecting a fake `nm` (PortScanner-shaped object) into the wrapper.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_parse_results_extracts_ports_and_services</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_parse_results_handles_empty_scan</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_parse_results_attaches_mac_vendor_when_present</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_rbac.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 9 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for the /rbac/* admin endpoints and role enforcement on key routes.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_can_list_users</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_viewer_cannot_list_users</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_analyst_cannot_list_users</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_can_create_user</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_create_user_rejects_duplicate_email</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_cannot_demote_self</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_can_change_other_user_role</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_can_disable_user</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_viewer_cannot_create_user</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_report_signer.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 17 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for app/services/report_signer.py<br/>— canonical_findings_hash, sign_pdf, verify_signature
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_returns_64_char_hex</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_same_findings_same_hash</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_order_independent</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_list</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_different_findings_different_hash</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_single_finding</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_returns_hex_string</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_same_bytes_same_signature</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_different_bytes_different_signature</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_different_key_different_signature</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_no_key_returns_empty</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_bytes</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_valid_signature_returns_true</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_tampered_pdf_returns_false</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_wrong_key_returns_false</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_stored_sig_returns_false</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_garbage_sig_returns_false</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_reports_api.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 15 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for /api/v1/reports/ endpoints:<br/>  POST /{scan_id}/generate<br/>  GET  /{report_id}/meta<br/>  GET  /{report_id}/pdf<br/>  GET  /{report_id}/verify<br/>  GET  /{scan_id}          (legacy)
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_generate_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_meta_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_pdf_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_verify_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_generate_unknown_scan_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_meta_unknown_report_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_pdf_unknown_report_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_verify_unknown_report_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_generate_report_returns_metadata</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_get_report_meta_after_generate</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_download_pdf_after_generate</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_verify_report_returns_valid</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_legacy_get_report_returns_ai_analysis_field</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_legacy_unknown_scan_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_analyst_can_generate_report</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_risk.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 1 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    No specific description available for this test file. Please review the file's test cases to see what is being tested.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_risk_score_calculation</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_risk_engine.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 11 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for UnifiedRiskEngine constants and the scoring_explainer pure-function module.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_severity_weight_ordering</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_risk_ports_includes_classics</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_risk_ports_have_name_and_weight</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_asset_value_multipliers_are_monotonic</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explain_returns_string_for_critical_score</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explain_handles_zero_findings</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explain_band_thresholds[95-CRITICAL]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explain_band_thresholds[70-HIGH]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explain_band_thresholds[40-MEDIUM]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explain_band_thresholds[10-LOW]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explain_band_thresholds[0-INFO]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_risk_engine_manual.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 3 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Manual unit test for UnifiedRiskEngine.<br/>Tests score/penalty logic without requiring a database session.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_risk_port_weights</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_severity_weights</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_asset_value_multipliers</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_scan_reaper.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 6 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for app/services/scan_reaper.py — reap_orphan_scans (async)
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_no_orphans_returns_zero</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_orphans_found_returns_count</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_commit_always_called</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_execute_called_once</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_custom_stale_minutes_accepted</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_none_rowcount_treated_as_zero</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_scan_tasks.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 3 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Celery task tests in eager mode (no Redis broker required).
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_scan_tasks_module_imports</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_run_ai_scan_is_registered</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_celery_broker_url_uses_redis_setting</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_scope_guard.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 22 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Unit tests for app.services.scope_guard — ScopeGuard and ScopeViolation.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explicit_allowlist_used</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_derives_hostname_from_base_url</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_allowlist_when_no_base_and_no_list</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_explicit_allowlist_overrides_base_url</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_exact_hostname_match</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_subdomain_of_allowed_host</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_deep_subdomain_allowed</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_different_host_blocked</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_partial_hostname_not_allowed</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_multiple_entries_in_allowlist</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_http_and_https_same_host</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_ip_inside_cidr_is_in_scope</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_ip_outside_cidr_is_blocked</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_exact_ip_match_via_cidr</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_mixed_hostname_and_cidr</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_in_scope_url_passes_silently</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_out_of_scope_raises_scope_violation</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_scope_violation_message_contains_url</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_scope_violation_is_exception</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_url_string</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_url_without_scheme</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_base_url_with_port_derives_correct_host</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_scoring_explainer.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 24 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for app/services/scoring_explainer.py — explain() and _band()
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[100-CRITICAL]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[80-CRITICAL]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[79-HIGH]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[60-HIGH]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[59-MEDIUM]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[30-MEDIUM]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[29-LOW]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[1-LOW]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_band_thresholds[0-INFO]</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_returns_string</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_contains_risk_band</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_contains_score</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_no_factors_still_returns_sentence</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_severity_counts_critical</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_severity_counts_high</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_zero_severity_counts_not_mentioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_risk_port_mentioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_safe_port_not_mentioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_critical_asset_mentioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_low_asset_criticality_not_mentioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_cvss_mentioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_low_cvss_not_mentioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_none_factors_ok</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_all_factors_combined</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_security_core.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 17 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for app/core/security.py — JWT creation/decoding and password hashing.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_hash_returns_string</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_hash_is_not_plaintext</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_verify_correct_password</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_verify_wrong_password</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_string_password</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_two_hashes_of_same_password_differ</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_verify_garbage_hash_returns_false</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_unicode_password</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_create_and_decode_round_trip</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_payload_contains_exp_and_iat</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_custom_expiry_is_respected</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_expired_token_raises</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_tampered_token_raises</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_garbage_token_raises</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_empty_string_raises</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_different_subjects_produce_different_tokens</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_role_preserved_exactly</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_siem_integration.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 6 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for the Wazuh SIEM client + alert correlator.<br/><br/>We mock the network-layer calls; no Wazuh instance is required.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_wazuh_integration_imports</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_wazuh_integration_uses_settings</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_wazuh_get_token_returns_none_on_network_error</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alert_correlator_imports</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alert_correlator_returns_alerts_with_match_field</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_alert_correlator_handles_missing_fields</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_sla.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 14 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Tests for app/services/sla.py — due_date_for and check_and_action_breaches
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_critical_is_7_days</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_high_is_30_days</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_medium_is_90_days</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_low_is_180_days</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_info_returns_none</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_string_severity_critical</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_string_severity_high</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_unknown_string_defaults_to_180</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_no_findings_returns_zero</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_open_overdue_finding_creates_action_item</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_fixed_finding_not_actioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_finding_with_no_due_date_not_actioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_future_due_date_not_actioned</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_duplicate_breach_not_created_twice</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_targets_api.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 17 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Integration tests for /api/v1/targets/ — full CRUD lifecycle.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_targets_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_create_target_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_viewer_cannot_create_target</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_analyst_cannot_create_target</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_viewer_cannot_delete_target</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_creates_target_successfully</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_create_target_returns_masked_credentials</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_create_duplicate_url_rejected</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_targets_returns_list</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_authenticated_user_can_list_targets</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_targets_pagination</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_get_target_by_id</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_get_nonexistent_target_returns_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_can_update_target</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_update_nonexistent_target_returns_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_can_delete_target</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_delete_nonexistent_target_returns_404</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_vulnerabilities_api.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 15 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Integration tests for /api/v1/vulnerabilities/ — list and bulk update.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_vulns_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_bulk_update_requires_auth</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_returns_list</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_authenticated_user_can_list_vulnerabilities</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_filter_by_scan_id</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_filter_by_severity</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_filter_by_environment</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_list_limit_respected</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_viewer_cannot_bulk_update</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_analyst_can_bulk_update_status</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_admin_can_bulk_update_remediation</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_bulk_update_returns_not_found_for_ghost_ids</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_bulk_update_empty_ids_returns_400</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_bulk_update_missing_both_fields_returns_400</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_bulk_update_preserves_previous_status_in_response</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="file-section glass">
+                <div class="file-header">
+                    <h2 class="file-name">backend/tests/test_websocket.py</h2>
+                    <div class="file-stats">
+                        <span class="badge badge-passed">✓ 3 Passed</span>
+                        <span class="badge badge-failed">✗ 0 Failed</span>
+                        <span class="badge badge-skipped">⚠ 0 Skipped</span>
+                    </div>
+                </div>
+                
+                <div class="description-box">
+                    <strong>What this file tests:</strong>
+                    Verify that the ConnectionManager broadcast envelope is well-formed.<br/><br/>We do NOT test the live /ws/logs endpoint here because the lifespan that<br/>wires Redis would need a real broker. Instead we test the manager directly<br/>— that's where defect W-001 lived.
+                </div>
+                
+                <ul class="test-list">
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_broadcast_event_envelope_shape</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_broadcast_event_seq_is_monotonic</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                    <li class="test-item test-passed">
+                        <span class="test-name">test_broadcast_event_prunes_dead_clients</span>
+                        <span style="color: var(--success); font-weight: bold; font-size: 0.9rem; letter-spacing: 0.05em;">
+                            ✓ PASSED
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

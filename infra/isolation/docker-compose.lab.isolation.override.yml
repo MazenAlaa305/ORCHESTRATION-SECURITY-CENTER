@@ -1,0 +1,71 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Lab isolation override — apply alongside docker-compose.lab.yml
+#
+#   docker compose \
+#     -f docker-compose.lab.yml \
+#     -f infra/isolation/docker-compose.lab.isolation.override.yml \
+#     up -d
+#
+# Phase 5.1 remediation of:
+#   F-01 — Networks are not `internal: true`
+#   F-02 — Host ports published on every lab service (LAN exposure)
+#   F-05 — DNS resolvable outside lab
+#
+# The override:
+#   1. Marks dmz / corp / data networks `internal: true` so they cannot NAT
+#      out to the internet or user LAN.
+#   2. Rebinds every host port publication to 127.0.0.1 (loopback-only) so
+#      the scanner running on the host can still reach targets, but other
+#      hosts on the user's LAN cannot.
+#
+# Note: `mgmt` is NOT marked internal because `lab_log_shipper` (full-lab
+# profile) has to reach Elasticsearch on the main dashboard stack.
+# ════════════════════════════════════════════════════════════════════════════
+
+services:
+  lab_webserver:
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  lab_api_gateway:
+    ports:
+      - "127.0.0.1:8081:8081"
+
+  lab_dns_server:
+    ports:
+      - "127.0.0.1:15353:53/udp"
+      - "127.0.0.1:15353:53/tcp"
+
+  lab_fileserver:
+    ports:
+      - "127.0.0.1:4445:445"
+      - "127.0.0.1:1139:139"
+
+  lab_mailserver:
+    ports:
+      - "127.0.0.1:3025:3025"
+      - "127.0.0.1:3110:3110"
+      - "127.0.0.1:3143:3143"
+      - "127.0.0.1:8082:8080"
+
+  lab_workstation:
+    ports:
+      - "127.0.0.1:8083:80"
+
+  lab_database:
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  lab_redis_cache:
+    ports:
+      - "127.0.0.1:6380:6380"
+
+networks:
+  dmz:
+    # Prevents outbound NAT. Lab containers cannot reach the internet or LAN.
+    internal: true
+  corp:
+    internal: true
+  data:
+    internal: true
+  # mgmt stays bridged — lab_log_shipper needs to reach Elasticsearch.

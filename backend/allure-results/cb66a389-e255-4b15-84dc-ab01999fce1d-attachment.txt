@@ -1,0 +1,2 @@
+2026-05-08T21:45:53 [WARNING] [rid=-] app.services.event_publisher: EventPublisher: Failed to publish 'SLA_BREACH': object MagicMock can't be used in 'await' expression
+2026-05-08T21:45:53 [INFO] [rid=-] app.services.sla: SLA breach check: 1 new overdue action items created.

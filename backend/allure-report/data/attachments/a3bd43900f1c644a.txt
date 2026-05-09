@@ -1,0 +1,1 @@
+2026-05-08T21:45:47 [WARNING] [rid=-] app.services.scan_reaper: [ScanReaper] Reaped 1 orphaned scan(s) on startup — they were RUNNING/QUEUED for more than 5 minutes.

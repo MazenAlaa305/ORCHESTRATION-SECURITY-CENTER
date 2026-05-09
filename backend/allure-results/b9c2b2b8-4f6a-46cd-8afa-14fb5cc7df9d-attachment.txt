@@ -1,0 +1,1 @@
+[33mWARNING [0m app.services.intelligence_agent:intelligence_agent.py:28 GEMINI_API_KEY not set. IntelligenceAgent will use fallback responses.

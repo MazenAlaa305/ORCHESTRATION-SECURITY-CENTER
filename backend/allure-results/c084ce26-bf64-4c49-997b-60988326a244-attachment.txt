@@ -1,0 +1,1 @@
+[1m[31mERROR   [0m app.services.wazuh_integration:wazuh_integration.py:36 Failed to connect to Wazuh API: boom

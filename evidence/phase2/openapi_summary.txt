@@ -1,0 +1,26 @@
+{
+  "openapi_version": "3.1.0",
+  "info": {
+    "title": "SME Cyber Exposure Dashboard",
+    "description": "AI-driven DAST platform for SMEs",
+    "version": "2.0.0"
+  },
+  "path_count": 57,
+  "schema_count": 32,
+  "tags_seen": [
+    "System",
+    "audit",
+    "auth",
+    "config",
+    "dashboard",
+    "findings",
+    "lab",
+    "network",
+    "openvas",
+    "reports",
+    "scans",
+    "siem",
+    "targets",
+    "vulnerabilities"
+  ]
+}

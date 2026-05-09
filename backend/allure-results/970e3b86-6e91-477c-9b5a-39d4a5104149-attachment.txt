@@ -1,0 +1,1 @@
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/reports/2d2fa9a3-a513-4f80-8670-39d3dfb58e86/pdf "HTTP/1.1 404 Not Found"

@@ -1,0 +1,1 @@
+2026-05-08T21:49:12 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/scans/059af6e9-7090-4c74-8517-838023d8cfbb/audit/verify "HTTP/1.1 200 OK"

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:8000/api/v1/assets/)",
+      "Bash(curl -s http://localhost:8000/api/v1/risk/summary)",
+      "Bash(curl -s http://localhost:8000/api/v1/alerts/)",
+      "Bash(curl -s http://localhost:8000/api/v1/dashboard/summary)",
+      "Bash(curl -s http://localhost:8000/api/v1/siem/status)",
+      "Bash(curl -s http://localhost:8000/openapi.json)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in d.get\\('paths',{}\\).keys\\(\\)]\")",
+      "Bash(curl -s \"http://localhost:8000/api/v1/scans/trigger\" -X POST -H \"Content-Type: application/json\" -d '{\"target_url\":\"http://localhost:3000\",\"scan_type\":\"quick\"}')",
+      "Bash(python -c ' *)",
+      "Read(//c/Users/DELL/AppData/Local/Programs//**)",
+      "Read(//c/Users/DELL/AppData/Roaming//**)",
+      "Read(//c/Program Files/Docker/Docker//**)",
+      "Bash(chmod +x infra/healthcheck.sh)",
+      "Bash(git mv *)",
+      "Bash(python -c \"import json; json.load\\(open\\('d:/FINAL PROJECT/the-dashboard-project-/postman/OrchestrationSecurityCenter_API.postman_collection.json'\\)\\); print\\('JSON valid'\\)\")",
+      "Bash(python build_presentation.py)",
+      "Bash(ls backend/tests/)",
+      "Bash(ls .github/workflows/)",
+      "Bash(ls infra/)",
+      "Bash(ls lab/scenarios/ lab/wazuh/ lab/kibana/dashboards/)",
+      "Bash(ls tests/e2e/)",
+      "PowerShell(.\\\\start-lite.ps1)"
+    ]
+  }
+}

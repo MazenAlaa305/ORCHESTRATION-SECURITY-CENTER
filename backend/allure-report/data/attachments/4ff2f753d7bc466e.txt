@@ -1,0 +1,1 @@
+2026-05-08T21:45:46 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/reports/35b32c60-c640-4612-aeac-2a66bc16ce77/pdf "HTTP/1.1 404 Not Found"

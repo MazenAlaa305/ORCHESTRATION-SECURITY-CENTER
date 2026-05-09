@@ -1,0 +1,1 @@
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/scans/58adec45-0b12-4dbe-aa22-7d43730d7fe3/audit/verify "HTTP/1.1 401 Unauthorized"

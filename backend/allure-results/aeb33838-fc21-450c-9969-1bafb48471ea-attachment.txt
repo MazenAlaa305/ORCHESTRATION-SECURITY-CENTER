@@ -1,0 +1,2 @@
+2026-05-08T21:49:12 [WARNING] [rid=64361f8c9dd74019a6727b38624e9430] app.api.v1.endpoints.audit: Audit chain broken at log 3bd0cdc2-a9da-4a5e-a876-13a6d605ed53 for scan 141881e0-a4fd-46d0-8984-604c1073ac78 — stored=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa expected=472679ca2ccd0c0d51ae4dd01ae73083c1ed02532de45573250ccb611c5d4bf5
+2026-05-08T21:49:12 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/scans/141881e0-a4fd-46d0-8984-604c1073ac78/audit/verify "HTTP/1.1 200 OK"

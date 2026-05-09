@@ -1,0 +1,2 @@
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/targets/ "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/targets/4bf32a3e-dbaa-48ca-bf7c-2ee11245b2a0 "HTTP/1.1 200 OK"

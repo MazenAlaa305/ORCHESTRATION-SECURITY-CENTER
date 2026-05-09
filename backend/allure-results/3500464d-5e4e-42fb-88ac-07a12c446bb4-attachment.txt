@@ -1,0 +1,1 @@
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/reports/01301cfd-e6ed-4f6e-9959-2dab7f9f5d64/generate "HTTP/1.1 401 Unauthorized"

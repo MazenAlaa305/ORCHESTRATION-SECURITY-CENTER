@@ -1,0 +1,390 @@
+# ============================================================
+# LIVING LAB - Orchestration Security Center
+# SME Network Simulation Environment (LITE MODE)
+# Default: 6 containers (~900MB RAM). For full 10-container topology
+# pass --profile full-lab to docker compose up.
+# ============================================================
+
+services:
+
+  # ════════════════════════════════════════════════════════════
+  # DMZ SUBNET (10.10.10.0/24) — Internet-facing services
+  # ════════════════════════════════════════════════════════════
+
+  lab_webserver:
+    image: bkimminich/juice-shop:latest
+    container_name: lab_webserver
+    hostname: webserver.sme-lab.local
+    ports:
+      - "3000:3000"
+    networks:
+      dmz:
+        ipv4_address: 10.10.10.10
+      lab_network:
+    labels:
+      lab.zone: "dmz"
+      lab.persona: "ecommerce-webserver"
+      lab.vulns: "sqli,xss,bola,idor,broken-auth,ssrf"
+      lab.cvss: "9.5"
+      lab.description: "Public-facing e-commerce platform (OWASP Juice Shop). Primary web application attack surface."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  lab_api_gateway:
+    image: nginx:alpine
+    container_name: lab_api_gateway
+    hostname: api-gw.sme-lab.local
+    volumes:
+      - ./lab/config/nginx/api_gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8081:8081"
+    networks:
+      dmz:
+        ipv4_address: 10.10.10.20
+      lab_network:
+    labels:
+      lab.zone: "dmz"
+      lab.persona: "api-gateway"
+      lab.vulns: "info-disclosure,header-leak,directory-listing,swagger-exposure"
+      lab.cvss: "6.0"
+      lab.description: "Corporate API gateway with information disclosure, outdated headers, and exposed Swagger docs."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+
+  lab_dns_server:
+    profiles: ["full-lab"]
+    image: coredns/coredns:latest
+    container_name: lab_dns_server
+    hostname: dns.sme-lab.local
+    user: "0"
+    volumes:
+      - ./lab/config/coredns/Corefile:/etc/coredns/Corefile:ro
+      - ./lab/config/coredns/sme-lab.local.zone:/etc/coredns/sme-lab.local.zone:ro
+    command: ["-conf", "/etc/coredns/Corefile"]
+    ports:
+      - "15353:53/udp"
+      - "15353:53/tcp"
+    networks:
+      dmz:
+        ipv4_address: 10.10.10.30
+      corp:
+        ipv4_address: 10.10.20.30
+      lab_network:
+    labels:
+      lab.zone: "dmz"
+      lab.persona: "dns-server"
+      lab.vulns: "dns-zone-transfer,dns-amplification"
+      lab.cvss: "5.0"
+      lab.description: "DNS server allowing zone transfers and recursive queries (amplification risk)."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+
+  # ════════════════════════════════════════════════════════════
+  # CORPORATE SUBNET (10.10.20.0/24) — Internal office network
+  # ════════════════════════════════════════════════════════════
+
+  lab_fileserver:
+    image: dperson/samba:latest
+    container_name: lab_fileserver
+    hostname: fileserver.sme-lab.local
+    command: >
+      -u "admin;admin123"
+      -u "guest;guest"
+      -u "hr_backup;Password1"
+      -s "public;/public;yes;no;no;all;none;"
+      -s "hr_data;/hr_data;no;no;no;admin,hr_backup;none;"
+      -s "it_backups;/it_backups;no;no;no;admin;none;"
+      -s "shared;/shared;yes;yes;yes;all;none;"
+    ports:
+      - "4445:445"
+      - "1139:139"
+    volumes:
+      - ./lab/data/samba/public:/public
+      - ./lab/data/samba/hr_data:/hr_data
+      - ./lab/data/samba/it_backups:/it_backups
+      - ./lab/data/samba/shared:/shared
+    networks:
+      corp:
+        ipv4_address: 10.10.20.10
+      lab_network:
+    labels:
+      lab.zone: "corp"
+      lab.persona: "corporate-fileserver"
+      lab.vulns: "weak-credentials,smb-enum,default-login,sensitive-data-exposure"
+      lab.cvss: "8.0"
+      lab.description: "Corporate file server with weak credentials (admin/admin123), exposed SMB shares, and sensitive HR data."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  lab_mailserver:
+    profiles: ["full-lab"]
+    image: greenmail/standalone:2.0.1
+    container_name: lab_mailserver
+    hostname: mail.sme-lab.local
+    ports:
+      - "3025:3025"   # SMTP
+      - "3110:3110"   # POP3
+      - "3143:3143"   # IMAP
+      - "8082:8080"   # Web admin
+    environment:
+      - GREENMAIL_OPTS=-Dgreenmail.smtp.hostname=0.0.0.0 -Dgreenmail.smtp.port=3025 -Dgreenmail.pop3.hostname=0.0.0.0 -Dgreenmail.pop3.port=3110 -Dgreenmail.imap.hostname=0.0.0.0 -Dgreenmail.imap.port=3143 -Dgreenmail.users=admin:admin123,user:password,hr:hr2024
+    networks:
+      corp:
+        ipv4_address: 10.10.20.20
+      lab_network:
+    labels:
+      lab.zone: "corp"
+      lab.persona: "mail-server"
+      lab.vulns: "weak-credentials,plaintext-protocols,user-enum"
+      lab.cvss: "7.0"
+      lab.description: "Corporate mail server with plaintext SMTP/POP3/IMAP, weak credentials, and user enumeration."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  lab_workstation:
+    profiles: ["full-lab"]
+    image: nginx:alpine
+    container_name: lab_workstation
+    hostname: ws01.sme-lab.local
+    volumes:
+      - ./lab/config/nginx/workstation.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8083:80"
+    networks:
+      corp:
+        ipv4_address: 10.10.20.40
+      lab_network:
+    labels:
+      lab.zone: "corp"
+      lab.persona: "employee-workstation"
+      lab.vulns: "info-disclosure,internal-network-leak"
+      lab.cvss: "4.0"
+      lab.description: "Employee workstation exposing internal network topology and user information."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+
+  # ════════════════════════════════════════════════════════════
+  # DATA SUBNET (10.10.30.0/24) — Database and cache tier
+  # ════════════════════════════════════════════════════════════
+
+  lab_database:
+    image: postgres:13-alpine
+    container_name: lab_database
+    hostname: db.sme-lab.local
+    environment:
+      - POSTGRES_USER=app_user
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=sme_production
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./lab/config/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      data:
+        ipv4_address: 10.10.30.10
+      lab_network:
+    labels:
+      lab.zone: "data"
+      lab.persona: "production-database"
+      lab.vulns: "weak-credentials,default-config,sensitive-data,no-encryption"
+      lab.cvss: "9.0"
+      lab.description: "Production PostgreSQL with weak password (password123), no SSL, and sensitive employee/financial data."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 96M
+
+  lab_redis_cache:
+    image: redis:6.0-alpine
+    container_name: lab_redis_cache
+    hostname: cache.sme-lab.local
+    command: redis-server --port 6380 --protected-mode no --bind 0.0.0.0
+    ports:
+      - "6380:6380"
+    networks:
+      data:
+        ipv4_address: 10.10.30.20
+      lab_network:
+    labels:
+      lab.zone: "data"
+      lab.persona: "redis-cache"
+      lab.vulns: "no-auth,unauthenticated-access,data-exfiltration"
+      lab.cvss: "8.5"
+      lab.description: "Redis cache with no authentication and protected-mode disabled. Accessible from all subnets."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 48M
+
+  # ════════════════════════════════════════════════════════════
+  # MANAGEMENT SUBNET (10.10.40.0/24) — Monitoring & utilities
+  # ════════════════════════════════════════════════════════════
+
+  lab_traffic_gen:
+    build:
+      context: ./lab/traffic-generator
+      dockerfile: Dockerfile
+    container_name: lab_traffic_gen
+    hostname: traffic-gen.sme-lab.local
+    environment:
+      - TARGET_WEBSERVER=http://10.10.10.10:3000
+      - TARGET_API=http://10.10.10.20:8081
+      - TARGET_FILESERVER=10.10.20.10
+      - TARGET_MAIL=10.10.20.20
+      - TARGET_DB=10.10.30.10
+      - TARGET_REDIS=10.10.30.20:6380
+      - TARGET_DNS=10.10.10.30
+      - TRAFFIC_INTENSITY=low
+      - LOG_OUTPUT=/var/log/traffic/traffic.log
+    volumes:
+      - lab_traffic_logs:/var/log/traffic
+    networks:
+      mgmt:
+        ipv4_address: 10.10.40.10
+      dmz:
+      corp:
+      data:
+    labels:
+      lab.zone: "mgmt"
+      lab.persona: "traffic-generator"
+      lab.description: "Generates realistic background network traffic across all lab subnets."
+    restart: unless-stopped
+    depends_on:
+      - lab_webserver
+      - lab_api_gateway
+      - lab_fileserver
+      - lab_redis_cache
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 80M
+
+  lab_log_shipper:
+    profiles: ["full-lab"]
+    build:
+      context: ./lab/log-shipper
+      dockerfile: Dockerfile
+    container_name: lab_log_shipper
+    hostname: log-shipper.sme-lab.local
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - WAZUH_MANAGER=wazuh
+      - LOG_SOURCES=/var/log/traffic/traffic.log
+      - INDEX_PREFIX=sme-lab
+      - SHIP_INTERVAL=10
+    volumes:
+      - lab_traffic_logs:/var/log/traffic:ro
+    networks:
+      mgmt:
+        ipv4_address: 10.10.40.20
+      lab_network:
+    labels:
+      lab.zone: "mgmt"
+      lab.persona: "log-shipper"
+      lab.description: "Ships lab events and traffic logs to Elasticsearch and Wazuh for SIEM integration."
+    restart: unless-stopped
+    depends_on:
+      - lab_traffic_gen
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # lab_wazuh_agent:
+  #   image: wazuh/wazuh-agent:4.7.2
+  #   container_name: lab_wazuh_agent
+  #   hostname: wazuh-agent.sme-lab.local
+  #   environment:
+  #     - WAZUH_MANAGER=wazuh
+  #     - WAZUH_AGENT_GROUP=sme-lab
+  #     - WAZUH_AGENT_NAME=lab-monitor
+  #   volumes:
+  #     - lab_traffic_logs:/var/log/traffic:ro
+  #   networks:
+  #     mgmt:
+  #       ipv4_address: 10.10.40.30
+  #     dmz:
+  #     corp:
+  #     data:
+  #     lab_network:
+  #   labels:
+  #     lab.zone: "mgmt"
+  #     lab.persona: "wazuh-agent"
+  #     lab.description: "Wazuh agent monitoring all lab subnets and forwarding security events to dashboard SIEM."
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.25'
+  #         memory: 128M
+
+# ════════════════════════════════════════════════════════════
+# NETWORK DEFINITIONS
+# ════════════════════════════════════════════════════════════
+
+networks:
+  dmz:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1
+  corp:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.20.0/24
+          gateway: 10.10.20.1
+  data:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.30.0/24
+          gateway: 10.10.30.1
+  mgmt:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.40.0/24
+          gateway: 10.10.40.1
+  lab_network:
+    external: true
+    name: the-dashboard-project-_lab_network
+
+# ════════════════════════════════════════════════════════════
+# VOLUMES
+# ════════════════════════════════════════════════════════════
+
+volumes:
+  lab_traffic_logs:
+    driver: local

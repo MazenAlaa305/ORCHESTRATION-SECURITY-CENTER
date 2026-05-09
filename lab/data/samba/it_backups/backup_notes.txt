@@ -1,0 +1,8 @@
+IT Backup Notes - Q1 2024
+==========================
+Database backup schedule: Daily at 02:00 UTC
+Backup location: \\fileserver\it_backups\db_dumps\
+DB credentials: app_user / password123
+Redis: No auth configured (port 6380)
+Admin portal: http://api-gw:8081/admin (no auth required)
+Wazuh: wazuh/wazuh (default credentials)
