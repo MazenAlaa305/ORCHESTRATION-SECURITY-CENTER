@@ -72,7 +72,11 @@
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --no-sandbox --hide-scrollbars --default-background-color=00000000 --window-size=760,1860 --screenshot=\"C:\\\\Users\\\\omar\\\\AppData\\\\Local\\\\Temp\\\\osc_banner.png\" \"file:///d:/FINAL%20PROJECT/the-dashboard-project-/banner-output/banner.html\")",
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --no-sandbox --no-pdf-header-footer --print-to-pdf=\"C:\\\\Users\\\\omar\\\\AppData\\\\Local\\\\Temp\\\\osc_banner.pdf\" --print-to-pdf-no-header \"file:///d:/FINAL%20PROJECT/the-dashboard-project-/banner-output/banner.html\")",
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --no-sandbox --hide-scrollbars --window-size=760,1860 --screenshot=\"C:\\\\Users\\\\omar\\\\AppData\\\\Local\\\\Temp\\\\osc_banner.png\" \"file:///d:/FINAL%20PROJECT/the-dashboard-project-/banner-output/banner.html\")",
-      "Bash(python -c \"import openpyxl; print\\(openpyxl.__version__\\)\")"
+      "Bash(python -c \"import openpyxl; print\\(openpyxl.__version__\\)\")",
+      "PowerShell(winget --version 2>&1)",
+      "PowerShell(scoop --version 2>&1)",
+      "PowerShell(choco --version 2>&1)",
+      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements)"
     ],
     "additionalDirectories": [
       "C:\\Users\\omar\\AppData\\Local\\Temp"

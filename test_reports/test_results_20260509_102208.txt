@@ -1,0 +1,549 @@
+Test Run Timestamp: 2026-05-09 10:22:08
+Command: python -m pytest backend/tests/ -v --color=no
+Description: This file contains the results of all testing files and what tests were run.
+--------------------------------------------------------------------------------
+
+============================= test session starts =============================
+platform win32 -- Python 3.13.0, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\User 1\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\UNI\FINAL PROJECT\the-dashboard-project--main
+plugins: allure-pytest-2.16.0, anyio-4.11.0, asyncio-1.3.0, mock-3.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 361 items
+
+backend/tests/test_agents.py::test_intelligence_agent_imports PASSED     [  0%]
+backend/tests/test_agents.py::test_validation_probe_imports PASSED       [  0%]
+backend/tests/test_agents.py::test_validation_result_dataclass_fields PASSED [  0%]
+backend/tests/test_agents.py::test_intelligence_agent_init_without_api_key PASSED [  1%]
+backend/tests/test_agents.py::test_finding_dedup_fingerprint_is_deterministic PASSED [  1%]
+backend/tests/test_agents.py::test_finding_dedup_normalises_url PASSED   [  1%]
+backend/tests/test_audit_api.py::test_audit_verify_requires_auth PASSED  [  1%]
+backend/tests/test_audit_api.py::test_audit_verify_unknown_scan_404 PASSED [  2%]
+backend/tests/test_audit_api.py::test_valid_chain_returns_true PASSED    [  2%]
+backend/tests/test_audit_api.py::test_empty_chain_is_valid PASSED        [  2%]
+backend/tests/test_audit_api.py::test_broken_chain_returns_false PASSED  [  3%]
+backend/tests/test_audit_api.py::test_analyst_can_verify_chain PASSED    [  3%]
+backend/tests/test_auth.py::test_hash_round_trip PASSED                  [  3%]
+backend/tests/test_auth.py::test_hash_is_salted PASSED                   [  3%]
+backend/tests/test_auth.py::test_jwt_round_trip PASSED                   [  4%]
+backend/tests/test_auth.py::test_jwt_rejects_tampered_token PASSED       [  4%]
+backend/tests/test_auth.py::test_jwt_rejects_expired_token PASSED        [  4%]
+backend/tests/test_auth_flow.py::test_login_success PASSED               [  4%]
+backend/tests/test_auth_flow.py::test_login_wrong_password PASSED        [  5%]
+backend/tests/test_auth_flow.py::test_login_unknown_email PASSED         [  5%]
+backend/tests/test_auth_flow.py::test_logout_returns_204 PASSED          [  5%]
+backend/tests/test_auth_flow.py::test_change_password_then_login_with_new PASSED [  6%]
+backend/tests/test_auth_flow.py::test_change_password_rejects_wrong_current PASSED [  6%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_encrypt_returns_string PASSED [  6%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_round_trip_simple_dict PASSED [  6%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_round_trip_nested_dict PASSED [  7%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_encrypt_none_returns_none PASSED [  7%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_decrypt_none_returns_none PASSED [  7%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_ciphertext_differs_each_call PASSED [  8%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_empty_dict PASSED  [  8%]
+backend/tests/test_crypto.py::TestCryptoWithKey::test_decrypt_garbage_returns_none PASSED [  8%]
+backend/tests/test_crypto.py::TestCryptoPlaintextFallback::test_encrypt_returns_plain_json PASSED [  8%]
+backend/tests/test_crypto.py::TestCryptoPlaintextFallback::test_decrypt_plain_json_string PASSED [  9%]
+backend/tests/test_crypto.py::TestCryptoPlaintextFallback::test_decrypt_none_is_none PASSED [  9%]
+backend/tests/test_cvss.py::TestParseVector::test_full_prefix_stripped PASSED [  9%]
+backend/tests/test_cvss.py::TestParseVector::test_short_form_no_prefix PASSED [  9%]
+backend/tests/test_cvss.py::TestParseVector::test_missing_metrics_filled_with_defaults PASSED [ 10%]
+backend/tests/test_cvss.py::TestParseVector::test_environmental_keys_default_to_x PASSED [ 10%]
+backend/tests/test_cvss.py::TestParseVector::test_case_insensitive_input PASSED [ 10%]
+backend/tests/test_cvss.py::TestBaseScore::test_critical_10 PASSED       [ 11%]
+backend/tests/test_cvss.py::TestBaseScore::test_high_8_8 PASSED          [ 11%]
+backend/tests/test_cvss.py::TestBaseScore::test_no_impact_is_zero PASSED [ 11%]
+backend/tests/test_cvss.py::TestBaseScore::test_accepts_dict_input PASSED [ 11%]
+backend/tests/test_cvss.py::TestBaseScore::test_accepts_string_input PASSED [ 12%]
+backend/tests/test_cvss.py::TestBaseScore::test_score_in_valid_range PASSED [ 12%]
+backend/tests/test_cvss.py::TestBaseScore::test_physical_access_lower_than_network PASSED [ 12%]
+backend/tests/test_cvss.py::TestBaseScore::test_high_complexity_lower_than_low_complexity PASSED [ 13%]
+backend/tests/test_cvss.py::TestBaseScore::test_scope_changed_higher_than_unchanged_same_impacts PASSED [ 13%]
+backend/tests/test_cvss.py::TestBaseScore::test_roundup_one_decimal_place PASSED [ 13%]
+backend/tests/test_cvss.py::TestEnvironmentalScore::test_critical_asset_raises_score PASSED [ 13%]
+backend/tests/test_cvss.py::TestEnvironmentalScore::test_pii_data_raises_confidentiality_impact PASSED [ 14%]
+backend/tests/test_cvss.py::TestEnvironmentalScore::test_internal_exposure_lowers_score PASSED [ 14%]
+backend/tests/test_cvss.py::TestEnvironmentalScore::test_environmental_score_in_range PASSED [ 14%]
+backend/tests/test_cvss.py::TestEnvironmentalScore::test_accepts_dict_input PASSED [ 14%]
+backend/tests/test_cvss.py::TestEnvironmentalScore::test_original_dict_not_mutated PASSED [ 15%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_known_severities_return_valid_vector[critical] PASSED [ 15%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_known_severities_return_valid_vector[high] PASSED [ 15%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_known_severities_return_valid_vector[medium] PASSED [ 16%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_known_severities_return_valid_vector[low] PASSED [ 16%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_known_severities_return_valid_vector[info] PASSED [ 16%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_case_insensitive PASSED [ 16%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_unknown_severity_falls_back_to_low PASSED [ 17%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_critical_vector_scores_higher_than_low PASSED [ 17%]
+backend/tests/test_cvss.py::TestSeverityToDefaultVector::test_info_vector_scores_zero PASSED [ 17%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/summary] PASSED [ 18%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/kpi-snapshot] PASSED [ 18%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/risk-overview] PASSED [ 18%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/actions] PASSED [ 18%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_reject_unauthenticated[/api/v1/dashboard/exposure-trend] PASSED [ 19%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/summary] PASSED [ 19%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/kpi-snapshot] PASSED [ 19%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/risk-overview] PASSED [ 19%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_viewer[/api/v1/dashboard/actions] PASSED [ 20%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/summary] PASSED [ 20%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/kpi-snapshot] PASSED [ 20%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/risk-overview] PASSED [ 21%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_analyst[/api/v1/dashboard/actions] PASSED [ 21%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/summary] PASSED [ 21%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/kpi-snapshot] PASSED [ 21%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/risk-overview] PASSED [ 22%]
+backend/tests/test_dashboard_api.py::test_dashboard_routes_accessible_to_admin[/api/v1/dashboard/actions] PASSED [ 22%]
+backend/tests/test_dashboard_api.py::test_summary_returns_object PASSED  [ 22%]
+backend/tests/test_dashboard_api.py::test_kpi_snapshot_returns_object PASSED [ 22%]
+backend/tests/test_dashboard_api.py::test_risk_overview_returns_object_or_list PASSED [ 23%]
+backend/tests/test_dashboard_api.py::test_exposure_trend_accessible_or_known_bug PASSED [ 23%]
+backend/tests/test_dashboard_api.py::test_actions_returns_list_or_object PASSED [ 23%]
+backend/tests/test_dashboard_api.py::test_kpi_with_scan_id_param PASSED  [ 24%]
+backend/tests/test_dashboard_api.py::test_summary_with_scan_id_param PASSED [ 24%]
+backend/tests/test_dashboard_api.py::test_dashboard_after_scan_created PASSED [ 24%]
+backend/tests/test_e2e_scans.py::test_api_health SKIPPED (API server...) [ 24%]
+backend/tests/test_e2e_scans.py::test_trigger_scan SKIPPED (API serv...) [ 25%]
+backend/tests/test_e2e_scans.py::test_scan_completion_and_assets SKIPPED [ 25%]
+backend/tests/test_e2e_scans.py::test_report_generation SKIPPED (API...) [ 25%]
+backend/tests/test_endpoints.py::test_health_open PASSED                 [ 26%]
+backend/tests/test_endpoints.py::test_root_open PASSED                   [ 26%]
+backend/tests/test_endpoints.py::test_protected_routes_reject_unauthenticated[/api/v1/scans/] PASSED [ 26%]
+backend/tests/test_endpoints.py::test_protected_routes_reject_unauthenticated[/api/v1/targets/] PASSED [ 26%]
+backend/tests/test_endpoints.py::test_protected_routes_reject_unauthenticated[/api/v1/findings/] PASSED [ 27%]
+backend/tests/test_endpoints.py::test_protected_routes_reject_unauthenticated[/api/v1/dashboard/kpi-snapshot] PASSED [ 27%]
+backend/tests/test_endpoints.py::test_protected_routes_reject_unauthenticated[/api/v1/reports/dummy-scan-id] PASSED [ 27%]
+backend/tests/test_endpoints.py::test_protected_routes_reject_unauthenticated[/api/v1/vulnerabilities/] PASSED [ 27%]
+backend/tests/test_endpoints.py::test_me_returns_current_user PASSED     [ 28%]
+backend/tests/test_endpoints.py::test_me_rejects_garbage_token PASSED    [ 28%]
+backend/tests/test_endpoints.py::test_targets_list_empty PASSED          [ 28%]
+backend/tests/test_endpoints.py::test_dashboard_kpi_returns_object PASSED [ 29%]
+backend/tests/test_endpoints.py::test_scans_list_empty PASSED            [ 29%]
+backend/tests/test_endpoints.py::test_config_public_open PASSED          [ 29%]
+backend/tests/test_finding_dedup.py::TestNormaliseUrl::test_strips_query_string PASSED [ 29%]
+backend/tests/test_finding_dedup.py::TestNormaliseUrl::test_strips_fragment PASSED [ 30%]
+backend/tests/test_finding_dedup.py::TestNormaliseUrl::test_strips_both_query_and_fragment PASSED [ 30%]
+backend/tests/test_finding_dedup.py::TestNormaliseUrl::test_preserves_scheme_host_path PASSED [ 30%]
+backend/tests/test_finding_dedup.py::TestNormaliseUrl::test_empty_string_returns_empty PASSED [ 31%]
+backend/tests/test_finding_dedup.py::TestNormaliseUrl::test_none_handled_via_caller PASSED [ 31%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_returns_hex_sha256 PASSED [ 31%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_deterministic PASSED [ 31%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_different_target_ids_produce_different_fingerprints PASSED [ 32%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_different_vuln_types_produce_different_fingerprints PASSED [ 32%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_url_query_string_ignored_in_fingerprint PASSED [ 32%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_url_fragment_ignored PASSED [ 32%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_template_id_takes_precedence_over_description PASSED [ 33%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_description_used_when_no_template_id PASSED [ 33%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_description_truncated_to_64_chars PASSED [ 33%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_none_inputs_handled PASSED [ 34%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_vuln_type_case_normalised PASSED [ 34%]
+backend/tests/test_finding_dedup.py::TestFingerprint::test_fingerprint_matches_expected_sha256 PASSED [ 34%]
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_creates_new_finding_for_new_vuln PASSED [ 34%]
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_does_not_create_duplicate_finding_on_rescan PASSED [ 35%]
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_vuln_gets_finding_id_linked PASSED [ 35%]
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_returns_zero_for_empty_scan PASSED [ 35%]
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_multiple_different_vulns_create_multiple_findings PASSED [ 36%]
+backend/tests/test_findings_api.py::test_findings_requires_auth PASSED   [ 36%]
+backend/tests/test_findings_api.py::test_findings_returns_envelope PASSED [ 36%]
+backend/tests/test_findings_api.py::test_findings_list_analyst_can_access PASSED [ 36%]
+backend/tests/test_findings_api.py::test_findings_list_viewer_can_access PASSED [ 37%]
+backend/tests/test_findings_api.py::test_filter_by_status_open PASSED    [ 37%]
+backend/tests/test_findings_api.py::test_filter_by_status_fixed PASSED   [ 37%]
+backend/tests/test_findings_api.py::test_invalid_status_returns_422 PASSED [ 37%]
+backend/tests/test_findings_api.py::test_filter_by_scan_id PASSED        [ 38%]
+backend/tests/test_findings_api.py::test_filter_by_nonexistent_scan_id_returns_empty PASSED [ 38%]
+backend/tests/test_findings_api.py::test_filter_by_framework_and_control PASSED [ 38%]
+backend/tests/test_findings_api.py::test_framework_without_control_returns_400 PASSED [ 39%]
+backend/tests/test_findings_api.py::test_control_without_framework_returns_400 PASSED [ 39%]
+backend/tests/test_findings_api.py::test_unknown_framework_returns_400 PASSED [ 39%]
+backend/tests/test_findings_api.py::test_framework_aliases_work PASSED   [ 39%]
+backend/tests/test_findings_api.py::test_limit_respected PASSED          [ 40%]
+backend/tests/test_findings_api.py::test_offset_works PASSED             [ 40%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_sql_injection_variants[sqli] PASSED [ 40%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_sql_injection_variants[SQLi] PASSED [ 40%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_sql_injection_variants[SQL Injection] PASSED [ 41%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_sql_injection_variants[sql] PASSED [ 41%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_xss_variants[xss] PASSED [ 41%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_xss_variants[XSS] PASSED [ 42%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_xss_variants[Cross Site Scripting] PASSED [ 42%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_ssrf_type PASSED [ 42%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_rce_type PASSED [ 42%]
+backend/tests/test_framework_tagger.py::TestKnownVulnerabilityTypes::test_lfi_type PASSED [ 43%]
+backend/tests/test_framework_tagger.py::TestTemplateIdPrefix::test_sqli_template_prefix PASSED [ 43%]
+backend/tests/test_framework_tagger.py::TestTemplateIdPrefix::test_xss_template_prefix PASSED [ 43%]
+backend/tests/test_framework_tagger.py::TestTemplateIdPrefix::test_ssrf_template_prefix PASSED [ 44%]
+backend/tests/test_framework_tagger.py::TestCategoryOverride::test_explicit_category_takes_priority PASSED [ 44%]
+backend/tests/test_framework_tagger.py::TestCategoryOverride::test_unknown_category_returns_empty PASSED [ 44%]
+backend/tests/test_framework_tagger.py::TestUnknownInputs::test_all_none_returns_empty_dict PASSED [ 44%]
+backend/tests/test_framework_tagger.py::TestUnknownInputs::test_unknown_vuln_type_returns_empty_dict PASSED [ 45%]
+backend/tests/test_framework_tagger.py::TestUnknownInputs::test_unknown_template_id_returns_empty_dict PASSED [ 45%]
+backend/tests/test_framework_tagger.py::TestUnknownInputs::test_empty_strings_return_empty_dict PASSED [ 45%]
+backend/tests/test_framework_tagger.py::TestReturnTypeGuarantees::test_always_returns_dict PASSED [ 45%]
+backend/tests/test_framework_tagger.py::TestReturnTypeGuarantees::test_result_is_independent_copy PASSED [ 46%]
+backend/tests/test_framework_tagger.py::TestReturnTypeGuarantees::test_never_raises PASSED [ 46%]
+backend/tests/test_framework_tagger.py::TestAliasNormalisation::test_alias_resolves_same_as_canonical[sqlinjection-sqli] PASSED [ 46%]
+backend/tests/test_framework_tagger.py::TestAliasNormalisation::test_alias_resolves_same_as_canonical[crosssitescripting-xss] PASSED [ 47%]
+backend/tests/test_framework_tagger.py::TestAliasNormalisation::test_alias_resolves_same_as_canonical[remotecommandexecution-rce] PASSED [ 47%]
+backend/tests/test_framework_tagger.py::TestAliasNormalisation::test_alias_resolves_same_as_canonical[localfileinclusion-lfi] PASSED [ 47%]
+backend/tests/test_framework_tagger.py::TestAliasNormalisation::test_alias_resolves_same_as_canonical[informationdisclosure-exposure] PASSED [ 47%]
+backend/tests/test_framework_tagger.py::TestAliasNormalisation::test_alias_resolves_same_as_canonical[openredirect-redirect] PASSED [ 48%]
+backend/tests/test_framework_tagger.py::TestAliasNormalisation::test_alias_resolves_same_as_canonical[defaultcredentials-default-logins] PASSED [ 48%]
+backend/tests/test_nmap_wrapper.py::test_parse_results_extracts_ports_and_services PASSED [ 48%]
+backend/tests/test_nmap_wrapper.py::test_parse_results_handles_empty_scan PASSED [ 49%]
+backend/tests/test_nmap_wrapper.py::test_parse_results_attaches_mac_vendor_when_present PASSED [ 49%]
+backend/tests/test_rbac.py::test_admin_can_list_users PASSED             [ 49%]
+backend/tests/test_rbac.py::test_viewer_cannot_list_users PASSED         [ 49%]
+backend/tests/test_rbac.py::test_analyst_cannot_list_users PASSED        [ 50%]
+backend/tests/test_rbac.py::test_admin_can_create_user PASSED            [ 50%]
+backend/tests/test_rbac.py::test_create_user_rejects_duplicate_email PASSED [ 50%]
+backend/tests/test_rbac.py::test_admin_cannot_demote_self PASSED         [ 50%]
+backend/tests/test_rbac.py::test_admin_can_change_other_user_role PASSED [ 51%]
+backend/tests/test_rbac.py::test_admin_can_disable_user PASSED           [ 51%]
+backend/tests/test_rbac.py::test_viewer_cannot_create_user PASSED        [ 51%]
+backend/tests/test_report_signer.py::TestCanonicalFindingsHash::test_returns_64_char_hex PASSED [ 52%]
+backend/tests/test_report_signer.py::TestCanonicalFindingsHash::test_same_findings_same_hash PASSED [ 52%]
+backend/tests/test_report_signer.py::TestCanonicalFindingsHash::test_order_independent PASSED [ 52%]
+backend/tests/test_report_signer.py::TestCanonicalFindingsHash::test_empty_list PASSED [ 52%]
+backend/tests/test_report_signer.py::TestCanonicalFindingsHash::test_different_findings_different_hash PASSED [ 53%]
+backend/tests/test_report_signer.py::TestCanonicalFindingsHash::test_single_finding PASSED [ 53%]
+backend/tests/test_report_signer.py::TestSignPdf::test_returns_hex_string PASSED [ 53%]
+backend/tests/test_report_signer.py::TestSignPdf::test_same_bytes_same_signature PASSED [ 54%]
+backend/tests/test_report_signer.py::TestSignPdf::test_different_bytes_different_signature PASSED [ 54%]
+backend/tests/test_report_signer.py::TestSignPdf::test_different_key_different_signature PASSED [ 54%]
+backend/tests/test_report_signer.py::TestSignPdf::test_no_key_returns_empty PASSED [ 54%]
+backend/tests/test_report_signer.py::TestSignPdf::test_empty_bytes PASSED [ 55%]
+backend/tests/test_report_signer.py::TestVerifySignature::test_valid_signature_returns_true PASSED [ 55%]
+backend/tests/test_report_signer.py::TestVerifySignature::test_tampered_pdf_returns_false PASSED [ 55%]
+backend/tests/test_report_signer.py::TestVerifySignature::test_wrong_key_returns_false PASSED [ 55%]
+backend/tests/test_report_signer.py::TestVerifySignature::test_empty_stored_sig_returns_false PASSED [ 56%]
+backend/tests/test_report_signer.py::TestVerifySignature::test_garbage_sig_returns_false PASSED [ 56%]
+backend/tests/test_reports_api.py::test_generate_requires_auth PASSED    [ 56%]
+backend/tests/test_reports_api.py::test_meta_requires_auth PASSED        [ 57%]
+backend/tests/test_reports_api.py::test_pdf_requires_auth PASSED         [ 57%]
+backend/tests/test_reports_api.py::test_verify_requires_auth PASSED      [ 57%]
+backend/tests/test_reports_api.py::test_generate_unknown_scan_404 PASSED [ 57%]
+backend/tests/test_reports_api.py::test_meta_unknown_report_404 PASSED   [ 58%]
+backend/tests/test_reports_api.py::test_pdf_unknown_report_404 PASSED    [ 58%]
+backend/tests/test_reports_api.py::test_verify_unknown_report_404 PASSED [ 58%]
+backend/tests/test_reports_api.py::test_generate_report_returns_metadata PASSED [ 59%]
+backend/tests/test_reports_api.py::test_get_report_meta_after_generate PASSED [ 59%]
+backend/tests/test_reports_api.py::test_download_pdf_after_generate PASSED [ 59%]
+backend/tests/test_reports_api.py::test_verify_report_returns_valid PASSED [ 59%]
+backend/tests/test_reports_api.py::test_legacy_get_report_returns_ai_analysis_field PASSED [ 60%]
+backend/tests/test_reports_api.py::test_legacy_unknown_scan_404 PASSED   [ 60%]
+backend/tests/test_reports_api.py::test_analyst_can_generate_report PASSED [ 60%]
+backend/tests/test_risk.py::test_risk_score_calculation PASSED           [ 60%]
+backend/tests/test_risk_engine.py::test_severity_weight_ordering PASSED  [ 61%]
+backend/tests/test_risk_engine.py::test_high_risk_ports_includes_classics PASSED [ 61%]
+backend/tests/test_risk_engine.py::test_high_risk_ports_have_name_and_weight PASSED [ 61%]
+backend/tests/test_risk_engine.py::test_asset_value_multipliers_are_monotonic PASSED [ 62%]
+backend/tests/test_risk_engine.py::test_explain_returns_string_for_critical_score PASSED [ 62%]
+backend/tests/test_risk_engine.py::test_explain_handles_zero_findings PASSED [ 62%]
+backend/tests/test_risk_engine.py::test_explain_band_thresholds[95-CRITICAL] PASSED [ 62%]
+backend/tests/test_risk_engine.py::test_explain_band_thresholds[70-HIGH] PASSED [ 63%]
+backend/tests/test_risk_engine.py::test_explain_band_thresholds[40-MEDIUM] PASSED [ 63%]
+backend/tests/test_risk_engine.py::test_explain_band_thresholds[10-LOW] PASSED [ 63%]
+backend/tests/test_risk_engine.py::test_explain_band_thresholds[0-INFO] PASSED [ 63%]
+backend/tests/test_risk_engine_manual.py::test_high_risk_port_weights PASSED [ 64%]
+backend/tests/test_risk_engine_manual.py::test_severity_weights PASSED   [ 64%]
+backend/tests/test_risk_engine_manual.py::test_asset_value_multipliers PASSED [ 64%]
+backend/tests/test_scan_reaper.py::test_no_orphans_returns_zero PASSED   [ 65%]
+backend/tests/test_scan_reaper.py::test_orphans_found_returns_count PASSED [ 65%]
+backend/tests/test_scan_reaper.py::test_commit_always_called PASSED      [ 65%]
+backend/tests/test_scan_reaper.py::test_execute_called_once PASSED       [ 65%]
+backend/tests/test_scan_reaper.py::test_custom_stale_minutes_accepted PASSED [ 66%]
+backend/tests/test_scan_reaper.py::test_none_rowcount_treated_as_zero PASSED [ 66%]
+backend/tests/test_scan_tasks.py::test_scan_tasks_module_imports PASSED  [ 66%]
+backend/tests/test_scan_tasks.py::test_run_ai_scan_is_registered PASSED  [ 67%]
+backend/tests/test_scan_tasks.py::test_celery_broker_url_uses_redis_setting PASSED [ 67%]
+backend/tests/test_scope_guard.py::TestScopeGuardConstruction::test_explicit_allowlist_used PASSED [ 67%]
+backend/tests/test_scope_guard.py::TestScopeGuardConstruction::test_derives_hostname_from_base_url PASSED [ 67%]
+backend/tests/test_scope_guard.py::TestScopeGuardConstruction::test_empty_allowlist_when_no_base_and_no_list PASSED [ 68%]
+backend/tests/test_scope_guard.py::TestScopeGuardConstruction::test_explicit_allowlist_overrides_base_url PASSED [ 68%]
+backend/tests/test_scope_guard.py::TestIsInScope::test_exact_hostname_match PASSED [ 68%]
+backend/tests/test_scope_guard.py::TestIsInScope::test_subdomain_of_allowed_host PASSED [ 68%]
+backend/tests/test_scope_guard.py::TestIsInScope::test_deep_subdomain_allowed PASSED [ 69%]
+backend/tests/test_scope_guard.py::TestIsInScope::test_different_host_blocked PASSED [ 69%]
+backend/tests/test_scope_guard.py::TestIsInScope::test_partial_hostname_not_allowed PASSED [ 69%]
+backend/tests/test_scope_guard.py::TestIsInScope::test_multiple_entries_in_allowlist PASSED [ 70%]
+backend/tests/test_scope_guard.py::TestIsInScope::test_http_and_https_same_host PASSED [ 70%]
+backend/tests/test_scope_guard.py::TestCIDRScope::test_ip_inside_cidr_is_in_scope PASSED [ 70%]
+backend/tests/test_scope_guard.py::TestCIDRScope::test_ip_outside_cidr_is_blocked PASSED [ 70%]
+backend/tests/test_scope_guard.py::TestCIDRScope::test_exact_ip_match_via_cidr PASSED [ 71%]
+backend/tests/test_scope_guard.py::TestCIDRScope::test_mixed_hostname_and_cidr PASSED [ 71%]
+backend/tests/test_scope_guard.py::TestAssertInScope::test_in_scope_url_passes_silently PASSED [ 71%]
+backend/tests/test_scope_guard.py::TestAssertInScope::test_out_of_scope_raises_scope_violation PASSED [ 72%]
+backend/tests/test_scope_guard.py::TestAssertInScope::test_scope_violation_message_contains_url PASSED [ 72%]
+backend/tests/test_scope_guard.py::TestAssertInScope::test_scope_violation_is_exception PASSED [ 72%]
+backend/tests/test_scope_guard.py::TestScopeGuardEdgeCases::test_empty_url_string PASSED [ 72%]
+backend/tests/test_scope_guard.py::TestScopeGuardEdgeCases::test_url_without_scheme PASSED [ 73%]
+backend/tests/test_scope_guard.py::TestScopeGuardEdgeCases::test_base_url_with_port_derives_correct_host PASSED [ 73%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[100-CRITICAL] PASSED [ 73%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[80-CRITICAL] PASSED [ 73%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[79-HIGH] PASSED [ 74%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[60-HIGH] PASSED [ 74%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[59-MEDIUM] PASSED [ 74%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[30-MEDIUM] PASSED [ 75%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[29-LOW] PASSED [ 75%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[1-LOW] PASSED [ 75%]
+backend/tests/test_scoring_explainer.py::TestBand::test_band_thresholds[0-INFO] PASSED [ 75%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_returns_string PASSED [ 76%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_contains_risk_band PASSED [ 76%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_contains_score PASSED [ 76%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_no_factors_still_returns_sentence PASSED [ 77%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_severity_counts_critical PASSED [ 77%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_severity_counts_high PASSED [ 77%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_zero_severity_counts_not_mentioned PASSED [ 77%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_high_risk_port_mentioned PASSED [ 78%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_safe_port_not_mentioned PASSED [ 78%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_critical_asset_mentioned PASSED [ 78%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_low_asset_criticality_not_mentioned PASSED [ 78%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_high_cvss_mentioned PASSED [ 79%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_low_cvss_not_mentioned PASSED [ 79%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_none_factors_ok PASSED [ 79%]
+backend/tests/test_scoring_explainer.py::TestExplain::test_all_factors_combined PASSED [ 80%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_hash_returns_string PASSED [ 80%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_hash_is_not_plaintext PASSED [ 80%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_verify_correct_password PASSED [ 80%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_verify_wrong_password PASSED [ 81%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_empty_string_password PASSED [ 81%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_two_hashes_of_same_password_differ PASSED [ 81%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_verify_garbage_hash_returns_false PASSED [ 81%]
+backend/tests/test_security_core.py::TestPasswordHashing::test_unicode_password PASSED [ 82%]
+backend/tests/test_security_core.py::TestJWT::test_create_and_decode_round_trip PASSED [ 82%]
+backend/tests/test_security_core.py::TestJWT::test_payload_contains_exp_and_iat PASSED [ 82%]
+backend/tests/test_security_core.py::TestJWT::test_custom_expiry_is_respected PASSED [ 83%]
+backend/tests/test_security_core.py::TestJWT::test_expired_token_raises PASSED [ 83%]
+backend/tests/test_security_core.py::TestJWT::test_tampered_token_raises PASSED [ 83%]
+backend/tests/test_security_core.py::TestJWT::test_garbage_token_raises PASSED [ 83%]
+backend/tests/test_security_core.py::TestJWT::test_empty_string_raises PASSED [ 84%]
+backend/tests/test_security_core.py::TestJWT::test_different_subjects_produce_different_tokens PASSED [ 84%]
+backend/tests/test_security_core.py::TestJWT::test_role_preserved_exactly PASSED [ 84%]
+backend/tests/test_siem_integration.py::test_wazuh_integration_imports PASSED [ 85%]
+backend/tests/test_siem_integration.py::test_wazuh_integration_uses_settings PASSED [ 85%]
+backend/tests/test_siem_integration.py::test_wazuh_get_token_returns_none_on_network_error PASSED [ 85%]
+backend/tests/test_siem_integration.py::test_alert_correlator_imports PASSED [ 85%]
+backend/tests/test_siem_integration.py::test_alert_correlator_returns_alerts_with_match_field PASSED [ 86%]
+backend/tests/test_siem_integration.py::test_alert_correlator_handles_missing_fields PASSED [ 86%]
+backend/tests/test_sla.py::TestDueDateFor::test_critical_is_7_days PASSED [ 86%]
+backend/tests/test_sla.py::TestDueDateFor::test_high_is_30_days PASSED   [ 86%]
+backend/tests/test_sla.py::TestDueDateFor::test_medium_is_90_days PASSED [ 87%]
+backend/tests/test_sla.py::TestDueDateFor::test_low_is_180_days PASSED   [ 87%]
+backend/tests/test_sla.py::TestDueDateFor::test_info_returns_none PASSED [ 87%]
+backend/tests/test_sla.py::TestDueDateFor::test_string_severity_critical PASSED [ 88%]
+backend/tests/test_sla.py::TestDueDateFor::test_string_severity_high PASSED [ 88%]
+backend/tests/test_sla.py::TestDueDateFor::test_unknown_string_defaults_to_180 PASSED [ 88%]
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_no_findings_returns_zero PASSED [ 88%]
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_open_overdue_finding_creates_action_item PASSED [ 89%]
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_fixed_finding_not_actioned PASSED [ 89%]
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_finding_with_no_due_date_not_actioned PASSED [ 89%]
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_future_due_date_not_actioned PASSED [ 90%]
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_duplicate_breach_not_created_twice PASSED [ 90%]
+backend/tests/test_targets_api.py::test_list_targets_requires_auth PASSED [ 90%]
+backend/tests/test_targets_api.py::test_create_target_requires_auth PASSED [ 90%]
+backend/tests/test_targets_api.py::test_viewer_cannot_create_target PASSED [ 91%]
+backend/tests/test_targets_api.py::test_analyst_cannot_create_target PASSED [ 91%]
+backend/tests/test_targets_api.py::test_viewer_cannot_delete_target PASSED [ 91%]
+backend/tests/test_targets_api.py::test_admin_creates_target_successfully PASSED [ 91%]
+backend/tests/test_targets_api.py::test_create_target_returns_masked_credentials PASSED [ 92%]
+backend/tests/test_targets_api.py::test_create_duplicate_url_rejected PASSED [ 92%]
+backend/tests/test_targets_api.py::test_list_targets_returns_list PASSED [ 92%]
+backend/tests/test_targets_api.py::test_authenticated_user_can_list_targets PASSED [ 93%]
+backend/tests/test_targets_api.py::test_list_targets_pagination PASSED   [ 93%]
+backend/tests/test_targets_api.py::test_get_target_by_id PASSED          [ 93%]
+backend/tests/test_targets_api.py::test_get_nonexistent_target_returns_404 PASSED [ 93%]
+backend/tests/test_targets_api.py::test_admin_can_update_target PASSED   [ 94%]
+backend/tests/test_targets_api.py::test_update_nonexistent_target_returns_404 PASSED [ 94%]
+backend/tests/test_targets_api.py::test_admin_can_delete_target PASSED   [ 94%]
+backend/tests/test_targets_api.py::test_delete_nonexistent_target_returns_404 PASSED [ 95%]
+backend/tests/test_vulnerabilities_api.py::test_list_vulns_requires_auth PASSED [ 95%]
+backend/tests/test_vulnerabilities_api.py::test_bulk_update_requires_auth PASSED [ 95%]
+backend/tests/test_vulnerabilities_api.py::test_list_returns_list PASSED [ 95%]
+backend/tests/test_vulnerabilities_api.py::test_authenticated_user_can_list_vulnerabilities PASSED [ 96%]
+backend/tests/test_vulnerabilities_api.py::test_list_filter_by_scan_id PASSED [ 96%]
+backend/tests/test_vulnerabilities_api.py::test_list_filter_by_severity PASSED [ 96%]
+backend/tests/test_vulnerabilities_api.py::test_list_filter_by_environment PASSED [ 96%]
+backend/tests/test_vulnerabilities_api.py::test_list_limit_respected PASSED [ 97%]
+backend/tests/test_vulnerabilities_api.py::test_viewer_cannot_bulk_update PASSED [ 97%]
+backend/tests/test_vulnerabilities_api.py::test_analyst_can_bulk_update_status PASSED [ 97%]
+backend/tests/test_vulnerabilities_api.py::test_admin_can_bulk_update_remediation PASSED [ 98%]
+backend/tests/test_vulnerabilities_api.py::test_bulk_update_returns_not_found_for_ghost_ids PASSED [ 98%]
+backend/tests/test_vulnerabilities_api.py::test_bulk_update_empty_ids_returns_400 PASSED [ 98%]
+backend/tests/test_vulnerabilities_api.py::test_bulk_update_missing_both_fields_returns_400 PASSED [ 98%]
+backend/tests/test_vulnerabilities_api.py::test_bulk_update_preserves_previous_status_in_response PASSED [ 99%]
+backend/tests/test_websocket.py::test_broadcast_event_envelope_shape PASSED [ 99%]
+backend/tests/test_websocket.py::test_broadcast_event_seq_is_monotonic PASSED [ 99%]
+backend/tests/test_websocket.py::test_broadcast_event_prunes_dead_clients PASSED [100%]
+
+============================== warnings summary ===============================
+backend\app\schemas\scan.py:56
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:56: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class TargetResponse(BaseModel):
+
+backend\app\schemas\scan.py:97
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:97: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ScanSummary(BaseModel):
+
+backend\app\schemas\scan.py:158
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:158: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class VulnerabilityResponse(VulnerabilityBase):
+
+backend\app\schemas\scan.py:207
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:207: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class AgentLogResponse(BaseModel):
+
+backend\app\schemas\scan.py:233
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:233: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class EndpointResponse(BaseModel):
+
+backend\app\schemas\scan.py:251
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:251: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class AssetServiceResponse(BaseModel):
+
+backend\app\schemas\scan.py:265
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:265: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ScanAssetResponse(BaseModel):
+
+backend\app\schemas\scan.py:306
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\schemas\scan.py:306: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ActionItemResponse(BaseModel):
+
+backend\app\api\v1\endpoints\network.py:13
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\network.py:13: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class NetworkAssetResponse(BaseModel):
+
+backend\app\api\v1\endpoints\dashboard.py:52
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\dashboard.py:52: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ActionItemResponse(BaseModel):
+
+backend\app\api\v1\endpoints\auth.py:40
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\auth.py:40: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MeResponse(BaseModel):
+
+backend\app\api\v1\endpoints\rbac.py:31
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\rbac.py:31: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserOut(BaseModel):
+
+backend/tests/test_audit_api.py: 20 warnings
+backend/tests/test_dashboard_api.py: 4 warnings
+backend/tests/test_finding_dedup.py: 37 warnings
+backend/tests/test_findings_api.py: 37 warnings
+backend/tests/test_rbac.py: 1 warning
+backend/tests/test_reports_api.py: 21 warnings
+backend/tests/test_sla.py: 10 warnings
+backend/tests/test_targets_api.py: 21 warnings
+backend/tests/test_vulnerabilities_api.py: 63 warnings
+  C:\Users\User 1\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\sql\schema.py:3596: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+backend/tests/test_audit_api.py: 5 warnings
+backend/tests/test_auth.py: 3 warnings
+backend/tests/test_auth_flow.py: 5 warnings
+backend/tests/test_dashboard_api.py: 20 warnings
+backend/tests/test_endpoints.py: 4 warnings
+backend/tests/test_findings_api.py: 15 warnings
+backend/tests/test_rbac.py: 9 warnings
+backend/tests/test_reports_api.py: 11 warnings
+backend/tests/test_security_core.py: 10 warnings
+backend/tests/test_targets_api.py: 16 warnings
+backend/tests/test_vulnerabilities_api.py: 13 warnings
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\core\security.py:42: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expire = datetime.utcnow() + (expires_delta or timedelta(hours=settings.JWT_EXPIRE_HOURS))
+
+backend/tests/test_audit_api.py: 5 warnings
+backend/tests/test_auth.py: 3 warnings
+backend/tests/test_auth_flow.py: 5 warnings
+backend/tests/test_dashboard_api.py: 20 warnings
+backend/tests/test_endpoints.py: 4 warnings
+backend/tests/test_findings_api.py: 15 warnings
+backend/tests/test_rbac.py: 9 warnings
+backend/tests/test_reports_api.py: 11 warnings
+backend/tests/test_security_core.py: 10 warnings
+backend/tests/test_targets_api.py: 16 warnings
+backend/tests/test_vulnerabilities_api.py: 13 warnings
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\core\security.py:47: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "iat": datetime.utcnow(),
+
+backend/tests/test_auth_flow.py::test_login_success
+backend/tests/test_auth_flow.py::test_change_password_then_login_with_new
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\auth.py:107: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    user.last_login_at = datetime.utcnow()
+
+backend/tests/test_dashboard_api.py: 44 warnings
+backend/tests/test_endpoints.py: 4 warnings
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\dashboard.py:154: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+backend/tests/test_dashboard_api.py::test_exposure_trend_accessible_or_known_bug
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\dashboard.py:195: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    end = datetime.utcnow()
+
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_creates_new_finding_for_new_vuln
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_does_not_create_duplicate_finding_on_rescan
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_vuln_gets_finding_id_linked
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_multiple_different_vulns_create_multiple_findings
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_multiple_different_vulns_create_multiple_findings
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_multiple_different_vulns_create_multiple_findings
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\finding_dedup.py:124: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    first_seen=datetime.utcnow(),
+
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_creates_new_finding_for_new_vuln
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_does_not_create_duplicate_finding_on_rescan
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_vuln_gets_finding_id_linked
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_multiple_different_vulns_create_multiple_findings
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_multiple_different_vulns_create_multiple_findings
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_multiple_different_vulns_create_multiple_findings
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\finding_dedup.py:125: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    last_seen=datetime.utcnow(),
+
+backend/tests/test_finding_dedup.py::TestDeduplicateScan::test_does_not_create_duplicate_finding_on_rescan
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\finding_dedup.py:105: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    existing.last_seen = datetime.utcnow()
+
+backend/tests/test_reports_api.py::test_generate_report_returns_metadata
+backend/tests/test_reports_api.py::test_get_report_meta_after_generate
+backend/tests/test_reports_api.py::test_download_pdf_after_generate
+backend/tests/test_reports_api.py::test_verify_report_returns_valid
+backend/tests/test_reports_api.py::test_analyst_can_generate_report
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\pdf_generator.py:223: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ["Generated", datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")],
+
+backend/tests/test_reports_api.py::test_generate_report_returns_metadata
+backend/tests/test_reports_api.py::test_get_report_meta_after_generate
+backend/tests/test_reports_api.py::test_download_pdf_after_generate
+backend/tests/test_reports_api.py::test_verify_report_returns_valid
+backend/tests/test_reports_api.py::test_analyst_can_generate_report
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\pdf_generator.py:754: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ["Generated (UTC)", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")],
+
+backend/tests/test_reports_api.py::test_generate_report_returns_metadata
+backend/tests/test_reports_api.py::test_get_report_meta_after_generate
+backend/tests/test_reports_api.py::test_download_pdf_after_generate
+backend/tests/test_reports_api.py::test_verify_report_returns_valid
+backend/tests/test_reports_api.py::test_analyst_can_generate_report
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\api\v1\endpoints\reports.py:185: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    generated_at=datetime.utcnow(),
+
+backend/tests/test_scan_reaper.py::test_no_orphans_returns_zero
+backend/tests/test_scan_reaper.py::test_orphans_found_returns_count
+backend/tests/test_scan_reaper.py::test_commit_always_called
+backend/tests/test_scan_reaper.py::test_execute_called_once
+backend/tests/test_scan_reaper.py::test_custom_stale_minutes_accepted
+backend/tests/test_scan_reaper.py::test_none_rowcount_treated_as_zero
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\scan_reaper.py:41: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    threshold = datetime.utcnow() - timedelta(minutes=stale_after_minutes)
+
+backend/tests/test_scan_reaper.py::test_no_orphans_returns_zero
+backend/tests/test_scan_reaper.py::test_orphans_found_returns_count
+backend/tests/test_scan_reaper.py::test_commit_always_called
+backend/tests/test_scan_reaper.py::test_execute_called_once
+backend/tests/test_scan_reaper.py::test_custom_stale_minutes_accepted
+backend/tests/test_scan_reaper.py::test_none_rowcount_treated_as_zero
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\scan_reaper.py:52: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    completed_at=datetime.utcnow(),
+
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_open_overdue_finding_creates_action_item
+backend/tests/test_sla.py::TestCheckAndActionBreaches::test_duplicate_breach_not_created_twice
+  D:\UNI\FINAL PROJECT\the-dashboard-project--main\backend\app\services\sla.py:111: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ 357 passed, 4 skipped, 541 warnings in 11.82s ================

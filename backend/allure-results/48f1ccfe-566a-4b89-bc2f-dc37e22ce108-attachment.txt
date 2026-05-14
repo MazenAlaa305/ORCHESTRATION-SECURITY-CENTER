@@ -1,0 +1,1 @@
+2026-05-09T17:25:20 [ERROR] [rid=-] app.core.crypto: Failed to decrypt auth_credentials: 

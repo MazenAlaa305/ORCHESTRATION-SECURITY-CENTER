@@ -1,0 +1,2 @@
+[32mINFO    [0m app.services.framework_tagger:framework_tagger.py:32 framework_tagger: loaded 13 category mappings
+[32mINFO    [0m app.services.finding_dedup:finding_dedup.py:139 Dedup complete for scan b3743e27-eb4c-4553-9ae0-6e383c44e908: 1 vulns processed, 1 new findings created

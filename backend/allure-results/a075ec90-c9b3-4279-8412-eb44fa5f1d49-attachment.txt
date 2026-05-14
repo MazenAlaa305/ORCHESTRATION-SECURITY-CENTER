@@ -1,0 +1,1 @@
+[32mINFO    [0m app.services.finding_dedup:finding_dedup.py:139 Dedup complete for scan 39b91a31-4382-4448-8861-2b4628922d4d: 3 vulns processed, 3 new findings created

@@ -1,0 +1,1 @@
+2026-05-09T17:25:26 [INFO] [rid=-] app.services.finding_dedup: Dedup complete for scan 3b9591bc-3a37-471f-a092-20b858c76c7e: 1 vulns processed, 1 new findings created

@@ -1,0 +1,2 @@
+2026-05-09T17:25:30 [INFO] [rid=-] httpx: HTTP Request: POST http://testserver/api/v1/targets/ "HTTP/1.1 200 OK"
+2026-05-09T17:25:30 [INFO] [rid=-] httpx: HTTP Request: PATCH http://testserver/api/v1/targets/9ff86e92-a7ad-48d3-92d1-8ddfd5a494ef "HTTP/1.1 200 OK"

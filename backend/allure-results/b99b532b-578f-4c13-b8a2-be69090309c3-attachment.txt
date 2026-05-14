@@ -1,0 +1,1 @@
+2026-05-09T17:25:21 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/dashboard/summary?scan_id=391a0355-e8dc-4d32-aff9-55223a68009a "HTTP/1.1 200 OK"

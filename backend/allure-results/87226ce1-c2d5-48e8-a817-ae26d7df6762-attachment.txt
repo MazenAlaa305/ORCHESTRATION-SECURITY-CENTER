@@ -1,0 +1,1 @@
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/reports/a4e3d89f-df70-479e-bb69-ff06dbf0e761/generate "HTTP/1.1 200 OK"
