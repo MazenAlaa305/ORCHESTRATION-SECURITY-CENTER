@@ -2,13 +2,20 @@ import React from 'react';
 import { Server, Shield, Globe, Terminal, Info, AlertTriangle, Monitor, Radio, Smartphone } from 'lucide-react';
 
 const AssetDetailPanel = ({ node, onClose }) => {
-    if (!node || !node.details) return null;
+    if (!node) return null;
 
-    const { details, vulnCount } = node;
-    const services = details?.services || [];
+    const { details = {}, vulnCount } = node;
 
-    // Group services by port
-    const sortedServices = [...services].sort((a, b) => a.port - b.port);
+    // Full scan services first; fall back to open_ports string
+    const scannedServices = details?.services || [];
+    const fallbackServices = !scannedServices.length && details?.open_ports
+        ? details.open_ports.split(',').filter(p => p.trim()).map(p => ({
+            port: p.trim(), protocol: 'tcp', state: 'open',
+            service_name: '—', product: '', version: '',
+          }))
+        : [];
+    const sortedServices = (scannedServices.length ? scannedServices : fallbackServices)
+        .sort((a, b) => Number(a.port) - Number(b.port));
 
     const getIcon = (type) => {
         if (!type) return <Monitor className="w-6 h-6 text-blue-400" />;
@@ -77,7 +84,40 @@ const AssetDetailPanel = ({ node, onClose }) => {
                             <span className="text-gray-500 block text-xs">Uptime</span>
                             <span className="text-white font-medium">{details?.uptime || 'N/A'}</span>
                         </div>
+                        {details?.risk_score > 0 && (
+                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
+                                <span className="text-gray-500 block text-xs">Risk Score</span>
+                                <span className="font-bold" style={{ color: details.risk_score >= 75 ? '#ff0055' : details.risk_score >= 50 ? '#ff6a00' : '#ffaa00' }}>
+                                    {Math.round(details.risk_score)}%
+                                </span>
+                            </div>
+                        )}
+                        {details?.criticality && (
+                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
+                                <span className="text-gray-500 block text-xs">Criticality</span>
+                                <span className="font-bold text-xs" style={{ color: details.criticality === 'CRITICAL' ? '#ff0055' : details.criticality === 'HIGH' ? '#ff6a00' : details.criticality === 'MEDIUM' ? '#ffaa00' : '#00ff88' }}>
+                                    {details.criticality}
+                                </span>
+                            </div>
+                        )}
+                        {details?.status && (
+                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
+                                <span className="text-gray-500 block text-xs">Status</span>
+                                <span className="text-white font-medium capitalize">{details.status}</span>
+                            </div>
+                        )}
+                        {details?.zone && (
+                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
+                                <span className="text-gray-500 block text-xs">Zone</span>
+                                <span className="text-white font-mono text-xs">{details.zone}</span>
+                            </div>
+                        )}
                     </div>
+                    {details?.description && (
+                        <p className="mt-3 text-xs text-gray-400 bg-gray-800/30 rounded p-3 border border-gray-700 leading-relaxed">
+                            {details.description}
+                        </p>
+                    )}
                 </section>
 
                 {/* AI Intelligence Section */}

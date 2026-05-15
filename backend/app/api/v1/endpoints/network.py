@@ -188,6 +188,19 @@ def get_asset_detail(asset_id: int, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/assets/topology/mermaid")
+def get_topology_mermaid(force: bool = False, db: Session = Depends(get_db)):
+    """
+    Return the current network topology as a Mermaid diagram string.
+
+    Served from Redis cache (set automatically after every scan).
+    Pass ?force=true to skip the cache and regenerate immediately.
+    """
+    from app.services.topology_generator import get_cached_or_generate, generate_and_cache
+    diagram = generate_and_cache(db) if force else get_cached_or_generate(db)
+    return {"mermaid": diagram}
+
+
 @router.get("/activity")
 def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
     from app.models.scan import ActionItem

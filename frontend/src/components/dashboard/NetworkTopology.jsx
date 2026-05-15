@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { ZoomIn, ZoomOut, Maximize2, Minimize2, RefreshCw, Move, Crosshair } from 'lucide-react';
 import AssetDetailPanel from './AssetDetailPanel';
@@ -229,25 +229,108 @@ const drawDeviceIcon = (ctx, group, cx, cy, r, color) => {
     ctx.restore();
 };
 
-// ─── Static demo nodes shown when APIs are unavailable ────
-const DEMO_GRAPH = (() => {
-    const hub = { id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0, fx:0, fy:0, x:0, y:0 };
-    const devices = [
-        { id:'d1', name:'WEB-01',    ip:'192.168.1.10', group:'server',   riskScore:72, criticality:'HIGH',     vulnCount:4 },
-        { id:'d2', name:'DB-PRIMARY',ip:'192.168.1.20', group:'database', riskScore:88, criticality:'CRITICAL',  vulnCount:7 },
-        { id:'d3', name:'FIREWALL',  ip:'192.168.1.1',  group:'firewall', riskScore:18, criticality:'LOW',      vulnCount:0 },
-        { id:'d4', name:'ROUTER-01', ip:'192.168.1.254',group:'router',   riskScore:35, criticality:'MEDIUM',   vulnCount:2 },
-        { id:'d5', name:'APP-SRV',   ip:'192.168.1.30', group:'server',   riskScore:55, criticality:'HIGH',     vulnCount:3 },
-        { id:'d6', name:'DEV-PC',    ip:'192.168.1.50', group:'desktop',  riskScore:12, criticality:'LOW',      vulnCount:1 },
-    ];
-    const count = devices.length, radius = 180;
-    const nodes = [hub, ...devices.map((d, i) => {
-        const angle = (2 * Math.PI * i) / count - Math.PI / 2;
-        return { ...d, val:10, infoCount:0, fx: Math.cos(angle)*radius, fy: Math.sin(angle)*radius,
-                  x: Math.cos(angle)*radius, y: Math.sin(angle)*radius };
-    })];
-    const links = devices.map(d => ({ source:'hub', target:d.id, value:2 }));
+// ─── Zone inference (mirrors topology_generator.py) ──────
+const ZONE_PREFIXES = [
+    { prefix: '10.10.10.', id: 'DMZ',   name: 'DMZ',   cidr: '10.10.10.0/24',  color: '#00ffff', icon: '🌐' },
+    { prefix: '10.10.20.', id: 'CORP',  name: 'CORP',  cidr: '10.10.20.0/24',  color: '#00ffff', icon: '🏢' },
+    { prefix: '10.10.30.', id: 'DATA',  name: 'DATA',  cidr: '10.10.30.0/24',  color: '#00ffff', icon: '🗄' },
+    { prefix: '10.10.40.', id: 'MGMT',  name: 'MGMT',  cidr: '10.10.40.0/24',  color: '#00ffff', icon: '📡' },
+    { prefix: '172.',      id: 'DASH',  name: 'DASH',  cidr: '172.0.0.0/8',    color: '#00ffff', icon: '🖥' },
+    { prefix: '192.168.',  id: 'LAN',   name: 'LAN',   cidr: '192.168.0.0/16', color: '#00ffff', icon: '🔌' },
+    { prefix: '127.',      id: 'LOCAL', name: 'LOCAL', cidr: '127.0.0.0/8',    color: '#00ffff', icon: '💻' },
+];
+const ZONE_ORDER = ['DMZ', 'CORP', 'DATA', 'MGMT', 'DASH', 'LAN', 'LOCAL', 'OTHER'];
+
+const inferZone = (ip) => {
+    if (!ip) return { id: 'OTHER', name: 'OTHER', cidr: 'other', color: '#00ffff', icon: '🔷' };
+    return ZONE_PREFIXES.find(z => ip.startsWith(z.prefix)) || { id: 'OTHER', name: 'OTHER', cidr: 'other', color: '#00ffff', icon: '🔷' };
+};
+
+// ─── Tree layout builder ──────────────────────────────────
+// zoneMap: { zoneId → { meta: {name,cidr,icon}, devices: [node,...] } }
+const buildTreeGraph = (zoneMap) => {
+    const nodes = [];
+    const links = [];
+    const orderedZones = ZONE_ORDER.filter(z => zoneMap[z]).map(z => ({ id: z, ...zoneMap[z] }));
+
+    const HUB_Y       = -320;
+    const SUBNET_Y    = -70;
+    const DEV_GAP     = 280;   // horizontal gap between devices in same row
+    const ROW_GAP     = 220;   // vertical gap between device rows
+    const MAX_PER_ROW = 5;     // wrap to a new row after this many devices
+    const ZONE_PAD    = 160;   // extra horizontal padding per zone
+    const DEVICE_Y_BASE = SUBNET_Y + 320;
+
+    // Compute per-zone grid dimensions and zone width
+    const zoneLayouts = orderedZones.map(zone => {
+        const n       = zone.devices.length;
+        const cols    = Math.min(Math.max(n, 1), MAX_PER_ROW);
+        const rows    = Math.ceil(n / MAX_PER_ROW);
+        const clusterW = Math.max(0, cols - 1) * DEV_GAP;
+        const zoneW   = Math.max(220, clusterW + ZONE_PAD);
+        return { cols, rows, clusterW, zoneW };
+    });
+
+    // Position zone centers sequentially from left
+    const totalWidth = zoneLayouts.reduce((s, l) => s + l.zoneW, 0);
+    let xCursor = -totalWidth / 2;
+    const zoneCenters = zoneLayouts.map(l => {
+        const cx = xCursor + l.zoneW / 2;
+        xCursor += l.zoneW;
+        return cx;
+    });
+
+    nodes.push({ id: 'hub', name: 'Gateway Hub', group: 'gateway', val: 24, riskScore: 0,
+                 fx: 0, fy: HUB_Y, x: 0, y: HUB_Y });
+
+    orderedZones.forEach((zone, zi) => {
+        const zx       = zoneCenters[zi];
+        const layout   = zoneLayouts[zi];
+        const subnetId = `zone_${zone.id}`;
+
+        nodes.push({
+            id: subnetId, name: zone.meta.name, cidr: zone.meta.cidr, icon: zone.meta.icon || '',
+            group: 'subnet', isSubnet: true, val: 13, riskScore: 0,
+            fx: zx, fy: SUBNET_Y, x: zx, y: SUBNET_Y,
+        });
+        links.push({ source: 'hub', target: subnetId, value: 3 });
+
+        zone.devices.forEach((dev, di) => {
+            const col = di % layout.cols;
+            const row = Math.floor(di / layout.cols);
+            const dx  = zx - layout.clusterW / 2 + col * DEV_GAP;
+            const dy  = DEVICE_Y_BASE + row * ROW_GAP;
+            nodes.push({ ...dev, fx: dx, fy: dy, x: dx, y: dy });
+            links.push({ source: subnetId, target: dev.id, value: 2 });
+        });
+    });
+
     return { nodes, links };
+};
+
+// ─── Static demo — tree layout ────────────────────────────
+const DEMO_GRAPH = (() => {
+    const demoZoneMap = {
+        DMZ:  { meta: { name: 'DMZ',  cidr: '10.10.10.0/24', icon: '🌐' }, devices: [
+            { id:'d1', name:'WEB-01',   ip:'10.10.10.10', group:'server',   riskScore:88, criticality:'CRITICAL', vulnCount:7, infoCount:0, val:16 },
+            { id:'d2', name:'API-GW',   ip:'10.10.10.20', group:'router',   riskScore:55, criticality:'MEDIUM',   vulnCount:3, infoCount:0, val:16 },
+            { id:'d3', name:'DNS-SVR',  ip:'10.10.10.30', group:'router',   riskScore:45, criticality:'MEDIUM',   vulnCount:2, infoCount:0, val:16 },
+        ]},
+        CORP: { meta: { name: 'CORP', cidr: '10.10.20.0/24', icon: '🏢' }, devices: [
+            { id:'d4', name:'FILE-SVR', ip:'10.10.20.10', group:'server',   riskScore:72, criticality:'HIGH',     vulnCount:4, infoCount:0, val:16 },
+            { id:'d5', name:'MAIL-SVR', ip:'10.10.20.20', group:'server',   riskScore:62, criticality:'HIGH',     vulnCount:3, infoCount:0, val:16 },
+            { id:'d6', name:'WS-01',    ip:'10.10.20.40', group:'desktop',  riskScore:35, criticality:'MEDIUM',   vulnCount:1, infoCount:0, val:16 },
+        ]},
+        DATA: { meta: { name: 'DATA', cidr: '10.10.30.0/24', icon: '🗄' }, devices: [
+            { id:'d7', name:'DB-01',    ip:'10.10.30.10', group:'database', riskScore:88, criticality:'CRITICAL', vulnCount:6, infoCount:0, val:16 },
+            { id:'d8', name:'REDIS',    ip:'10.10.30.20', group:'database', riskScore:80, criticality:'CRITICAL', vulnCount:5, infoCount:0, val:16 },
+        ]},
+        MGMT: { meta: { name: 'MGMT', cidr: '10.10.40.0/24', icon: '📡' }, devices: [
+            { id:'d9',  name:'TRAF-GEN', ip:'10.10.40.10', group:'server', riskScore:10, criticality:'LOW', vulnCount:0, infoCount:0, val:16 },
+            { id:'d10', name:'LOG-SHIP', ip:'10.10.40.20', group:'server', riskScore:10, criticality:'LOW', vulnCount:0, infoCount:0, val:16 },
+        ]},
+    };
+    return buildTreeGraph(demoZoneMap);
 })();
 
 // ─── Safe roundRect polyfill ──────────────────────────────
@@ -264,6 +347,116 @@ const safeRoundRect = (ctx, x, y, w, h, r) => {
     ctx.lineTo(x, y + rr);
     ctx.quadraticCurveTo(x, y, x + rr, y);
     ctx.closePath();
+};
+
+// ─── Subnet Detail Panel ──────────────────────────────────
+const SubnetDetailPanel = ({ node, graphData, onClose }) => {
+    const subnetDevices = graphData.links
+        .filter(l => (typeof l.source === 'object' ? l.source.id : l.source) === node.id)
+        .map(l => {
+            const tid = typeof l.target === 'object' ? l.target.id : l.target;
+            return graphData.nodes.find(n => n.id === tid);
+        })
+        .filter(Boolean);
+
+    const totalVulns = subnetDevices.reduce((s, d) => s + (d.vulnCount || 0), 0);
+    const critCount  = subnetDevices.filter(d => (d.riskScore || 0) >= 75 || (d.criticality || '').toUpperCase() === 'CRITICAL').length;
+    const highCount  = subnetDevices.filter(d => { const r = d.riskScore || 0; const c = (d.criticality || '').toUpperCase(); return (r >= 50 && r < 75) || c === 'HIGH'; }).length;
+    const medCount   = subnetDevices.filter(d => { const r = d.riskScore || 0; return r >= 20 && r < 50; }).length;
+    const safeCount  = Math.max(0, subnetDevices.length - critCount - highCount - medCount);
+    const avgRisk    = subnetDevices.length
+        ? Math.round(subnetDevices.reduce((s, d) => s + (d.riskScore || 0), 0) / subnetDevices.length)
+        : 0;
+    const riskColor  = avgRisk >= 75 ? '#ff0055' : avgRisk >= 50 ? '#ff6a00' : avgRisk >= 20 ? '#ffaa00' : '#00ff88';
+
+    return (
+        <div className="glass-card flex flex-col h-full overflow-hidden" style={{ border: '1px solid rgba(0,255,255,0.12)' }}>
+            {/* Header */}
+            <div className="px-5 py-4 shrink-0" style={{ borderBottom: '1px solid rgba(0,255,255,0.08)', background: 'rgba(0,12,18,0.6)' }}>
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                        <span className="text-3xl leading-none">{node.icon || '🔷'}</span>
+                        <div>
+                            <div className="text-white font-black text-base uppercase tracking-widest">{node.name} Zone</div>
+                            <div className="font-mono text-xs mt-0.5" style={{ color: 'rgba(0,255,255,0.55)' }}>{node.cidr}</div>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors p-1 text-lg leading-none">×</button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                {/* Stats grid */}
+                <div className="grid grid-cols-2 gap-2">
+                    {[
+                        { label: 'Devices',  value: subnetDevices.length, color: '#00ffff' },
+                        { label: 'Vulns',    value: totalVulns, color: totalVulns > 0 ? '#ff6a00' : '#00ff88' },
+                        { label: 'Avg Risk', value: `${avgRisk}%`, color: riskColor },
+                        { label: 'Critical', value: critCount, color: critCount > 0 ? '#ff0055' : '#00ff88' },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} className="rounded-lg p-3" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${color}1a` }}>
+                            <div className="text-xl font-black" style={{ color }}>{value}</div>
+                            <div className="text-gray-500 text-xs mt-0.5 uppercase tracking-wider">{label}</div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Risk distribution bar */}
+                {subnetDevices.length > 0 && (
+                    <div>
+                        <div className="text-gray-500 text-xs uppercase tracking-wider mb-2">Risk Distribution</div>
+                        <div className="flex h-2 rounded-full overflow-hidden gap-px">
+                            {critCount  > 0 && <div style={{ flex: critCount,  background: '#ff0055', borderRadius: 4 }} />}
+                            {highCount  > 0 && <div style={{ flex: highCount,  background: '#ff6a00', borderRadius: 4 }} />}
+                            {medCount   > 0 && <div style={{ flex: medCount,   background: '#ffaa00', borderRadius: 4 }} />}
+                            {safeCount  > 0 && <div style={{ flex: safeCount,  background: '#00ff88', borderRadius: 4 }} />}
+                        </div>
+                        <div className="flex justify-between text-xs mt-1.5">
+                            <span style={{ color: '#ff0055' }}>{critCount} crit</span>
+                            <span style={{ color: '#ff6a00' }}>{highCount} high</span>
+                            <span style={{ color: '#ffaa00' }}>{medCount} med</span>
+                            <span style={{ color: '#00ff88' }}>{safeCount} low</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Device list */}
+                <div>
+                    <div className="text-gray-500 text-xs uppercase tracking-wider mb-2">Devices ({subnetDevices.length})</div>
+                    <div className="space-y-1.5">
+                        {subnetDevices.length === 0 && (
+                            <div className="text-gray-600 text-xs text-center py-4">No devices discovered in this zone</div>
+                        )}
+                        {subnetDevices.map((dev, i) => {
+                            const r   = dev.riskScore || 0;
+                            const crt = (dev.criticality || '').toUpperCase();
+                            const eff = r > 0 ? r : crt === 'CRITICAL' ? 90 : crt === 'HIGH' ? 70 : crt === 'MEDIUM' ? 40 : 10;
+                            const rc  = eff >= 75 ? '#ff0055' : eff >= 50 ? '#ff6a00' : eff >= 20 ? '#ffaa00' : '#00ff88';
+                            const lbl = eff >= 75 ? 'CRIT' : eff >= 50 ? 'HIGH' : eff >= 20 ? 'MED' : 'LOW';
+                            return (
+                                <div key={dev.id ?? i} className="flex items-center justify-between rounded-lg px-3 py-2"
+                                     style={{ background: 'rgba(0,0,0,0.25)', border: `1px solid ${rc}1a` }}>
+                                    <div className="min-w-0">
+                                        <div className="text-white text-xs font-bold truncate">{dev.name || dev.ip}</div>
+                                        <div className="font-mono text-xs truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>{dev.ip || '—'}</div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                                        {(dev.vulnCount || 0) > 0 && (
+                                            <span className="text-xs" style={{ color: rc }}>⚠ {dev.vulnCount}</span>
+                                        )}
+                                        <span className="text-xs font-bold px-1.5 py-0.5 rounded"
+                                              style={{ background: `${rc}1a`, color: rc, border: `1px solid ${rc}44` }}>
+                                            {lbl}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // ─── Component ────────────────────────────────────────────
@@ -321,98 +514,86 @@ const NetworkTopology = ({ refresh, compact = false }) => {
 
     useEffect(() => { fetchData(); }, [refresh]);
 
-    // Map lab target objects into the same graph node format
+    // Map lab target objects into tree graph
     const transformLabTargetsToGraph = (targets) => {
-        const nodes = [];
-        const links = [];
-
-        nodes.push({ id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0, fx:0, fy:0 });
-
-
-        const count = targets.length;
-        const radius = 180;
-
-        targets.forEach((t, i) => {
-            const angle = (2 * Math.PI * i) / count - Math.PI / 2;
-            const fx = Math.cos(angle) * radius;
-            const fy = Math.sin(angle) * radius;
-            const nodeId = `lab_${t.container}`;
-
-            // Determine group from protocol
+        const zoneMap = {};
+        targets.forEach((t) => {
             let group = 'server';
-            if (t.protocol === 'dns') group = 'router';
+            if (t.protocol === 'dns')                                    group = 'router';
             else if (t.protocol === 'postgresql' || t.protocol === 'redis') group = 'database';
-            else if (t.protocol === 'smtp') group = 'server';
-            else if (t.protocol === 'smb') group = 'server';
 
-            // Map CVSS to risk score (0-100 scale)
-            const riskScore = (t.cvss || 0) * 10;
+            const riskScore  = (t.cvss || 0) * 10;
+            const criticality = t.cvss >= 9 ? 'CRITICAL' : t.cvss >= 7 ? 'HIGH' : t.cvss >= 4 ? 'MEDIUM' : 'LOW';
+            const zone       = inferZone(t.hostname);
+            const zid        = t.zone?.toUpperCase() || zone.id;
 
-            nodes.push({
-                id:          nodeId,
+            if (!zoneMap[zid]) zoneMap[zid] = { meta: { name: zid, cidr: zone.cidr, icon: zone.icon || '🔷' }, devices: [] };
+            zoneMap[zid].devices.push({
+                id:          `lab_${t.container}`,
                 name:        t.name || t.hostname,
                 ip:          t.hostname,
                 group,
                 vulnCount:   (t.vulns || []).length,
                 infoCount:   0,
-                val:         10,
+                val:         16,
                 riskScore,
-                criticality: t.cvss >= 9 ? 'CRITICAL' : t.cvss >= 7 ? 'HIGH' : t.cvss >= 4 ? 'MEDIUM' : 'LOW',
+                criticality,
                 details: {
                     ip_address:  t.hostname,
                     hostname:    t.name,
                     device_type: group,
-                    os_name:     t.protocol,
+                    os_name:     t.os || null,
                     status:      'active',
                     open_ports:  String(t.port),
                     risk_score:  riskScore,
-                    criticality: t.cvss >= 9 ? 'CRITICAL' : t.cvss >= 7 ? 'HIGH' : 'MEDIUM',
-                    zone:        t.zone,
-                    vulns:       t.vulns,
+                    criticality,
+                    zone:        zid,
                     description: t.description,
+                    services: t.port ? [{
+                        port:         t.port,
+                        protocol:     'tcp',
+                        state:        'open',
+                        service_name: t.protocol || 'unknown',
+                        product:      t.name || '',
+                        version:      '',
+                        cpe:          '',
+                    }] : [],
+                    vulnerabilities: (t.vulns || []).map((v, i) => ({
+                        id:          String(i),
+                        title:       v.name || v.title || v.type || 'Vulnerability',
+                        severity:    (v.severity || 'medium').toLowerCase(),
+                        type:        v.type || '',
+                        url:         v.url  || '',
+                        cve_id:      v.cve_id || '',
+                        description: v.description || v.detail || '',
+                        status:      'open',
+                    })),
                 },
-                fx, fy,
-                x: fx, y: fy,
             });
-            links.push({ source: 'hub', target: nodeId, value: 2 });
         });
-
-        setGraphData({ nodes, links });
+        setGraphData(buildTreeGraph(zoneMap));
     };
 
     const transformDataToGraph = (assets) => {
-        const nodes = [];
-        const links = [];
-
-        // Hub fixed at centre
-        nodes.push({ id:'hub', name:'Gateway Hub', group:'gateway', val:18, riskScore:0, fx:0, fy:0 });
-
-        if (Array.isArray(assets)) {
-            const count  = assets.length;
-            const radius = 180;
-            assets.forEach((asset, i) => {
-                // Evenly spaced around a circle — same angle every load
-                const angle = (2 * Math.PI * i) / count - Math.PI / 2;
-                const fx    = Math.cos(angle) * radius;
-                const fy    = Math.sin(angle) * radius;
-                nodes.push({
-                    id:          asset.id || asset.ip_address,
-                    name:        asset.hostname || asset.ip_address,
-                    ip:          asset.ip_address,
-                    group:       determineGroup(asset),
-                    vulnCount:   asset.vuln_count  || 0,
-                    infoCount:   asset.info_count  || 0,
-                    val:         10,
-                    riskScore:   asset.risk_score  || 0,
-                    criticality: asset.criticality || 'MEDIUM',
-                    details:     asset,
-                    fx, fy,   // pinned — never moves
-                    x: fx, y: fy,
-                });
-                links.push({ source: 'hub', target: asset.id || asset.ip_address, value: 2 });
+        if (!Array.isArray(assets) || assets.length === 0) return;
+        const zoneMap = {};
+        assets.forEach((asset) => {
+            const zone = inferZone(asset.ip_address);
+            if (!zoneMap[zone.id]) zoneMap[zone.id] = { meta: { name: zone.name, cidr: zone.cidr, icon: zone.icon || '🔷' }, devices: [] };
+            zoneMap[zone.id].devices.push({
+                id:          asset.id || asset.ip_address,
+                name:        asset.hostname || asset.ip_address,
+                ip:          asset.ip_address,
+                group:       determineGroup(asset),
+                vulnCount:   asset.vuln_count  || 0,
+                infoCount:   asset.info_count  || 0,
+                val:         10,
+                riskScore:   asset.risk_score  || 0,
+                criticality: asset.criticality || 'MEDIUM',
+                details:     asset,
             });
-        }
-        setGraphData({ nodes, links });
+        });
+        setGraphData(buildTreeGraph(zoneMap));
     };
 
     const determineGroup = (asset) => {
@@ -431,16 +612,39 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     };
 
     const handleNodeClick = useCallback(async (node) => {
-        if (node.id === 'hub') { setSelectedNode(node); return; }
+        if (node.id === 'hub') { setSelectedNode(null); return; }
+        if (node.isSubnet) {
+            setSelectedNode(node);
+            if (fgRef.current) {
+                fgRef.current.centerAt(node.x, node.y, 800);
+                fgRef.current.zoom(2.2, 1000);
+            }
+            return;
+        }
         setSelectedNode(node);
+        // Numeric ID → direct detail fetch
         if (node.id && typeof node.id === 'number') {
             try {
                 const { data: detail } = await networkService.getAssetDetail(node.id);
                 setSelectedNode(prev =>
                     prev?.id === node.id
-                        ? { ...prev, details: detail, vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0 }
+                        ? { ...prev, details: { ...(prev.details || {}), ...detail }, vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0 }
                         : prev
                 );
+            } catch (_) {}
+        } else if (node.ip) {
+            // String ID (lab target) — find matching asset by IP then fetch detail
+            try {
+                const { data: assets } = await networkService.getAssets();
+                const match = assets?.find(a => a.ip_address === node.ip);
+                if (match && typeof match.id === 'number') {
+                    const { data: detail } = await networkService.getAssetDetail(match.id);
+                    setSelectedNode(prev =>
+                        prev?.id === node.id
+                            ? { ...prev, details: { ...(prev.details || {}), ...detail }, vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0 }
+                            : prev
+                    );
+                }
             } catch (_) {}
         }
         if (fgRef.current) {
@@ -463,93 +667,120 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     const drawNode = useCallback((node, ctx, globalScale) => {
         if (node.x == null || node.y == null) return;
 
+        // All sizes in canvas pixels (PX = 1 canvas pixel in graph units).
+        // This keeps every node the same visual size regardless of zoom level.
+        const PX = 1 / globalScale;
+
+        // ── Subnet zone circle (fixed 17 px canvas radius) ────
+        if (node.isSubnet) {
+            const c = '#00ffff';
+            const r = 17 * PX;
+
+            ctx.shadowColor = c; ctx.shadowBlur = 22 * PX;
+            ctx.beginPath(); ctx.arc(node.x, node.y, r * 1.35, 0, Math.PI * 2);
+            ctx.strokeStyle = `${c}18`; ctx.lineWidth = 1.5 * PX; ctx.stroke();
+
+            const bg = ctx.createRadialGradient(node.x, node.y - r * 0.3, 0, node.x, node.y, r);
+            bg.addColorStop(0, 'rgba(0,38,50,0.97)'); bg.addColorStop(1, 'rgba(0,12,18,0.99)');
+            ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = bg; ctx.fill();
+            ctx.strokeStyle = c; ctx.lineWidth = 2 * PX; ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.78, -Math.PI * 0.85, -Math.PI * 0.15);
+            ctx.strokeStyle = `${c}28`; ctx.lineWidth = 1.2 * PX; ctx.stroke();
+
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = `${12 * PX}px sans-serif`; ctx.fillStyle = c;
+            ctx.fillText(node.icon || '🔷', node.x, node.y - 7 * PX);
+            ctx.font = `800 ${9 * PX}px Outfit, monospace`;
+            ctx.fillText(node.name, node.x, node.y + 6 * PX);
+            ctx.font = `500 ${7 * PX}px Outfit, monospace`; ctx.fillStyle = `${c}77`;
+            ctx.fillText(node.cidr || '', node.x, node.y + r + 9 * PX);
+            return;
+        }
+
+        // ── Hub & device nodes ────────────────────────────────
         const color  = getNodeColor(node);
-        const radius = (node.val || 10) * 0.9;
         const isHub  = node.id === 'hub';
         const isRisk = node.riskScore > 50;
         const isCrit = node.riskScore > 75;
         const t      = Date.now() / 800;
 
         ctx.shadowColor = color;
-        ctx.shadowBlur  = isCrit ? 32 : isRisk ? 22 : isHub ? 20 : 12;
+        ctx.shadowBlur  = (isCrit ? 28 : isRisk ? 20 : isHub ? 22 : 12) * PX;
 
         if (isHub) {
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, radius * 1.6, 0, 2 * Math.PI);
-            ctx.strokeStyle = `${color}22`;
-            ctx.lineWidth   = 1.5 / globalScale;
-            ctx.stroke();
+            const r = 20 * PX;   // fixed 20 px canvas radius
 
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, radius * 1.2, 0, 2 * Math.PI);
-            ctx.strokeStyle = `${color}40`;
-            ctx.lineWidth   = 1 / globalScale;
-            ctx.stroke();
+            ctx.beginPath(); ctx.arc(node.x, node.y, r * 1.65, 0, Math.PI * 2);
+            ctx.strokeStyle = `${color}22`; ctx.lineWidth = 1.5 * PX; ctx.stroke();
+            ctx.beginPath(); ctx.arc(node.x, node.y, r * 1.25, 0, Math.PI * 2);
+            ctx.strokeStyle = `${color}40`; ctx.lineWidth = 1 * PX; ctx.stroke();
 
-            const bg = ctx.createRadialGradient(node.x, node.y - radius * 0.3, 0, node.x, node.y, radius);
-            bg.addColorStop(0, 'rgba(0,45,55,0.98)');
-            bg.addColorStop(1, 'rgba(0,20,28,0.99)');
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+            const bg = ctx.createRadialGradient(node.x, node.y - r * 0.3, 0, node.x, node.y, r);
+            bg.addColorStop(0, 'rgba(0,45,55,0.98)'); bg.addColorStop(1, 'rgba(0,20,28,0.99)');
+            ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
             ctx.fillStyle = bg; ctx.fill();
-            ctx.strokeStyle = color; ctx.lineWidth = 2.5 / globalScale; ctx.stroke();
+            ctx.strokeStyle = color; ctx.lineWidth = 2.5 * PX; ctx.stroke();
 
             const pulse = (Math.sin(t * 1.8) + 1) / 2;
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, radius * (0.48 + pulse * 0.08), 0, 2 * Math.PI);
+            ctx.beginPath(); ctx.arc(node.x, node.y, r * (0.48 + pulse * 0.08), 0, Math.PI * 2);
             ctx.strokeStyle = `${color}${Math.floor((0.35 + pulse * 0.45) * 255).toString(16).padStart(2, '0')}`;
-            ctx.lineWidth = 1.5 / globalScale; ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, radius * 0.22, 0, 2 * Math.PI);
+            ctx.lineWidth = 1.5 * PX; ctx.stroke();
+            ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.22, 0, Math.PI * 2);
             ctx.fillStyle = color; ctx.fill();
         } else {
+            const half = 15 * PX;   // fixed 15 px canvas half-side (30 px square)
+            const cr   = 3 * PX;
+
             if (isRisk) {
                 const pulse = (Math.sin(t) + 1) / 2;
-                ctx.beginPath();
-                ctx.arc(node.x, node.y, radius * (1.3 + pulse * 0.3), 0, 2 * Math.PI);
+                const pr    = half * (1.35 + pulse * 0.28);
                 const alpha = isCrit ? (0.25 + pulse * 0.3) : (0.1 + pulse * 0.2);
+                ctx.beginPath();
+                safeRoundRect(ctx, node.x - pr, node.y - pr, pr * 2, pr * 2, cr * 2);
                 ctx.strokeStyle = `${color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
-                ctx.lineWidth = (isCrit ? 2 : 1.5) / globalScale; ctx.stroke();
+                ctx.lineWidth = (isCrit ? 2 : 1.5) * PX; ctx.stroke();
             }
 
-            const bg = ctx.createRadialGradient(node.x, node.y - radius * 0.25, 0, node.x, node.y, radius);
-            bg.addColorStop(0, 'rgba(20,32,44,0.95)');
-            bg.addColorStop(1, 'rgba(8,14,22,0.98)');
+            const bg = ctx.createRadialGradient(node.x, node.y - half * 0.25, 0, node.x, node.y, half * 1.4);
+            bg.addColorStop(0, 'rgba(20,32,44,0.95)'); bg.addColorStop(1, 'rgba(8,14,22,0.98)');
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+            safeRoundRect(ctx, node.x - half, node.y - half, half * 2, half * 2, cr);
             ctx.fillStyle = bg; ctx.fill();
-            ctx.strokeStyle = color;
-            ctx.lineWidth = (isCrit ? 2.5 : isRisk ? 2 : 1.8) / globalScale; ctx.stroke();
+            ctx.strokeStyle = color; ctx.lineWidth = (isCrit ? 2.5 : isRisk ? 2 : 1.8) * PX; ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius * 0.75, -Math.PI * 0.85, -Math.PI * 0.15);
-            ctx.strokeStyle = `${color}30`; ctx.lineWidth = 1.5 / globalScale; ctx.stroke();
+            ctx.moveTo(node.x - half * 0.6, node.y - half + 1.2 * PX);
+            ctx.lineTo(node.x + half * 0.6, node.y - half + 1.2 * PX);
+            ctx.strokeStyle = `${color}30`; ctx.lineWidth = 1.5 * PX; ctx.stroke();
 
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur  = 0;
             ctx.globalAlpha = isRisk ? 1 : 0.82;
-            drawDeviceIcon(ctx, node.group || 'desktop', node.x, node.y, radius, color);
+            drawDeviceIcon(ctx, node.group || 'desktop', node.x, node.y, half, color);
             ctx.globalAlpha = 1;
         }
 
         ctx.shadowBlur = 0;
 
-        // Label with safe roundRect
-        const label    = node.name || '';
-        const fontSize = Math.max(8, 9 / globalScale);
-        ctx.font = `600 ${fontSize}px Outfit, sans-serif`;
+        // Label beneath node — always 8 canvas px font
+        const label   = node.name || '';
+        const labelFs = 8 * PX;
+        ctx.font = `600 ${labelFs}px Outfit, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-        const textW  = ctx.measureText(label).width + 10;
-        const labelY = node.y + radius + 6 / globalScale;
+        const textW   = ctx.measureText(label).width + 10 * PX;
+        const nodePx  = isHub ? 20 * PX : 15 * PX;
+        const labelY  = node.y + nodePx + 5 * PX;
 
         ctx.fillStyle   = 'rgba(2,9,15,0.82)';
         ctx.strokeStyle = `${color}44`;
-        ctx.lineWidth   = 0.7 / globalScale;
+        ctx.lineWidth   = 0.7 * PX;
         ctx.beginPath();
-        safeRoundRect(ctx, node.x - textW / 2, labelY - 2 / globalScale, textW, fontSize + 4 / globalScale, 4 / globalScale);
+        safeRoundRect(ctx, node.x - textW / 2, labelY - 2 * PX, textW, labelFs + 4 * PX, 3 * PX);
         ctx.fill(); ctx.stroke();
 
-        ctx.fillStyle = selectedNode?.id === node.id ? '#ffffff' : 'rgba(255,255,255,0.72)';
+        ctx.fillStyle = selectedNode?.id === node.id ? '#ffffff' : 'rgba(255,255,255,0.78)';
         ctx.fillText(label, node.x, labelY);
     }, [selectedNode]);
 
@@ -562,8 +793,14 @@ const NetworkTopology = ({ refresh, compact = false }) => {
 
             {/* Details Panel */}
             {!compact && (
-                <div className={`lg:order-1 transition-all duration-500 ${selectedNode && selectedNode.id !== 'hub' ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
-                    {selectedNode && selectedNode.id !== 'hub' ? (
+                <div className={`lg:order-1 transition-all duration-500 ${selectedNode ? 'col-span-1 opacity-100' : 'hidden lg:block opacity-20 pointer-events-none'}`}>
+                    {selectedNode?.isSubnet ? (
+                        <SubnetDetailPanel
+                            node={selectedNode}
+                            graphData={graphData}
+                            onClose={() => { setSelectedNode(null); doFit(); }}
+                        />
+                    ) : selectedNode ? (
                         <AssetDetailPanel
                             node={selectedNode}
                             onClose={() => { setSelectedNode(null); doFit(); }}
@@ -576,7 +813,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                             </div>
                             <h3 className="text-white font-black text-base uppercase tracking-tight mb-3">Infrastructure Insight</h3>
                             <p className="text-gray-600 text-xs leading-relaxed max-w-xs">
-                                Click any <span style={{ color:'#00ffff' }}>node</span> on the topology map to view deep packet inspection and AI-generated risk analysis.
+                                Click any <span style={{ color:'#00ffff' }}>node</span> or <span style={{ color:'#00ffff' }}>subnet</span> on the topology map to view details.
                             </p>
                         </div>
                     )}
@@ -643,6 +880,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         nodeCanvasObjectMode={() => 'replace'}
                         nodeLabel={(node) => {
                             if (node.id === 'hub') return `<div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.2);border-radius:10px;font-family:Outfit,sans-serif"><div style="font-size:11px;font-weight:800;color:#00ffff;text-transform:uppercase">Gateway Hub</div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Central network node</div></div>`;
+                            if (node.isSubnet) return `<div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.25);border-radius:10px;font-family:Outfit,sans-serif"><div style="font-size:13px;font-weight:800;color:#00ffff;text-transform:uppercase">${node.icon || ''} ${node.name}</div><div style="font-size:10px;color:rgba(0,255,255,0.55);margin-top:3px;font-family:monospace">${node.cidr || ''}</div></div>`;
                             const crit = (node.criticality || '').toUpperCase();
                             const critRisk = crit === 'CRITICAL' ? 90 : crit === 'HIGH' ? 70 : crit === 'MEDIUM' ? 40 : crit === 'LOW' ? 15 : 0;
                             const eff = node.riskScore > 0 ? node.riskScore : critRisk;
@@ -651,11 +889,12 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                             const v = node.vulnCount || 0;
                             return `<div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${rc}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:180px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase">${node.name}</div><div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${rc}22;border:1px solid ${rc}66;color:${rc}">${lbl}</div></div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px">${node.ip || 'INTERNAL'}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk</span><span style="font-size:11px;font-weight:800;color:${rc}">${eff}%</span></div><div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden"><div style="height:100%;width:${eff}%;background:${rc};border-radius:2px"></div></div>${v > 0 ? `<div style="margin-top:8px;font-size:10px;color:${rc}">⚠ ${v} vuln${v === 1 ? '' : 's'}</div>` : ''}</div>`;
                         }}
-                        linkColor={() => 'rgba(0,255,255,0.18)'}
-                        linkWidth={1.2}
-                        linkDirectionalParticles={3}
-                        linkDirectionalParticleWidth={2}
+                        linkColor={(link) => link.value >= 3 ? 'rgba(0,255,255,0.45)' : 'rgba(0,255,255,0.14)'}
+                        linkWidth={(link) => link.value >= 3 ? 2.5 : 1.2}
+                        linkDirectionalParticles={(link) => link.value >= 3 ? 4 : 2}
+                        linkDirectionalParticleWidth={(link) => link.value >= 3 ? 2.5 : 1.5}
                         linkDirectionalParticleColor={(link) => {
+                            if (link.value >= 3) return '#00ffff';
                             const r = (typeof link.target === 'object' ? link.target?.riskScore : 0) || 0;
                             return r > 75 ? '#ff0055' : r > 50 ? '#ffaa00' : '#00ffff';
                         }}

@@ -109,5 +109,14 @@ class AssetMonitor:
                 type=event["type"]
             )
             db.add(action)
-        
+
+        db.commit()
+
+        # Regenerate the topology diagram now that assets have changed
+        try:
+            from app.services.topology_generator import generate_and_cache
+            generate_and_cache(db)
+        except Exception as exc:
+            logger.warning("Topology regeneration failed: %s", exc)
+
         return events
