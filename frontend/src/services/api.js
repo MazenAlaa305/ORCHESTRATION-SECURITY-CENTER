@@ -138,6 +138,9 @@ export const vulnerabilityService = {
 
     // Mark as fixed
     markFixed: (id) => api.patch(`/vulnerabilities/${id}`, { status: 'fixed' }),
+
+    // Deep AI insight (attack scenario, remediation steps, detection advice, verify fix)
+    getAiInsight: (id) => api.post(`/vulnerabilities/${id}/ai-insight`),
 };
 
 export const openvasService = {

@@ -179,6 +179,9 @@ class VulnerabilityResponse(VulnerabilityBase):
     finding_id: Optional[str] = None
     control_tags: Optional[Dict[str, str]] = None
     simplified_description: Optional[str] = None
+    ai_remediation: Optional[str] = None
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
 
     class Config:
         from_attributes = True

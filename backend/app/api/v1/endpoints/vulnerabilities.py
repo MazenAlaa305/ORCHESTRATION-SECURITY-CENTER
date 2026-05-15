@@ -174,6 +174,19 @@ async def revalidate_vulnerability(vuln_id: str, db: AsyncSession = Depends(get_
     
     return result
 
+@router.post("/{vuln_id}/ai-insight")
+def get_vuln_ai_insight(vuln_id: str, db: Session = Depends(get_db)):
+    """
+    Generate a structured deep-dive AI analysis for a single vulnerability.
+    Returns attack_scenario, business_impact, remediation_steps, detection_advice, verify_fix.
+    """
+    vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
+    if not vuln:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    from app.services.ai_advisor import AIAdvisor
+    return AIAdvisor().generate_vuln_insight(vuln)
+
+
 @router.patch("/{vuln_id}/workflow")
 def update_workflow(vuln_id: str, ticket_id: Optional[str] = None, assigned_to: Optional[str] = None, status: Optional[str] = None, db: Session = Depends(get_db)):
     """
