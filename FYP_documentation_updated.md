@@ -1,7 +1,9 @@
-# FYP Documentation — Updated 2026-05-08
+# FYP Documentation — Updated 2026-05-16
 
 > **Scope:** Full audit of `docs/FYP.md` against the live codebase as of commit `68a49f1`.
 > Original file: `docs/FYP.md` (2,677 lines). This file documents every section that differs from the current codebase and adds new sections for features that have no documentation.
+>
+> **2026-05-16 delta:** A second pass found four additional divergences accumulated since the 2026-05-08 snapshot. Each is appended to its existing section under a `### ➕ Newly added 2026-05-16` block with explicit *Old → New* framing.
 
 ---
 
@@ -23,6 +25,13 @@
 - **New ORM models** — `Finding`, `Report`, `RuntimeConfig` are present in the codebase but absent from the documented ERD.
 - **Limitation §6.3.2 resolved** — "Single-User Mode / No RBAC" is no longer accurate.
 - **Future enhancement §6.4.1 achieved** — RBAC was a listed future goal; it is now complete.
+
+### Added in the 2026-05-16 delta
+
+- **Docker Compose profile restructure (§3.7.3)** — only 6 services now run in lite/default mode; `celery_beat`, `openvas`, `elasticsearch`, `kibana`, `wazuh`, and `n8n` all moved to `--profile full`. The earlier "11 base + 1 optional" framing in this audit file is superseded.
+- **New `AuditLog` model (§3.6)** — second audit table, distinct from the AgentLog hash chain. Records actor-attributed admin actions (user create / role change / disable / password reset) for RBAC compliance.
+- **Four new RBAC endpoints (§3.7.4)** — `/rbac/users/{id}/enable`, `/rbac/users/{id}/reset-password`, `DELETE /rbac/users/{id}`, and `/rbac/audit-logs`; surfaced in the frontend through a dedicated `UserManagementPage.jsx` and a new `usePermission` hook.
+- **New `topology_generator.py` service (§3.3.2)** — auto-builds a cached Mermaid network diagram from `NetworkAsset` rows; not in the service table added at the 2026-05-08 audit.
 
 ---
 
@@ -135,6 +144,22 @@ The documented 5-agent pipeline remains the core flow, but the `services/` layer
 
 All 17 files exist under `backend/app/services/`. The original doc documented only 11 services. The 6 new agents and 11 new support services represent significant hardening and capability expansion added after the original documentation was written.
 
+### ➕ Newly added 2026-05-16
+
+**What changed in §3.3.2:** one additional support service has appeared since the 2026-05-08 audit.
+
+> **Old** (2026-05-08 service table): the listing ended at `lab_manager` and did not contain any topology-rendering service.
+>
+> **New** (current code): `backend/app/services/topology_generator.py` is now present and is invoked by `AssetMonitor` after every scan. Append this row to the service table:
+
+| Service | Role |
+|---|---|
+| `topology_generator.py` | Auto-builds a Mermaid network diagram from `NetworkAsset` records and caches it in Redis (`osc:topology:mermaid`, TTL 1 h) so the topology API endpoint serves instantly |
+
+**Evidence:**
+
+- `backend/app/services/topology_generator.py:1-40` — module docstring states it is called by `AssetMonitor` after every scan; Redis key `osc:topology:mermaid` is declared at the top of the file.
+
 ---
 
 ## Section: Chapter 3 — System Design (§3.3.3 UnifiedRiskEngine)
@@ -198,6 +223,25 @@ Scan     (1) ──→ (N) Report       One scan can generate multiple report fo
 
 `backend/app/models/scan.py` defines `class Finding(Base)` and `class Report(Base)`. `backend/app/models/config.py` defines `class RuntimeConfig(Base)`. None appear in the original ERD or Table 3.5.
 
+### ➕ Newly added 2026-05-16
+
+**What changed in §3.6:** a 13th entity has been added — and it is **not** the AgentLog hash chain that this audit file already covers. The new `AuditLog` model is a separate, RBAC-scoped action ledger.
+
+> **Old** (2026-05-08 audit): the updated Table 3.5 added `Finding`, `Report`, and `RuntimeConfig`, bringing the entity count to 12. AgentLog (the SHA-256 hash chain) remained inside `models/scan.py`.
+>
+> **New** (current code): a dedicated `backend/app/models/audit_log.py` file now defines a separate `AuditLog` entity that records actor-attributed administrative actions. The entity count is now **13**. Append this row to Table 3.5:
+
+| Entity | Description | Key Attributes |
+|---|---|---|
+| **AuditLog** | Actor-attributed RBAC action ledger — records who (admin user) did what (create user / change role / disable / reset password) and when. Distinct from `AgentLog`, which records agent decisions inside a scan. | id (PK, UUID), actor_id (FK→User), actor_email, action, target_id, detail, created_at (indexed) |
+
+**Use case:** an admin reviewing the `/api/v1/rbac/audit-logs` endpoint can see a tamper-evident list of every RBAC mutation performed on the platform, satisfying ISO 27001 A.9.2 (user access management auditing) requirements.
+
+**Evidence:**
+
+- `backend/app/models/audit_log.py:1-17` — `class AuditLog(Base)` with `__tablename__ = "audit_logs"` and the columns listed above.
+- `backend/app/api/v1/endpoints/rbac.py:199` — `@router.get("/audit-logs", response_model=list[AuditLogOut], dependencies=[admin_only])` consumes this model.
+
 ---
 
 ## Section: Chapter 3 — System Design (§3.7.3 Docker Compose Services)
@@ -233,6 +277,33 @@ All three — backend, celery_worker, celery_beat — receive `N8N_WEBHOOK_URL` 
 ### 📝 Reason for Update
 
 `docker-compose.yml` service list: `caddy`, `backend`, `frontend`, `db`, `redis`, `celery_worker`, `celery_beat`, `openvas`, `elasticsearch`, `kibana`, `wazuh`, `n8n`. N8N has `profiles: ["full"]`.
+
+### ➕ Newly added 2026-05-16
+
+**What changed in §3.7.3:** the lite/full profile split has been broadened. The "11 base + 1 optional N8N" framing in the previous entry is no longer accurate.
+
+> **Old** (2026-05-08 audit): only `n8n` carried `profiles: ["full"]`; every other service was treated as a base/lite service, giving "11 base services + 1 optional".
+>
+> **New** (current `docker-compose.yml`): **6 services** run in default/lite mode (`caddy`, `backend`, `frontend`, `db`, `redis`, `celery_worker`). The remaining **6 services** (`celery_beat`, `openvas`, `elasticsearch`, `kibana`, `wazuh`, `n8n`) all carry `profiles: ["full"]` and only start with `docker compose --profile full up`. This matches the RAM table in `HOW_TO_RUN.md` (16 GB lite vs 32 GB full).
+
+Updated "Profile" column for Table 3.3:
+
+| Service | Profile |
+|---|---|
+| caddy, backend, frontend, db, redis, celery_worker | base (lite) |
+| celery_beat, openvas, elasticsearch, kibana, wazuh, n8n | `--profile full` only |
+
+**Downstream impact:**
+
+- **§6.2 Objective O6** should now read "6-service lite deployment, expandable to 12 with `--profile full`", not "11-service Docker Compose".
+- **§3.7 capacity discussion** in the original doc claimed the stack runs on 16 GB; that is now true only because the heavy SIEM/SOAR services are profile-gated.
+- Scheduled scanning (Celery Beat) is no longer running by default — the partially-achieved Future Enhancement 8 should be re-noted as "requires `--profile full` to be active".
+
+**Evidence:**
+
+- `docker-compose.yml:170` — `celery_beat:` block begins with `profiles: ["full"]`.
+- `docker-compose.yml:191, 210, 229, 242, 256` — `profiles: ["full"]` appears on `openvas`, `elasticsearch`, `kibana`, `wazuh`, and `n8n`.
+- `HOW_TO_RUN.md:11-12` — the RAM table documents "Lite (default) … 6 main services" vs "Full … + OpenVAS, Elasticsearch, Kibana, Wazuh, n8n, celery_beat".
 
 ---
 
@@ -274,6 +345,34 @@ All three — backend, celery_worker, celery_beat — receive `N8N_WEBHOOK_URL` 
 ### 📝 Reason for Update
 
 `backend/app/api/api.py` now includes routers for `auth`, `rbac`, `findings`, `config`, and `audit`. These are completely absent from the original Table 3.4.
+
+### ➕ Newly added 2026-05-16
+
+**What changed in §3.7.4:** the `/rbac` row has grown — four more admin endpoints have been added since the 2026-05-08 audit, and a dedicated frontend page now consumes them.
+
+> **Old** (2026-05-08 audit): the `/rbac` row in Table 3.4 listed only `/users`, `/users/{id}/role`, `/users/{id}/disable` (3 endpoints), and the corresponding RBAC system section listed the same three.
+>
+> **New** (current code): the `/rbac` router exposes **eight** endpoints. Append these four to the `/rbac` row:
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/rbac/users/{id}/enable` | POST | Re-enable a previously disabled user (counterpart to `/disable`) |
+| `/rbac/users/{id}/reset-password` | POST | Admin-initiated password reset; sets `force_password_change=True` on the target user |
+| `/rbac/users/{id}` | DELETE | Hard-delete a user (204 No Content) |
+| `/rbac/audit-logs` | GET | List recent `AuditLog` rows (admin RBAC action history — see §3.6 entry) |
+
+All four require the `admin_only` dependency.
+
+**Frontend surface:** a new page `frontend/src/pages/UserManagementPage.jsx` consumes the full `/rbac` API, replacing the inline admin table that previously lived inside `SettingsPage.jsx`. A new `frontend/src/hooks/usePermission.js` hook centralises the role-rank logic (`canManageUsers`, `canTriggerScan`, `canDeleteTarget`, `canExportReport`, `canEditVuln`) so components no longer hard-code role strings.
+
+**Evidence:**
+
+- `backend/app/api/v1/endpoints/rbac.py:146` — `@router.post("/users/{user_id}/enable", … admin_only)`
+- `backend/app/api/v1/endpoints/rbac.py:162` — `@router.post("/users/{user_id}/reset-password", … admin_only)`
+- `backend/app/api/v1/endpoints/rbac.py:182` — `@router.delete("/users/{user_id}", … admin_only)`
+- `backend/app/api/v1/endpoints/rbac.py:199` — `@router.get("/audit-logs", … admin_only)`
+- `frontend/src/pages/UserManagementPage.jsx:10-19` — `rbac` helper object wires all eight endpoints
+- `frontend/src/hooks/usePermission.js:1-21` — role-rank table and capability booleans
 
 ---
 
