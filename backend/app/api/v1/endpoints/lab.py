@@ -10,7 +10,9 @@ from typing import Optional
 import uuid
 from datetime import datetime
 
+from app.api.deps import require_role
 from app.core.database import get_async_db
+from app.models.user import UserRole
 from app.services.lab_manager import lab_manager
 
 router = APIRouter()
@@ -27,7 +29,7 @@ async def get_lab_status():
     return {**status, "telemetry": telemetry}
 
 
-@router.post("/seed")
+@router.post("/seed", dependencies=[Depends(require_role(UserRole.ADMIN))])
 async def seed_lab_targets(db: AsyncSession = Depends(get_async_db)):
     """
     Register all lab targets in the dashboard database.
@@ -68,7 +70,7 @@ async def get_lab_telemetry():
     return await lab_manager.get_telemetry_stats()
 
 
-@router.post("/seed-vulns")
+@router.post("/seed-vulns", dependencies=[Depends(require_role(UserRole.ADMIN))])
 async def seed_lab_vulnerabilities(db: AsyncSession = Depends(get_async_db)):
     """
     Seed the database with realistic demo vulnerabilities for the lab environment.

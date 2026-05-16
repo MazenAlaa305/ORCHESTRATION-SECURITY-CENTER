@@ -24,7 +24,8 @@ const AuthDisplay = () => {
             <span data-testid="token">{token ?? 'null'}</span>
             <span data-testid="email">{user?.email ?? 'null'}</span>
             <span data-testid="role">{user?.role ?? 'null'}</span>
-            <button onClick={() => login('tok-123', 'admin@test', 'ADMIN')}>Login</button>
+            <span data-testid="id">{user?.id ?? 'null'}</span>
+            <button onClick={() => login('tok-123', 'admin@test', 'ADMIN', 'u-1')}>Login</button>
             <button onClick={logout}>Logout</button>
         </div>
     );

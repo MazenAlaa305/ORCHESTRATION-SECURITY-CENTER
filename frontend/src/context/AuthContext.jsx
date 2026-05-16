@@ -24,9 +24,9 @@ export const AuthProvider = ({ children }) => {
         }
     }, [token, user]);
 
-    const login = (newToken, email, role) => {
+    const login = (newToken, email, role, id = null) => {
         setToken(newToken);
-        const userData = { email, role };
+        const userData = { id, email, role };
         setUser(userData);
         STORAGE.setItem('token', newToken);
         STORAGE.setItem('user', JSON.stringify(userData));

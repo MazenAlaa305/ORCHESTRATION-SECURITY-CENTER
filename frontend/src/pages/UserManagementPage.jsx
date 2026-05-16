@@ -1,0 +1,476 @@
+import React, { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Users, Plus, Shield, ShieldOff, Trash2, KeyRound, RefreshCw, AlertCircle, X } from 'lucide-react';
+import RoleBadge from '../components/ui/RoleBadge';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+
+const rbac = {
+    listUsers:     (skip = 0, limit = 100) => api.get('/rbac/users', { params: { skip, limit } }),
+    createUser:    (body)   => api.post('/rbac/users', body),
+    changeRole:    (id, role) => api.patch(`/rbac/users/${id}/role`, { role }),
+    disableUser:   (id)     => api.post(`/rbac/users/${id}/disable`),
+    enableUser:    (id)     => api.post(`/rbac/users/${id}/enable`),
+    resetPassword: (id, new_password) => api.post(`/rbac/users/${id}/reset-password`, { new_password }),
+    deleteUser:    (id)     => api.delete(`/rbac/users/${id}`),
+    auditLogs:     (limit = 50) => api.get('/rbac/audit-logs', { params: { limit } }),
+};
+
+const ROLES = ['VIEWER', 'ANALYST', 'ADMIN'];
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function CreateUserModal({ onClose, onCreated }) {
+    const [form, setForm] = useState({ email: '', password: '', role: 'VIEWER' });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+
+    const submit = async () => {
+        if (!form.email || !form.password) { setError('Email and password are required'); return; }
+        setLoading(true);
+        try {
+            await rbac.createUser(form);
+            onCreated();
+            onClose();
+        } catch (err) {
+            setError(err.response?.data?.detail ?? 'Failed to create user');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div
+                className="w-96 rounded-xl p-6 space-y-4"
+                style={{ background: 'rgba(10,24,32,0.98)', border: '1px solid rgba(0,255,255,0.15)' }}
+            >
+                <h2 className="text-sm font-black uppercase tracking-widest text-white">New User</h2>
+
+                {error && (
+                    <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 rounded px-3 py-2">
+                        {error}
+                    </p>
+                )}
+
+                <input
+                    type="email" placeholder="Email address" value={form.email}
+                    onChange={set('email')}
+                    className="w-full bg-gray-900 text-white text-xs rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-cyan-500"
+                />
+                <input
+                    type="password" placeholder="Initial password" value={form.password}
+                    onChange={set('password')}
+                    className="w-full bg-gray-900 text-white text-xs rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-cyan-500"
+                />
+                <select
+                    value={form.role} onChange={set('role')}
+                    className="w-full bg-gray-900 text-white text-xs rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-cyan-500"
+                >
+                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+
+                <div className="flex justify-end gap-3 pt-2">
+                    <button
+                        onClick={onClose}
+                        className="text-xs px-4 py-2 rounded-lg bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={submit} disabled={loading}
+                        className="text-xs px-4 py-2 rounded-lg font-bold transition-colors"
+                        style={{ background: 'rgba(0,255,255,0.1)', border: '1px solid rgba(0,255,255,0.3)', color: '#00ffff' }}
+                    >
+                        {loading ? 'Creating…' : 'Create'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ResetPasswordModal({ user, onClose, onDone }) {
+    const [pw, setPw] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const submit = async () => {
+        if (!pw) { setError('Password is required'); return; }
+        setLoading(true);
+        try {
+            await rbac.resetPassword(user.id, pw);
+            onDone();
+            onClose();
+        } catch (err) {
+            setError(err.response?.data?.detail ?? 'Failed to reset password');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div
+                className="w-80 rounded-xl p-6 space-y-4"
+                style={{ background: 'rgba(10,24,32,0.98)', border: '1px solid rgba(255,165,0,0.2)' }}
+            >
+                <h2 className="text-sm font-black uppercase tracking-widest text-white">Reset Password</h2>
+                <p className="text-xs text-gray-500">
+                    Set a new temporary password for <span className="text-gray-300">{user.email}</span>.
+                    The user will be required to change it on next login.
+                </p>
+
+                {error && (
+                    <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 rounded px-3 py-2">
+                        {error}
+                    </p>
+                )}
+
+                <input
+                    type="password" placeholder="New password" value={pw}
+                    onChange={e => setPw(e.target.value)}
+                    className="w-full bg-gray-900 text-white text-xs rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-orange-500"
+                />
+
+                <div className="flex justify-end gap-3 pt-2">
+                    <button onClick={onClose} className="text-xs px-4 py-2 rounded-lg bg-gray-800 text-gray-400 hover:text-white transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        onClick={submit} disabled={loading}
+                        className="text-xs px-4 py-2 rounded-lg font-bold text-orange-300 transition-colors"
+                        style={{ background: 'rgba(255,165,0,0.1)', border: '1px solid rgba(255,165,0,0.3)' }}
+                    >
+                        {loading ? 'Saving…' : 'Reset'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── User row ──────────────────────────────────────────────────────────────────
+
+function UserRow({ u, currentUserId, onRefresh, onError }) {
+    const [changingRole, setChangingRole] = useState(false);
+    const [showReset, setShowReset] = useState(false);
+    const isSelf = u.id === currentUserId;
+
+    const act = async (fn) => {
+        try { await fn(); onRefresh(); }
+        catch (err) {
+            onError?.(err.response?.data?.detail ?? err.message ?? 'Request failed');
+        }
+    };
+
+    return (
+        <>
+            <tr className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
+                {/* Email */}
+                <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        <div
+                            className="h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-black flex-shrink-0"
+                            style={{ background: 'rgba(0,255,255,0.1)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.2)' }}
+                        >
+                            {(u.email[0] || '?').toUpperCase()}
+                        </div>
+                        <div>
+                            <p className="text-xs text-white font-semibold">{u.email}</p>
+                            {u.force_password_change && (
+                                <p className="text-[9px] text-orange-400 uppercase tracking-wider">Must change password</p>
+                            )}
+                        </div>
+                    </div>
+                </td>
+
+                {/* Role */}
+                <td className="px-4 py-3">
+                    {isSelf ? (
+                        <RoleBadge role={u.role} />
+                    ) : changingRole ? (
+                        <select
+                            defaultValue={u.role}
+                            autoFocus
+                            onBlur={() => setChangingRole(false)}
+                            onChange={async (e) => {
+                                setChangingRole(false);
+                                await act(() => rbac.changeRole(u.id, e.target.value));
+                            }}
+                            className="bg-gray-900 text-white text-[10px] rounded px-2 py-1 border border-cyan-700 focus:outline-none"
+                        >
+                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                    ) : (
+                        <button onClick={() => setChangingRole(true)} title="Click to change role">
+                            <RoleBadge role={u.role} />
+                        </button>
+                    )}
+                </td>
+
+                {/* Status */}
+                <td className="px-4 py-3">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${u.disabled ? 'text-red-400' : 'text-green-400'}`}>
+                        {u.disabled ? 'Disabled' : 'Active'}
+                    </span>
+                </td>
+
+                {/* Actions */}
+                <td className="px-4 py-3">
+                    {!isSelf && (
+                        <div className="flex items-center gap-3">
+                            {u.disabled ? (
+                                <button
+                                    onClick={() => act(() => rbac.enableUser(u.id))}
+                                    title="Enable account"
+                                    className="text-green-500 hover:text-green-300 transition-colors"
+                                >
+                                    <Shield className="h-3.5 w-3.5" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => act(() => rbac.disableUser(u.id))}
+                                    title="Disable account"
+                                    className="text-yellow-500 hover:text-yellow-300 transition-colors"
+                                >
+                                    <ShieldOff className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setShowReset(true)}
+                                title="Reset password"
+                                className="text-orange-500 hover:text-orange-300 transition-colors"
+                            >
+                                <KeyRound className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (window.confirm(`Permanently delete ${u.email}?`))
+                                        act(() => rbac.deleteUser(u.id));
+                                }}
+                                title="Delete user"
+                                className="text-red-600 hover:text-red-400 transition-colors"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    )}
+                    {isSelf && <span className="text-[9px] text-gray-700 uppercase tracking-wider">You</span>}
+                </td>
+            </tr>
+
+            {showReset && (
+                <ResetPasswordModal user={u} onClose={() => setShowReset(false)} onDone={onRefresh} />
+            )}
+        </>
+    );
+}
+
+// ── Audit log panel ───────────────────────────────────────────────────────────
+
+function AuditLogPanel() {
+    const { data, isLoading } = useQuery({
+        queryKey: ['audit-logs'],
+        queryFn: () => rbac.auditLogs(50).then(r => r.data),
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+    });
+
+    if (isLoading) return (
+        <div className="flex items-center justify-center h-32">
+            <div className="w-5 h-5 border-2 border-transparent border-t-cyan-400 rounded-full animate-spin" />
+        </div>
+    );
+
+    return (
+        <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+            {(!data || data.length === 0) && (
+                <p className="text-xs text-gray-600 text-center py-6">No audit events yet.</p>
+            )}
+            {(data ?? []).map(entry => (
+                <div key={entry.id} className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.02]">
+                    <span
+                        className="mt-0.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
+                        style={{ background: 'rgba(0,255,255,0.08)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.15)' }}
+                    >
+                        {entry.action}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-gray-300 truncate">
+                            <span className="text-gray-500">{entry.actor_email}</span>
+                            {entry.detail && <span className="text-gray-600"> → {entry.detail}</span>}
+                        </p>
+                        <p className="text-[9px] text-gray-700 mt-0.5">
+                            {new Date(entry.created_at).toLocaleString()}
+                        </p>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+export default function UserManagementPage() {
+    const queryClient = useQueryClient();
+    const { user: currentUser } = useAuth();
+    const [showCreate, setShowCreate] = useState(false);
+    const [activeSubTab, setActiveSubTab] = useState('users');
+    const [errorMsg, setErrorMsg] = useState('');
+
+    const currentUserId = currentUser?.id ?? '';
+
+    const { data: users = [], isLoading, refetch } = useQuery({
+        queryKey: ['rbac-users'],
+        queryFn: () => rbac.listUsers().then(r => r.data),
+        staleTime: 10_000,
+    });
+
+    const refresh = useCallback(() => {
+        refetch();
+        queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
+    }, [refetch, queryClient]);
+
+    const SUB_TABS = [
+        { id: 'users', label: 'Users' },
+        { id: 'audit', label: 'Audit Log' },
+    ];
+
+    return (
+        <div className="space-y-4 animate-fade-in">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Users className="h-4 w-4 text-cyan-400" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-white">
+                        User Management
+                    </h2>
+                    <span
+                        className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(0,255,255,0.08)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.15)' }}
+                    >
+                        {users.length} users
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={refresh}
+                        className="p-1.5 rounded-lg text-gray-600 hover:text-cyan-400 transition-colors"
+                        title="Refresh"
+                    >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                        onClick={() => setShowCreate(true)}
+                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                        style={{ background: 'rgba(0,255,255,0.1)', border: '1px solid rgba(0,255,255,0.25)', color: '#00ffff' }}
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                        New User
+                    </button>
+                </div>
+            </div>
+
+            {/* Sub-tabs */}
+            <div className="flex gap-4 border-b border-white/5 pb-0">
+                {SUB_TABS.map(t => (
+                    <button
+                        key={t.id}
+                        onClick={() => setActiveSubTab(t.id)}
+                        className={`relative pb-3 text-xs font-bold transition-colors ${
+                            activeSubTab === t.id ? 'text-cyan-400' : 'text-gray-600 hover:text-gray-400'
+                        }`}
+                    >
+                        {t.label}
+                        {activeSubTab === t.id && (
+                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" />
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {/* Error banner */}
+            {errorMsg && (
+                <div
+                    className="flex items-start gap-3 px-4 py-3 rounded-lg"
+                    style={{ background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.3)' }}
+                >
+                    <AlertCircle className="h-4 w-4 mt-0.5 text-red-400 flex-shrink-0" />
+                    <p className="flex-1 text-xs text-red-300 font-mono">{errorMsg}</p>
+                    <button
+                        onClick={() => setErrorMsg('')}
+                        className="text-red-400 hover:text-red-200 transition-colors"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Users table */}
+            {activeSubTab === 'users' && (
+                <div
+                    className="rounded-xl overflow-hidden"
+                    style={{ border: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                    {isLoading ? (
+                        <div className="flex items-center justify-center h-40">
+                            <div className="w-6 h-6 border-2 border-transparent border-t-cyan-400 rounded-full animate-spin" />
+                        </div>
+                    ) : (
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr style={{ background: 'rgba(0,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-gray-600">User</th>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-gray-600">Role</th>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-gray-600">Status</th>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-gray-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="px-4 py-8 text-center text-xs text-gray-700">
+                                            No users found.
+                                        </td>
+                                    </tr>
+                                )}
+                                {users.map(u => (
+                                    <UserRow
+                                        key={u.id}
+                                        u={u}
+                                        currentUserId={currentUserId}
+                                        onRefresh={refresh}
+                                        onError={setErrorMsg}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            )}
+
+            {/* Audit log */}
+            {activeSubTab === 'audit' && (
+                <div
+                    className="rounded-xl p-4"
+                    style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}
+                >
+                    <AuditLogPanel />
+                </div>
+            )}
+
+            {showCreate && (
+                <CreateUserModal
+                    onClose={() => setShowCreate(false)}
+                    onCreated={refresh}
+                />
+            )}
+        </div>
+    );
+}

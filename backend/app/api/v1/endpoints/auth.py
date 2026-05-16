@@ -35,6 +35,8 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     role: str
     force_password_change: bool
+    user_id: str
+    email: str
 
 
 class MeResponse(BaseModel):
@@ -112,6 +114,8 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
         access_token=token,
         role=user.role.value,
         force_password_change=user.force_password_change,
+        user_id=user.id,
+        email=user.email,
     )
 
 

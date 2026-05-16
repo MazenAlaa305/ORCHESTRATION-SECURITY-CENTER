@@ -24,7 +24,7 @@ export default function LoginPage() {
             });
             const data = await response.json();
             if (response.ok) {
-                login(data.access_token, username, data.role);
+                login(data.access_token, data.email ?? username, data.role, data.user_id ?? null);
                 if (data.force_password_change) {
                     alert('You must change your password on first login. Please update it in your profile settings.');
                 }

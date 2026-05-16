@@ -14,8 +14,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_role
 from app.core.database import get_db
 from app.models.scan import Scan, Report
+from app.models.user import UserRole
 from app.services.report_signer import canonical_findings_hash, sign_pdf, verify_signature
 
 router = APIRouter()
@@ -159,7 +161,8 @@ def _build_scan_data(scan: Scan, db=None) -> dict:
     }
 
 
-@router.post("/{scan_id}/generate")
+@router.post("/{scan_id}/generate",
+             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 def generate_report(scan_id: str, db: Session = Depends(get_db)):
     """Generate a signed PDF report for a completed scan and store the metadata."""
     scan = db.query(Scan).filter(Scan.id == scan_id).first()

@@ -315,7 +315,8 @@ def get_scan_logs(scan_id: str, db: Session = Depends(get_db)):
     return logs
 
 
-@router.post("/{scan_id}/stop")
+@router.post("/{scan_id}/stop",
+             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 def stop_scan(scan_id: str, db: Session = Depends(get_db)):
     """
     Stop a running scan.
@@ -333,7 +334,8 @@ def stop_scan(scan_id: str, db: Session = Depends(get_db)):
     return {"message": "Scan stopped", "scan_id": scan_id}
 
 
-@router.delete("/{scan_id}")
+@router.delete("/{scan_id}",
+               dependencies=[Depends(require_role(UserRole.ADMIN))])
 def delete_scan(scan_id: str, db: Session = Depends(get_db)):
     """
     Delete a scan and all its associated data.

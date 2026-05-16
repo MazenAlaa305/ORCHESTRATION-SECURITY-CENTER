@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 import { useAuth } from '../context/AuthContext';
+import { usePermission } from '../hooks/usePermission';
 import { loadSavedViews, VIEWS_CHANGED_EVENT } from '../hooks/useSavedViews';
 
-const NAV_SECTIONS = [
+const buildNavSections = (isAdmin) => [
     {
         label: 'Security',
         items: [
@@ -23,6 +24,7 @@ const NAV_SECTIONS = [
         label: 'System',
         items: [
             { icon: <FileText />, label: 'Reports', id: 'reports' },
+            ...(isAdmin ? [{ icon: <Users />, label: 'Users', id: 'users' }] : []),
             { icon: <Settings />, label: 'Settings', id: 'settings' },
         ],
     },
@@ -108,6 +110,8 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
 const Sidebar = ({ activeTab, onTabChange }) => {
     const { state: realTime } = useRealTime();
     const { user, logout } = useAuth();
+    const { canManageUsers } = usePermission();
+    const NAV_SECTIONS = buildNavSections(canManageUsers);
     const [collapsed, setCollapsed] = useState(() => {
         try { return localStorage.getItem('sidebar-collapsed') === 'true'; } catch { return false; }
     });

@@ -13,15 +13,17 @@ import VulnTrend from '../components/dashboard/VulnTrend';
 import ActionCenter from '../components/dashboard/ActionCenter';
 import SubTabBar from '../components/ui/SubTabBar';
 import Tabs from '../components/ui/Tabs';
+import UserManagementPage from './UserManagementPage';
 
 import { scanService, dashboardService } from '../services/api';
 import { useRealTime } from '../context/RealTimeContext';
 import { useConfig } from '../context/ConfigContext';
+import { usePermission } from '../hooks/usePermission';
 
 import {
     LayoutDashboard, History, Settings, Activity,
     Network, FileText, Target, Bug, Brain,
-    Scan as ScanIcon, Server,
+    Scan as ScanIcon, Server, Users,
 } from 'lucide-react';
 
 // ── Lazy-loaded heavy panels (code-split to improve initial load time) ────────
@@ -45,8 +47,8 @@ const PanelLoader = () => (
     </div>
 );
 
-// ── Main tab definitions ──────────────────────────────────────────────────────
-const MAIN_TABS = [
+// ── Base tab definitions (users tab added at render time for ADMINs) ──────────
+const BASE_TABS = [
     { id: 'overview',      label: 'Command Center', icon: <LayoutDashboard /> },
     { id: 'operations',    label: 'Operations',     icon: <ScanIcon /> },
     { id: 'threat-center', label: 'Threat Center',  icon: <Activity /> },
@@ -62,10 +64,16 @@ const MAIN_TABS = [
 const Dashboard = () => {
     const { state: realTime, dispatch } = useRealTime();
     const { siem_enabled } = useConfig();
+    const { canManageUsers } = usePermission();
     const { tab: urlTab, subTab: urlSubTab } = useParams();
     const navigate = useNavigate();
     const [refreshKey,   setRefreshKey]   = useState(0);
     const [activeScanId, setActiveScanId] = useState(null);
+
+    const MAIN_TABS = useMemo(() => [
+        ...BASE_TABS,
+        ...(canManageUsers ? [{ id: 'users', label: 'Users', icon: <Users /> }] : []),
+    ], [canManageUsers]);
 
     // Sub-tab defaults depend on SIEM flag — SIEM tab is hidden when disabled
     const SUB_TAB_DEFAULTS = useMemo(() => ({
@@ -75,6 +83,7 @@ const Dashboard = () => {
         'ai-brain':      'ai-console',
         reports:         'reports',
         settings:        'settings',
+        users:           'users',
     }), [siem_enabled]);
 
     const VALID_TABS = MAIN_TABS.map(t => t.id);
@@ -356,6 +365,13 @@ const Dashboard = () => {
                 <Suspense fallback={<PanelLoader />}>
                     <SettingsPanel />
                 </Suspense>
+            )}
+
+            {/* ════════════════════════════════════════════════════════════════
+                TAB: USER MANAGEMENT (ADMIN only)
+            ════════════════════════════════════════════════════════════════ */}
+            {activeTab === 'users' && canManageUsers && (
+                <UserManagementPage />
             )}
         </Layout>
     );

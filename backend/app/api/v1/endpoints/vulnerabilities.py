@@ -139,7 +139,8 @@ def get_proof_of_concept(vuln_id: str, db: Session = Depends(get_db)):
         "remediation": vuln.remediation
     }
 
-@router.post("/{vuln_id}/revalidate")
+@router.post("/{vuln_id}/revalidate",
+             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 async def revalidate_vulnerability(vuln_id: str, db: AsyncSession = Depends(get_async_db)):
     """
     Trigger the ValidationAgent to re-verify this specific vulnerability using the LLM.
@@ -187,7 +188,8 @@ def get_vuln_ai_insight(vuln_id: str, db: Session = Depends(get_db)):
     return AIAdvisor().generate_vuln_insight(vuln)
 
 
-@router.patch("/{vuln_id}/workflow")
+@router.patch("/{vuln_id}/workflow",
+              dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
 def update_workflow(vuln_id: str, ticket_id: Optional[str] = None, assigned_to: Optional[str] = None, status: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Update workflow fields: Status, Assignment, Ticket ID.
