@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Dashboard from './pages/Dashboard';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import ProfilePage from './pages/ProfilePage';
@@ -27,6 +28,10 @@ const AnimatedRoutes = () => {
         <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname.split('/').slice(0, 3).join('/')}>
                 <Route
+                    path="/"
+                    element={<RouteShell><LandingPage /></RouteShell>}
+                />
+                <Route
                     path="/login"
                     element={<RouteShell><LoginPage /></RouteShell>}
                 />
@@ -50,8 +55,8 @@ const AnimatedRoutes = () => {
                         </ProtectedRoute>
                     }
                 />
-                {/* Catch-all: redirect root and unknown paths to the dashboard */}
-                <Route path="*" element={<Navigate to="/dashboard/overview" replace />} />
+                {/* Catch-all: unknown paths fall back to the landing page */}
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </AnimatePresence>
     );

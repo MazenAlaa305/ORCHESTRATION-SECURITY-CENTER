@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users, Home } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -226,6 +226,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
 
             {/* ── Navigation ────────────────────────────────────────────── */}
             <div className="flex-1 py-4 flex flex-col gap-1 px-2.5 overflow-y-auto">
+                {/* Home — navigates out to the public landing page */}
+                <div className="mb-3 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <NavItem
+                        icon={<Home className="h-3.5 w-3.5 shrink-0" style={{ color: 'rgba(148,163,184,0.6)' }} />}
+                        label="Home"
+                        collapsed={collapsed}
+                        active={false}
+                        onClick={() => navigate('/')}
+                    />
+                </div>
+
                 {NAV_SECTIONS.map(section => (
                     <div key={section.label} className="mb-4">
                         {!collapsed && (
