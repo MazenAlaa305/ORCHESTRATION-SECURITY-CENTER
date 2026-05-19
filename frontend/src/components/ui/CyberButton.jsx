@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 /**
  * CyberButton — animated border-trace button with neon glow on hover/active.
@@ -27,21 +28,31 @@ export const CyberButton = ({
         lg: 'px-6 py-2.5 text-sm   gap-2',
     };
 
+    const isInteractive = !disabled && !loading;
+
     return (
-        <button
-            onClick={disabled || loading ? undefined : onClick}
+        <motion.button
+            onClick={isInteractive ? onClick : undefined}
             disabled={disabled || loading}
+            whileHover={isInteractive ? { y: -1, scale: 1.015 } : undefined}
+            whileTap={isInteractive ? { scale: 0.96 } : undefined}
+            transition={{ type: 'spring', stiffness: 380, damping: 22 }}
             className={`
                 relative overflow-hidden group
                 ${variants[variant]} ${sizes[size]}
                 inline-flex items-center justify-center
                 font-bold uppercase tracking-widest
-                rounded-xl transition-all duration-300
+                rounded-xl transition-colors duration-300
                 disabled:opacity-40 disabled:cursor-not-allowed
                 ${className}
             `}
             {...props}
         >
+            {/* Hover sweep shine */}
+            <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-sweep"
+            />
             {/* Active border trace */}
             <span className="absolute inset-0 rounded-xl border border-white opacity-0 group-active:opacity-30 transition-opacity duration-150" />
             {/* Loading spinner */}
@@ -52,7 +63,7 @@ export const CyberButton = ({
                 </svg>
             )}
             <span className="relative z-10 flex items-center gap-2">{children}</span>
-        </button>
+        </motion.button>
     );
 };
 

@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { ShieldCheck, Bug, Monitor, Zap, AlertTriangle, Wrench } from 'lucide-react';
 import { useRealTime } from '../../context/RealTimeContext';
+import useCountUp from '../../hooks/useCountUp';
+import { stagger, staggerItem } from '../../lib/motion';
 
 const SEV_COLORS = {
     CRITICAL: '#ff0055',
@@ -10,30 +13,15 @@ const SEV_COLORS = {
     INFO:     '#888888',
 };
 
-function useCountUp(target, duration = 900) {
-    const [value, setValue] = useState(0);
-    useEffect(() => {
-        if (target === undefined || target === null) return;
-        const numTarget = Number(target);
-        if (isNaN(numTarget)) return;
-        let current = 0;
-        const step = numTarget / (duration / 16);
-        const timer = setInterval(() => {
-            current = Math.min(current + step, numTarget);
-            setValue(Math.round(current));
-            if (current >= numTarget) clearInterval(timer);
-        }, 16);
-        return () => clearInterval(timer);
-    }, [target, duration]);
-    return value;
-}
-
 const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse, badge }) => {
-    const animValue = useCountUp(typeof value === 'number' ? value : 0);
+    const animValue = useCountUp(typeof value === 'number' ? value : 0, { duration: 900 });
 
     return (
-        <div
-            className="relative overflow-hidden rounded-lg p-4 flex flex-col gap-2 transition-all duration-300 group"
+        <motion.div
+            variants={staggerItem}
+            whileHover={{ y: -3, scale: 1.02, boxShadow: `0 8px 32px ${color}18, 0 0 24px ${color}14, inset 0 1px 0 rgba(255,255,255,0.04)` }}
+            transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+            className="relative overflow-hidden rounded-lg p-4 flex flex-col gap-2 group cursor-default"
             style={{
                 background: 'linear-gradient(135deg, rgba(15,25,34,0.7), rgba(10,17,24,0.85))',
                 border:     `1px solid ${color}20`,
@@ -71,23 +59,29 @@ const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse, badg
                         <div className="flex h-full">
                             {barSegments.map(({ pct, c }, i) =>
                                 pct > 0 ? (
-                                    <div
+                                    <motion.div
                                         key={i}
-                                        className="h-full transition-all duration-700"
-                                        style={{ width: `${pct}%`, background: c }}
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${pct}%` }}
+                                        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: i * 0.05 }}
+                                        className="h-full"
+                                        style={{ background: c }}
                                     />
                                 ) : null
                             )}
                         </div>
                     ) : (
-                        <div
-                            className="h-full rounded-full transition-all duration-1000"
-                            style={{ width: `${bar}%`, background: `linear-gradient(90deg, ${color}40, ${color})` }}
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${bar}%` }}
+                            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+                            className="h-full rounded-full"
+                            style={{ background: `linear-gradient(90deg, ${color}40, ${color})` }}
                         />
                     )}
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 };
 
@@ -136,7 +130,12 @@ const StatCards = ({ latestScan, isScanning }) => {
     const slaColor = overdueCount > 0 ? '#ff0055' : '#00ff88';
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4 animate-fade-in">
+        <motion.div
+            variants={stagger(0.05, 0.06)}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4"
+        >
             <KPICard
                 title="Security Health"
                 value={healthScore}
@@ -188,7 +187,7 @@ const StatCards = ({ latestScan, isScanning }) => {
                 bar={isScanning ? 70 : undefined}
                 pulse={isScanning}
             />
-        </div>
+        </motion.div>
     );
 };
 

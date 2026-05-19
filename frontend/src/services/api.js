@@ -2,6 +2,17 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://localhost/api/v1';
 
+// Origin of the backend (strips trailing /api/v1) — used to resolve avatar
+// URLs returned as host-relative paths like "/avatars/abc.png".
+export const API_ORIGIN = API_URL.replace(/\/api\/v\d+\/?$/, '');
+
+/** Resolve a possibly-relative avatar URL into something the <img> tag can load. */
+export function resolveAvatarUrl(url) {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url)) return url;
+    return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
 const api = axios.create({
     baseURL: API_URL,
     headers: {
@@ -162,6 +173,25 @@ export const dashboardService = {
 export const findingsService = {
     // List deduplicated findings with framework/compliance filtering
     list: (params = {}) => api.get('/findings', { params }),
+};
+
+export const authService = {
+    me: () => api.get('/auth/me'),
+    updateProfile: (data) => api.patch('/auth/me', data),
+    changePassword: (current_password, new_password) =>
+        api.post('/auth/change-password', { current_password, new_password }),
+    uploadAvatar: (file) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        // Don't set Content-Type manually — axios derives the correct
+        // `multipart/form-data; boundary=…` header from the FormData body.
+        // Forcing a literal "multipart/form-data" strips the boundary and the
+        // server can't parse the body. We also clear the axios-instance default
+        // of `application/json` for this single request.
+        return api.post('/auth/me/avatar', fd, {
+            headers: { 'Content-Type': undefined },
+        });
+    },
 };
 
 export const labService = {

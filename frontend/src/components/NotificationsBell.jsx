@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, X, Check } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 
@@ -86,28 +87,44 @@ export default function NotificationsBell() {
 
     return (
         <>
-            <button
+            <motion.button
                 ref={buttonRef}
                 onClick={() => setOpen(o => !o)}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.9 }}
+                animate={unreadCount > 0 ? { rotate: [0, -10, 10, -6, 6, 0] } : {}}
+                transition={unreadCount > 0 ? { duration: 0.7, repeat: 0 } : {}}
                 className="relative p-1.5 rounded-lg text-gray-400 hover:text-white transition-colors"
                 style={{ background: open ? BG_HOVER : 'transparent' }}
                 aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
                 title="Notifications"
             >
                 <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                    <span
-                        className="absolute -top-0.5 -right-0.5 text-[8px] font-black rounded-full leading-tight flex items-center justify-center"
-                        style={{ background: '#ff0055', color: '#fff', minWidth: 14, height: 14, padding: '0 3px' }}
-                    >
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                )}
-            </button>
+                <AnimatePresence>
+                    {unreadCount > 0 && (
+                        <motion.span
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 480, damping: 18 }}
+                            className="absolute -top-0.5 -right-0.5 text-[8px] font-black rounded-full leading-tight flex items-center justify-center"
+                            style={{ background: '#ff0055', color: '#fff', minWidth: 14, height: 14, padding: '0 3px' }}
+                        >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </motion.span>
+                    )}
+                </AnimatePresence>
+            </motion.button>
 
-            {open && createPortal(
-                <div
+            {createPortal(
+                <AnimatePresence>
+                {open && (
+                <motion.div
                     ref={dropdownRef}
+                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                     style={{
                         position: 'fixed',
                         top: pos.top,
@@ -119,6 +136,7 @@ export default function NotificationsBell() {
                         borderRadius: 12,
                         boxShadow: '0 16px 48px #000, 0 2px 8px #000',
                         overflow: 'hidden',
+                        transformOrigin: 'top right',
                     }}
                 >
                     {/* Header */}
@@ -206,7 +224,9 @@ export default function NotificationsBell() {
                             </span>
                         </div>
                     )}
-                </div>,
+                </motion.div>
+                )}
+                </AnimatePresence>,
                 document.body
             )}
         </>

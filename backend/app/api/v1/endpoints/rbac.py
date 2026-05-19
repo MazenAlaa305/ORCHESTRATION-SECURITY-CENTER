@@ -42,6 +42,14 @@ class UserOut(BaseModel):
     role: UserRole
     disabled: bool
     force_password_change: bool
+    # Profile fields — surfaced so the admin user-management view can show
+    # avatars and full profile details without an extra round-trip.
+    full_name: str | None = None
+    bio: str | None = None
+    phone: str | None = None
+    avatar_url: str | None = None
+    created_at: datetime | None = None
+    last_login_at: datetime | None = None
 
     class Config:
         from_attributes = True

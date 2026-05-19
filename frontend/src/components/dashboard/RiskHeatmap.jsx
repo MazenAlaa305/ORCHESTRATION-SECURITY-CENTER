@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 
 const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 
@@ -87,17 +88,20 @@ const RiskHeatmap = ({ data = [] }) => {
 
             {hasData ? (
                 <div className="space-y-2.5">
-                    {SEV_ORDER.map((sev) => {
+                    {SEV_ORDER.map((sev, idx) => {
                         const meta  = SEV_META[sev];
                         const count = counts[sev] || 0;
                         const pct   = total > 0 ? (count / total) * 100 : 0;
                         const isEmpty = count === 0;
 
                         return (
-                            <div
+                            <motion.div
                                 key={sev}
+                                initial={{ opacity: 0, x: -12 }}
+                                animate={{ opacity: isEmpty ? 0.35 : 1, x: 0 }}
+                                transition={{ delay: idx * 0.07, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                                whileHover={!isEmpty ? { scale: 1.015 } : undefined}
                                 className="group relative flex items-center gap-3"
-                                style={{ opacity: isEmpty ? 0.35 : 1, transition: 'opacity 0.3s' }}
                             >
                                 {/* Severity label + dot */}
                                 <div className="flex items-center gap-1.5 w-16 shrink-0">
@@ -157,7 +161,7 @@ const RiskHeatmap = ({ data = [] }) => {
                                         {count}
                                     </span>
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })}
 

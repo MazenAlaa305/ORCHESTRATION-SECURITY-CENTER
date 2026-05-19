@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Brain, ChevronDown, Terminal, CheckCircle, XCircle, Loader2, Network, Cpu, BarChart2 } from 'lucide-react';
 import { pentesterService } from '../../services/api';
 
@@ -172,10 +173,16 @@ const AgentLogViewer = ({ scanId, autoRefresh = true }) => {
                     </div>
                 )}
 
+                <AnimatePresence initial={false}>
                 {logs.map((log, index) => (
-                    <div
+                    <motion.div
                         key={log.id || index}
-                        className="group/item relative pl-4 border-l border-white/5 hover:border-cyber-vibrant/40 transition-all py-1"
+                        layout
+                        initial={{ opacity: 0, x: -20, backgroundColor: 'rgba(168, 139, 250, 0.12)' }}
+                        animate={{ opacity: 1, x: 0, backgroundColor: 'rgba(168, 139, 250, 0)' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ type: 'spring', stiffness: 280, damping: 26, backgroundColor: { duration: 1.4, delay: 0.2 } }}
+                        className="group/item relative pl-4 border-l border-white/5 hover:border-cyber-vibrant/40 transition-colors py-1"
                     >
                         {/* Dot Indicator */}
                         <div className="absolute -left-[5px] top-3 h-2 w-2 rounded-full bg-white/10 group-hover/item:bg-cyber-vibrant group-hover/item:shadow-neon-purple transition-all"></div>
@@ -205,8 +212,16 @@ const AgentLogViewer = ({ scanId, autoRefresh = true }) => {
                         </div>
 
                         {/* Expanded Details / Intelligence View */}
+                        <AnimatePresence initial={false}>
                         {expanded[log.id] && (
-                            <div className="mt-4 ml-8 space-y-3 animate-fade-in">
+                            <motion.div
+                                key="expanded"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                                className="mt-4 ml-8 space-y-3 overflow-hidden"
+                            >
                                 {log.reasoning && (
                                     <div className="bg-black/40 backdrop-blur-sm p-4 rounded-xl border border-cyber-vibrant/20 glow-purple">
                                         <div className="flex items-center gap-2 mb-2">
@@ -237,10 +252,12 @@ const AgentLogViewer = ({ scanId, autoRefresh = true }) => {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
-                    </div>
+                        </AnimatePresence>
+                    </motion.div>
                 ))}
+                </AnimatePresence>
 
                 {logs.length === 0 && !loading && (
                     <div className="text-center py-20">

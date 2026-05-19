@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { X, Loader2, AlertCircle, ExternalLink, Info } from 'lucide-react';
 import { dashboardService } from '../../services/api';
+import { backdrop as backdropV, drawerRight } from '../../lib/motion';
 
 const SEV_COLOR = {
     critical: '#ff0055',
@@ -41,8 +43,6 @@ export default function RiskBreakdownDrawer({ scanId, onClose }) {
         return () => window.removeEventListener('keydown', onKey);
     }, [scanId, onClose]);
 
-    if (!scanId) return null;
-
     const breakdown = data?.breakdown ?? [];
     const score = data?.score ?? 0;
     // Total raw contribution (sum) — we show each row's share of this total so
@@ -52,19 +52,36 @@ export default function RiskBreakdownDrawer({ scanId, onClose }) {
     const scoreColor = score >= 80 ? '#ff0055' : score >= 60 ? '#ff6a00' : score >= 30 ? '#ffaa00' : '#00ff88';
 
     return (
-        <>
+        <AnimatePresence>
             {/* Backdrop */}
-            <div
+            {scanId && (
+            <motion.div
+                key="rbd-backdrop"
+                variants={backdropV}
+                initial="initial"
+                animate="animate"
+                exit="exit"
                 className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
                 onClick={onClose}
             />
+            )}
 
             {/* Drawer */}
-            <aside
+            {scanId && (
+            <motion.aside
+                key="rbd-aside"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Risk breakdown"
-                className="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-full max-w-[480px] animate-slide-in-right"
+                variants={drawerRight}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={{ left: 0, right: 0.4 }}
+                onDragEnd={(_, info) => { if (info.offset.x > 120 || info.velocity.x > 600) onClose?.(); }}
+                className="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-full max-w-[480px]"
                 style={{
                     background: 'linear-gradient(180deg, rgba(15,30,40,0.98), rgba(10,20,28,0.99))',
                     borderLeft: '1px solid rgba(0,255,255,0.15)',
@@ -226,7 +243,8 @@ export default function RiskBreakdownDrawer({ scanId, onClose }) {
                         Open Vulns <ExternalLink className="h-3 w-3" />
                     </button>
                 </div>
-            </aside>
-        </>
+            </motion.aside>
+            )}
+        </AnimatePresence>
     );
 }

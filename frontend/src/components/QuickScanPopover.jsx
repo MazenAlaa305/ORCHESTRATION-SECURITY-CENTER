@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Zap, Settings, Loader2, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { scanService, targetService } from '../services/api';
@@ -124,8 +125,19 @@ export default function QuickScanPopover({ isScanning, onScanStarted }) {
                     {isScanning ? 'Scanning...' : 'Quick Scan'}
                 </button>
 
-                {open && createPortal(
-                    <div ref={popoverRef} role="dialog" aria-label="Confirm quick scan" style={PANEL}>
+                {createPortal(
+                    <AnimatePresence>
+                    {open && (
+                    <motion.div
+                        ref={popoverRef}
+                        role="dialog"
+                        aria-label="Confirm quick scan"
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                        style={PANEL}
+                    >
                         {/* Header */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${BORDER}` }}>
                             <Zap size={13} color="#00cccc" />
@@ -205,7 +217,9 @@ export default function QuickScanPopover({ isScanning, onScanStarted }) {
                                 </p>
                             </>
                         )}
-                    </div>,
+                    </motion.div>
+                    )}
+                    </AnimatePresence>,
                     document.body
                 )}
             </div>

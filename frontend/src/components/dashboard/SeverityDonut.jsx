@@ -47,6 +47,10 @@ export default function SeverityDonut() {
                         outerRadius={90}
                         paddingAngle={2}
                         isAnimationActive
+                        animationBegin={120}
+                        animationDuration={900}
+                        animationEasing="ease-out"
+                        isUpdateAnimationActive={false}
                     >
                         {data.map((entry) => (
                             <Cell key={entry.name} fill={COLORS[entry.name]} />

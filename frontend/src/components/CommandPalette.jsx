@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import {
     Search, X, Zap, Settings as SettingsIcon, FileText, Brain,
@@ -228,18 +229,26 @@ export default function CommandPalette() {
         }
     };
 
-    if (!open) return null;
-
     return (
-        <div
-            className="fixed inset-0 z-[110] flex items-start justify-center pt-[12vh] px-4 animate-fade-in"
+        <AnimatePresence>
+        {open && (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[110] flex items-start justify-center pt-[12vh] px-4"
             style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
             role="dialog"
             aria-modal="true"
             aria-label="Command palette"
             onClick={() => setOpen(false)}
         >
-            <div
+            <motion.div
+                initial={{ opacity: 0, y: -16, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-2xl rounded-xl overflow-hidden flex flex-col"
                 style={{
@@ -355,7 +364,9 @@ export default function CommandPalette() {
                         </span>
                     </div>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
+        )}
+        </AnimatePresence>
     );
 }

@@ -1,11 +1,15 @@
 import asyncio
 import json
 import logging
+import os
+from pathlib import Path
+
 import aioredis
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.api.api import api_router
@@ -346,6 +350,13 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# ── Static mount for user avatars (uploaded via POST /auth/me/avatar) ────────
+# Mounted under /api/v1 so the same reverse-proxy rule that routes the API
+# (Caddyfile / nginx) also handles avatar requests — no infra changes needed.
+_AVATAR_DIR = Path(os.environ.get("AVATAR_UPLOAD_DIR", "/app/uploads/avatars"))
+_AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+app.mount(f"{settings.API_V1_STR}/avatars", StaticFiles(directory=str(_AVATAR_DIR)), name="avatars")
 
 # ── API router ────────────────────────────────────────────────────────────────
 app.include_router(api_router, prefix=settings.API_V1_STR)

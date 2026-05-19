@@ -25,3 +25,5 @@ bcrypt==4.0.1
 # Phase 3.2 — credential encryption
 cryptography>=42.0.0
 croniter==3.0.3
+# Avatar upload (multipart/form-data) on POST /auth/me/avatar
+python-multipart>=0.0.9

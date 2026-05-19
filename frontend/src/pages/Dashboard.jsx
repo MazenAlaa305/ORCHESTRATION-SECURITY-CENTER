@@ -1,7 +1,9 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { fadeInUp, stagger, staggerItem } from '../lib/motion';
 
 import Layout from '../layout/Layout';
 import StatCards from '../components/dashboard/StatCards';
@@ -42,9 +44,26 @@ const SettingsPanel        = lazy(() => import('../components/dashboard/Settings
 
 // ── Loading fallback ──────────────────────────────────────────────────────────
 const PanelLoader = () => (
-    <div className="glass-card flex items-center justify-center min-h-[200px]">
-        <div className="w-6 h-6 border-2 border-transparent border-t-cyan-400 rounded-full animate-spin" />
-    </div>
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="glass-card flex items-center justify-center min-h-[200px] gap-3"
+    >
+        <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+            className="w-6 h-6 border-2 border-transparent border-t-cyan-400 rounded-full"
+        />
+        <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600"
+        >
+            Loading
+        </motion.span>
+    </motion.div>
 );
 
 // ── Base tab definitions (users tab added at render time for ADMINs) ──────────
@@ -226,13 +245,23 @@ const Dashboard = () => {
             </div>
 
             {/* ════════════════════════════════════════════════════════════════
-                TAB: COMMAND CENTER
+                Animated tab content — keyed by activeTab so AnimatePresence
+                cross-fades panels on tab switch.
             ════════════════════════════════════════════════════════════════ */}
+            <AnimatePresence mode="wait">
+            <motion.div
+                key={activeTab}
+                variants={fadeInUp}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+            >
+            {/* ── COMMAND CENTER ── */}
             {activeTab === 'overview' && (
-                <div className="animate-fade-in space-y-4">
+                <motion.div variants={stagger(0.05, 0.06)} initial="initial" animate="animate" className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                         {/* Left rail */}
-                        <div className="md:col-span-3 flex flex-col gap-4">
+                        <motion.div variants={staggerItem} className="md:col-span-3 flex flex-col gap-4">
                             <UptimeGauge value={realTime.kpi.health_score} />
                             <div className="glass-card p-4 relative overflow-hidden">
                                 <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3">
@@ -241,36 +270,34 @@ const Dashboard = () => {
                                 <ScanButton onScanStarted={handleScanStarted} isScanning={isScanning} />
                             </div>
                             <VulnTrend data={trendData} />
-                        </div>
+                        </motion.div>
 
                         {/* Centre panel */}
-                        <div className="md:col-span-6 flex flex-col gap-4">
+                        <motion.div variants={staggerItem} className="md:col-span-6 flex flex-col gap-4">
                             <RiskHeatmap data={heatmapData} />
                             <div className="flex-grow min-h-[400px]">
                                 <Suspense fallback={<PanelLoader />}>
                                     <NetworkTopology refresh={refreshKey} compact />
                                 </Suspense>
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Right rail */}
-                        <div className="md:col-span-3 flex flex-col gap-4">
+                        <motion.div variants={staggerItem} className="md:col-span-3 flex flex-col gap-4">
                             <div className="h-[350px]">
                                 <OrchestrationFeed logs={realTime.orchestrationLog} />
                             </div>
                             <div className="flex-grow">
                                 <ActionCenter refreshKey={refreshKey} />
                             </div>
-                        </div>
+                        </motion.div>
                     </div>
-                </div>
+                </motion.div>
             )}
 
-            {/* ════════════════════════════════════════════════════════════════
-                TAB: OPERATIONS
-            ════════════════════════════════════════════════════════════════ */}
+            {/* ── OPERATIONS ── */}
             {activeTab === 'operations' && (
-                <div className="animate-fade-in">
+                <div>
                     <SubTabBar
                         tabs={[
                             { id: 'scanner', label: 'Scan',    icon: <ScanIcon /> },
@@ -315,11 +342,9 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* ════════════════════════════════════════════════════════════════
-                TAB: THREAT CENTER
-            ════════════════════════════════════════════════════════════════ */}
+            {/* ── THREAT CENTER ── */}
             {activeTab === 'threat-center' && (
-                <div className="animate-fade-in">
+                <div>
                     <SubTabBar
                         tabs={[
                             // SIEM tab is only shown when the backend integration is enabled
@@ -338,11 +363,9 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* ════════════════════════════════════════════════════════════════
-                TAB: AI BRAIN
-            ════════════════════════════════════════════════════════════════ */}
+            {/* ── AI BRAIN ── */}
             {activeTab === 'ai-brain' && (
-                <div className="animate-fade-in space-y-4">
+                <div className="space-y-4">
                     <Suspense fallback={<PanelLoader />}>
                         <AgentLogViewer scanId={activeScanId || latestScan?.id} />
                     </Suspense>
@@ -367,12 +390,12 @@ const Dashboard = () => {
                 </Suspense>
             )}
 
-            {/* ════════════════════════════════════════════════════════════════
-                TAB: USER MANAGEMENT (ADMIN only)
-            ════════════════════════════════════════════════════════════════ */}
+            {/* ── USER MANAGEMENT (ADMIN only) ── */}
             {activeTab === 'users' && canManageUsers && (
                 <UserManagementPage />
             )}
+            </motion.div>
+            </AnimatePresence>
         </Layout>
     );
 };

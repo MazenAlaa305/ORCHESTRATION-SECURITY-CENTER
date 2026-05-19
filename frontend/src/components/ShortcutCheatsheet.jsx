@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X, Keyboard } from 'lucide-react';
+import { backdrop as backdropV, modalBody } from '../lib/motion';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || '');
 const MOD = isMac ? '⌘' : 'Ctrl';
@@ -86,18 +88,23 @@ export default function ShortcutCheatsheet() {
         };
     }, [open]);
 
-    if (!open) return null;
-
     return (
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
+        <AnimatePresence>
+        {open && (
+        <motion.div
+            variants={backdropV}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
             role="dialog"
             aria-modal="true"
             aria-label="Keyboard shortcuts"
             onClick={() => setOpen(false)}
         >
-            <div
+            <motion.div
+                variants={modalBody}
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-3xl max-h-[85vh] overflow-y-auto custom-scrollbar rounded-xl p-6"
                 style={{
@@ -169,7 +176,9 @@ export default function ShortcutCheatsheet() {
                         <Kbd>Esc</Kbd>
                     </span>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
+        )}
+        </AnimatePresence>
     );
 }

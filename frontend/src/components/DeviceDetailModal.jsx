@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { backdrop, modalBody } from '../lib/motion';
 
 const DeviceDetailModal = ({ device, onClose }) => {
-    if (!device) return null;
-
     const getSeverityColor = (severity) => {
         if (severity >= 9.0) return '#bf00ff'; // Critical - Magenta
         if (severity >= 7.0) return '#ff0055'; // High - Red
@@ -11,9 +11,18 @@ const DeviceDetailModal = ({ device, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        <AnimatePresence>
+        {device && (
+        <motion.div
+            variants={backdrop}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={onClose}>
-            <div className="bg-[#1a1a2e] border border-[#bf00ff]/30 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+            <motion.div
+                variants={modalBody}
+                className="bg-[#1a1a2e] border border-[#bf00ff]/30 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
                 onClick={(e) => e.stopPropagation()}>
 
                 {/* Header */}
@@ -180,8 +189,10 @@ const DeviceDetailModal = ({ device, onClose }) => {
                             </div>
                         )}
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
+        )}
+        </AnimatePresence>
     );
 };
 

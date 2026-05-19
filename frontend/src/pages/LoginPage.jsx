@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { Shield, Lock, User, Loader2, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { stagger, staggerItem } from '../lib/motion';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
@@ -59,17 +61,27 @@ export default function LoginPage() {
                  }} />
 
             {/* Card */}
-            <div className="relative z-10 w-full max-w-md mx-4">
+            <motion.div
+                variants={stagger(0.08, 0.1)}
+                initial="initial"
+                animate="animate"
+                className="relative z-10 w-full max-w-md mx-4"
+            >
                 {/* Header badge */}
-                <div className="flex flex-col items-center mb-8">
-                    <div className="flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-                         style={{
+                <motion.div variants={staggerItem} className="flex flex-col items-center mb-8">
+                    <motion.div
+                        initial={{ scale: 0.6, rotate: -30, opacity: 0 }}
+                        animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 280, damping: 18, delay: 0.1 }}
+                        whileHover={{ rotate: 5, scale: 1.05 }}
+                        className="flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+                        style={{
                              background: 'linear-gradient(135deg, rgba(77,189,177,0.15) 0%, rgba(26,69,102,0.2) 100%)',
                              border: '1px solid rgba(77,189,177,0.3)',
                              boxShadow: '0 0 32px rgba(77,189,177,0.12)',
                          }}>
                         <Shield className="w-8 h-8" style={{ color: '#4dbdb1' }} />
-                    </div>
+                    </motion.div>
                     <h1 className="text-2xl font-black uppercase tracking-[0.25em]"
                         style={{ color: '#4dbdb1', textShadow: '0 0 24px rgba(77,189,177,0.4)' }}>
                         OSC
@@ -77,10 +89,14 @@ export default function LoginPage() {
                     <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 mt-1 font-bold">
                         Orchestration Security Center
                     </p>
-                </div>
+                </motion.div>
 
                 {/* Glass card */}
-                <div className="rounded-2xl p-8"
+                <motion.div
+                    variants={staggerItem}
+                    animate={error ? { x: [0, -8, 8, -6, 6, 0] } : undefined}
+                    transition={error ? { duration: 0.45 } : undefined}
+                    className="rounded-2xl p-8"
                      style={{
                          background: 'linear-gradient(135deg, rgba(77,189,177,0.06) 0%, rgba(16,34,43,0.7) 40%, rgba(10,26,34,0.8) 100%)',
                          border: '1px solid rgba(77,189,177,0.18)',
@@ -92,17 +108,24 @@ export default function LoginPage() {
                         Secure Authentication
                     </h2>
 
+                    <AnimatePresence>
                     {error && (
-                        <div className="flex items-center gap-2 rounded-lg px-4 py-3 mb-5 text-xs font-mono"
-                             style={{
+                        <motion.div
+                            initial={{ opacity: 0, y: -6, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: 'auto' }}
+                            exit={{ opacity: 0, y: -6, height: 0 }}
+                            transition={{ duration: 0.25 }}
+                            className="flex items-center gap-2 rounded-lg px-4 py-3 mb-5 text-xs font-mono overflow-hidden"
+                            style={{
                                  background: 'rgba(255,60,60,0.08)',
                                  border: '1px solid rgba(255,60,60,0.25)',
                                  color: '#ff6b6b',
                              }}>
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                             {error}
-                        </div>
+                        </motion.div>
                     )}
+                    </AnimatePresence>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Username */}
@@ -156,10 +179,13 @@ export default function LoginPage() {
                         </div>
 
                         {/* Submit */}
-                        <button
+                        <motion.button
                             type="submit"
                             disabled={loading}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-black uppercase tracking-[0.2em] transition-all mt-2"
+                            whileHover={!loading ? { y: -1, scale: 1.01 } : undefined}
+                            whileTap={!loading ? { scale: 0.97 } : undefined}
+                            transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-black uppercase tracking-[0.2em] transition-colors mt-2"
                             style={{
                                 background: loading
                                     ? 'rgba(77,189,177,0.08)'
@@ -171,23 +197,34 @@ export default function LoginPage() {
                             onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'linear-gradient(135deg, rgba(77,189,177,0.28) 0%, rgba(26,69,102,0.35) 100%)'; }}
                             onMouseLeave={e => { if (!loading) e.currentTarget.style.background = 'linear-gradient(135deg, rgba(77,189,177,0.18) 0%, rgba(26,69,102,0.25) 100%)'; }}
                         >
-                            {loading
-                                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Authenticating…</>
-                                : 'Access System'}
-                        </button>
+                            <AnimatePresence mode="wait">
+                                {loading
+                                    ? <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Authenticating…</motion.span>
+                                    : <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>Access System</motion.span>}
+                            </AnimatePresence>
+                        </motion.button>
                     </form>
-                </div>
+
+                    <div className="mt-6 pt-5 border-t border-white/[0.05] text-center">
+                        <p className="text-[10px] text-gray-500">
+                            Need an account?{' '}
+                            <Link to="/signup" className="font-bold hover:underline" style={{ color: '#4dbdb1' }}>
+                                Create one
+                            </Link>
+                        </p>
+                    </div>
+                </motion.div>
 
                 {/* Footer */}
-                <div className="mt-5 text-center space-y-1">
+                <motion.div variants={staggerItem} className="mt-5 text-center space-y-1">
                     <p className="text-[9px] uppercase tracking-[0.25em] text-gray-600 font-bold">
                         Authorized Personnel Only
                     </p>
                     <p className="text-[9px] text-gray-700 font-mono">
                         All actions are logged and monitored
                     </p>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
         </div>
     );
 }

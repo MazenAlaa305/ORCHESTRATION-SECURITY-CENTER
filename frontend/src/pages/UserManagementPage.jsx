@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Users, Plus, Shield, ShieldOff, Trash2, KeyRound, RefreshCw, AlertCircle, X } from 'lucide-react';
+import { Users, Plus, Shield, ShieldOff, Trash2, KeyRound, RefreshCw, AlertCircle, X, Mail, Phone, Clock, Calendar } from 'lucide-react';
 import RoleBadge from '../components/ui/RoleBadge';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import api, { resolveAvatarUrl } from '../services/api';
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
@@ -154,12 +154,110 @@ function ResetPasswordModal({ user, onClose, onDone }) {
     );
 }
 
+// ── Admin profile view modal ─────────────────────────────────────────────────
+
+function UserProfileModal({ user, onClose }) {
+    const avatarUrl = resolveAvatarUrl(user.avatar_url);
+    const initial = (user.full_name || user.email || '?')[0].toUpperCase();
+    const fmtDate = (v) => v ? new Date(v).toLocaleString() : '—';
+
+    return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4" onClick={onClose}>
+            <div
+                className="w-full max-w-lg rounded-xl overflow-hidden"
+                style={{ background: 'rgba(10,24,32,0.98)', border: '1px solid rgba(0,255,255,0.18)' }}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h2 className="text-sm font-black uppercase tracking-widest text-white">User Profile</h2>
+                    <button onClick={onClose} className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-white">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+
+                {/* Identity */}
+                <div className="px-6 py-5 flex items-center gap-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    {avatarUrl ? (
+                        <img
+                            src={avatarUrl}
+                            alt=""
+                            className="h-16 w-16 rounded-full object-cover flex-shrink-0"
+                            style={{ border: '2px solid rgba(0,255,255,0.3)' }}
+                        />
+                    ) : (
+                        <div
+                            className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-black flex-shrink-0"
+                            style={{ background: 'rgba(0,255,255,0.15)', color: '#00ffff', border: '2px solid rgba(0,255,255,0.3)' }}
+                        >
+                            {initial}
+                        </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                        <p className="text-base font-bold text-white truncate">{user.full_name || user.email.split('@')[0]}</p>
+                        <p className="text-xs text-gray-500 font-mono truncate">{user.email}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <RoleBadge role={user.role} />
+                            <span className={`text-[9px] font-bold uppercase tracking-wider ${user.disabled ? 'text-red-400' : 'text-green-400'}`}>
+                                {user.disabled ? 'Disabled' : 'Active'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Details grid */}
+                <div className="px-6 py-5 space-y-3">
+                    <ProfileField icon={<Mail className="h-3 w-3" />} label="Email">{user.email}</ProfileField>
+                    <ProfileField icon={<Phone className="h-3 w-3" />} label="Phone">{user.phone || '—'}</ProfileField>
+                    <ProfileField icon={<Calendar className="h-3 w-3" />} label="Member since">{fmtDate(user.created_at)}</ProfileField>
+                    <ProfileField icon={<Clock className="h-3 w-3" />} label="Last login">{fmtDate(user.last_login_at)}</ProfileField>
+
+                    {user.bio && (
+                        <div className="pt-2">
+                            <p className="text-[9px] uppercase tracking-[0.25em] font-black text-gray-500 mb-1.5">Bio</p>
+                            <p className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">{user.bio}</p>
+                        </div>
+                    )}
+
+                    {user.force_password_change && (
+                        <p className="text-[10px] text-orange-400 uppercase tracking-wider pt-2">
+                            Pending password change on next login
+                        </p>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-3 flex justify-end" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <button
+                        onClick={onClose}
+                        className="text-xs px-4 py-2 rounded-lg bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ProfileField({ icon, label, children }) {
+    return (
+        <div className="flex items-center gap-3">
+            <div className="text-gray-600 flex-shrink-0">{icon}</div>
+            <p className="text-[9px] uppercase tracking-[0.25em] font-black text-gray-500 w-24 flex-shrink-0">{label}</p>
+            <p className="text-xs text-gray-300 truncate flex-1">{children}</p>
+        </div>
+    );
+}
+
 // ── User row ──────────────────────────────────────────────────────────────────
 
-function UserRow({ u, currentUserId, onRefresh, onError }) {
+function UserRow({ u, currentUserId, onRefresh, onError, onOpenProfile }) {
     const [changingRole, setChangingRole] = useState(false);
     const [showReset, setShowReset] = useState(false);
     const isSelf = u.id === currentUserId;
+    const avatarUrl = resolveAvatarUrl(u.avatar_url);
+    const initial = (u.full_name || u.email || '?')[0].toUpperCase();
 
     const act = async (fn) => {
         try { await fn(); onRefresh(); }
@@ -171,22 +269,39 @@ function UserRow({ u, currentUserId, onRefresh, onError }) {
     return (
         <>
             <tr className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
-                {/* Email */}
+                {/* User cell — clickable, opens admin profile view */}
                 <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                        <div
-                            className="h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-black flex-shrink-0"
-                            style={{ background: 'rgba(0,255,255,0.1)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.2)' }}
-                        >
-                            {(u.email[0] || '?').toUpperCase()}
-                        </div>
-                        <div>
-                            <p className="text-xs text-white font-semibold">{u.email}</p>
+                    <button
+                        type="button"
+                        onClick={() => onOpenProfile?.(u)}
+                        className="flex items-center gap-2.5 text-left w-full rounded hover:bg-white/[0.03] -mx-1 px-1 py-1 transition-colors"
+                        title="View profile"
+                    >
+                        {avatarUrl ? (
+                            <img
+                                src={avatarUrl}
+                                alt=""
+                                className="h-7 w-7 rounded-full object-cover flex-shrink-0"
+                                style={{ border: '1px solid rgba(0,255,255,0.25)' }}
+                            />
+                        ) : (
+                            <div
+                                className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0"
+                                style={{ background: 'rgba(0,255,255,0.1)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.2)' }}
+                            >
+                                {initial}
+                            </div>
+                        )}
+                        <div className="min-w-0">
+                            <p className="text-xs text-white font-semibold truncate">
+                                {u.full_name || u.email.split('@')[0]}
+                            </p>
+                            <p className="text-[10px] text-gray-500 truncate">{u.email}</p>
                             {u.force_password_change && (
                                 <p className="text-[9px] text-orange-400 uppercase tracking-wider">Must change password</p>
                             )}
                         </div>
-                    </div>
+                    </button>
                 </td>
 
                 {/* Role */}
@@ -321,6 +436,7 @@ export default function UserManagementPage() {
     const queryClient = useQueryClient();
     const { user: currentUser } = useAuth();
     const [showCreate, setShowCreate] = useState(false);
+    const [profileUser, setProfileUser] = useState(null);
     const [activeSubTab, setActiveSubTab] = useState('users');
     const [errorMsg, setErrorMsg] = useState('');
 
@@ -447,6 +563,7 @@ export default function UserManagementPage() {
                                         currentUserId={currentUserId}
                                         onRefresh={refresh}
                                         onError={setErrorMsg}
+                                        onOpenProfile={setProfileUser}
                                     />
                                 ))}
                             </tbody>
@@ -469,6 +586,13 @@ export default function UserManagementPage() {
                 <CreateUserModal
                     onClose={() => setShowCreate(false)}
                     onCreated={refresh}
+                />
+            )}
+
+            {profileUser && (
+                <UserProfileModal
+                    user={profileUser}
+                    onClose={() => setProfileUser(null)}
                 />
             )}
         </div>

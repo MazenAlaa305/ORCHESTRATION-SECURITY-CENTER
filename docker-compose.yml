@@ -45,6 +45,7 @@ services:
       - SOAR_ENABLED=${SOAR_ENABLED:-false}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - avatar_uploads:/app/uploads/avatars
     networks:
       - default
       - lab_network
@@ -284,3 +285,4 @@ volumes:
   n8n_data:
   caddy_data:
   caddy_config:
+  avatar_uploads:

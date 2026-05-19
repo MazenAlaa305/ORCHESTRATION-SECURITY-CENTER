@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { backdrop as backdropV, modalBody as modalBodyV } from '../../lib/motion';
 import {
     X, Target as TargetIcon, Zap, Clock, Network, Shield, Radar, Brain,
     Activity, FileText, AlertCircle, Check, ChevronDown, ChevronRight,
@@ -546,8 +548,18 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
     const canAdvance = stepValidity[activeStep];
 
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-fade-in">
-            <div className="glass-card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <motion.div
+            variants={backdropV}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        >
+            <motion.div
+                variants={modalBodyV}
+                onClick={(e) => e.stopPropagation()}
+                className="glass-card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
                     <div className="flex items-center gap-2">
@@ -607,8 +619,8 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     , document.body);
 };
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const severityConfig = {
     critical: { bg: 'rgba(255,0,85,0.12)',    border: 'rgba(255,0,85,0.45)',    color: '#ff0055', pulse: true  },
@@ -15,21 +16,31 @@ const severityConfig = {
 };
 
 export const CyberBadge = ({ label, type = 'info', dot = true, className = '' }) => {
-    const cfg = severityConfig[type?.toLowerCase()] || severityConfig.info;
+    const key = (type || 'info').toLowerCase();
+    const cfg = severityConfig[key] || severityConfig.info;
 
     return (
-        <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest font-outfit border ${cfg.pulse ? 'animate-pulse' : ''} ${className}`}
-            style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}
-        >
-            {dot && (
-                <span
-                    className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ background: cfg.color, boxShadow: `0 0 5px ${cfg.color}` }}
-                />
-            )}
-            {label}
-        </span>
+        <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+                key={`${key}:${label}`}
+                layout
+                initial={{ opacity: 0, scale: 0.85, y: -2 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.85, y: 2 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 24 }}
+                whileHover={{ scale: 1.05 }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest font-outfit border ${cfg.pulse ? 'animate-pulse' : ''} ${className}`}
+                style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}
+            >
+                {dot && (
+                    <span
+                        className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: cfg.color, boxShadow: `0 0 5px ${cfg.color}` }}
+                    />
+                )}
+                {label}
+            </motion.span>
+        </AnimatePresence>
     );
 };
 

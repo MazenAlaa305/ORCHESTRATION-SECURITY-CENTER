@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Activity, Wifi, AlertTriangle, Clock, Server, Terminal } from 'lucide-react';
 import { networkService } from '../../services/api';
 
@@ -99,10 +100,16 @@ const ActivityFeed = ({ refresh, compact = false, isScanning = false }) => {
                         </div>
                     ) : (
                         <>
+                            <AnimatePresence initial={false}>
                             {activity.map((event, index) => (
-                                <div
+                                <motion.div
                                     key={event.id || index}
-                                    className="flex items-start gap-2 mb-1.5 group hover:bg-white/3 rounded px-1 py-0.5 transition-colors"
+                                    layout
+                                    initial={{ opacity: 0, y: 8, backgroundColor: 'rgba(0,255,255,0.1)' }}
+                                    animate={{ opacity: 1, y: 0, backgroundColor: 'rgba(255,255,255,0)' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], backgroundColor: { duration: 1.2 } }}
+                                    className="flex items-start gap-2 mb-1.5 group hover:bg-white/3 rounded px-1 py-0.5"
                                 >
                                     <span className="text-gray-700 shrink-0 tabular-nums w-16">
                                         [{formatRelativeTime(event.timestamp)}]
@@ -116,8 +123,9 @@ const ActivityFeed = ({ refresh, compact = false, isScanning = false }) => {
                                             <span className="text-gray-600 ml-1">— {event.description}</span>
                                         )}
                                     </span>
-                                </div>
+                                </motion.div>
                             ))}
+                            </AnimatePresence>
                             {/* Blinking cursor when scanning */}
                             {isScanning && (
                                 <div className="flex items-center gap-2 mt-2">
@@ -148,9 +156,16 @@ const ActivityFeed = ({ refresh, compact = false, isScanning = false }) => {
                         </div>
                     ) : (
                         <div className="space-y-2 overflow-y-auto custom-scrollbar flex-1">
+                            <AnimatePresence initial={false}>
                             {newDevices.map((device, index) => (
-                                <div
+                                <motion.div
                                     key={device.id || index}
+                                    layout
+                                    initial={{ opacity: 0, x: -16 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 16 }}
+                                    transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+                                    whileHover={{ scale: 1.02 }}
                                     className="p-3 bg-cyber-neon/5 border border-cyber-neon/15 rounded-xl hover:border-cyber-neon/30 transition-colors"
                                 >
                                     <div className="font-mono text-cyber-neon text-xs font-bold">{device.ip_address}</div>
@@ -160,8 +175,9 @@ const ActivityFeed = ({ refresh, compact = false, isScanning = false }) => {
                                             Ports: {device.open_ports}
                                         </div>
                                     )}
-                                </div>
+                                </motion.div>
                             ))}
+                            </AnimatePresence>
                         </div>
                     )}
                 </div>

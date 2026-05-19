@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
     X, Shield, AlertTriangle, CheckCircle, XCircle, ExternalLink,
     Code, Brain, RefreshCw, Loader2, ChevronDown, ChevronUp,
@@ -6,6 +7,7 @@ import {
     Zap, Activity, Lock, Search, ListChecks, ShieldAlert
 } from 'lucide-react';
 import { vulnerabilityService } from '../../services/api';
+import { drawerRight } from '../../lib/motion';
 
 const SEV_CONFIG = {
     critical: { color: 'text-red-400',    bg: 'bg-red-500/15',    border: 'border-red-500/40',    label: 'CRITICAL', glow: 'shadow-[0_0_30px_rgba(239,68,68,0.15)]'    },
@@ -162,11 +164,20 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange, nav }) => {
 
     return (
         <>
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <motion.div key="incident-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-            <div
+        <motion.div
+                key="incident-aside"
                 role="dialog" aria-modal="true" aria-labelledby="incident-drawer-title"
-                className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl flex flex-col bg-cyber-dark border-l ${sev.border} ${sev.glow} animate-slide-in-right overflow-hidden`}
+                variants={drawerRight}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={{ left: 0, right: 0.4 }}
+                onDragEnd={(_, info) => { if (info.offset.x > 120 || info.velocity.x > 600) onClose?.(); }}
+                className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl flex flex-col bg-cyber-dark border-l ${sev.border} ${sev.glow} overflow-hidden`}
             >
                 {/* ── Header ─────────────────────────────────────── */}
                 <div className={`px-6 py-4 border-b border-white/10 ${sev.bg} shrink-0`}>
@@ -492,7 +503,7 @@ const IncidentDetailDrawer = ({ vuln, onClose, onStatusChange, nav }) => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </>
     );
 };

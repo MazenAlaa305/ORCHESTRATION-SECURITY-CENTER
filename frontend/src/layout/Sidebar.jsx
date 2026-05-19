@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 import { loadSavedViews, VIEWS_CHANGED_EVENT } from '../hooks/useSavedViews';
+import { authService, resolveAvatarUrl } from '../services/api';
 
 const buildNavSections = (isAdmin) => [
     {
@@ -31,9 +34,12 @@ const buildNavSections = (isAdmin) => [
 ];
 
 const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
-    <div
+    <motion.div
         onClick={onClick}
-        className={`relative flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-all duration-200 flex-shrink-0 group mb-0.5 ${collapsed ? 'justify-center' : ''}`}
+        whileHover={{ x: collapsed ? 0 : 3 }}
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+        className={`relative flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-colors duration-200 flex-shrink-0 group mb-0.5 ${collapsed ? 'justify-center' : ''}`}
         style={{
             background: active
                 ? 'linear-gradient(135deg, rgba(0,255,255,0.08), rgba(0,255,255,0.04))'
@@ -44,11 +50,13 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
         }}
         title={collapsed ? label : undefined}
     >
-        {/* Active left accent bar */}
+        {/* Active left accent bar — uses layoutId to slide between nav items */}
         {active && !collapsed && (
-            <div
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full"
-                style={{ background: '#00ffff', boxShadow: '0 0 6px #00ffff' }}
+            <motion.div
+                layoutId="sidebar-active-indicator"
+                className="absolute left-0 top-1/2 w-0.5 h-4 rounded-full"
+                style={{ background: '#00ffff', boxShadow: '0 0 6px #00ffff', y: '-50%' }}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             />
         )}
 
@@ -90,7 +98,10 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
 
         {/* Expanded numeric badge — count pill on the right */}
         {!collapsed && typeof badge === 'number' && badge > 0 && (
-            <span
+            <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 480, damping: 18 }}
                 className="text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none"
                 style={{
                     background: 'rgba(255,0,85,0.15)',
@@ -102,19 +113,37 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
                 title={`${badge} SLA overdue`}
             >
                 {badge > 99 ? '99+' : badge}
-            </span>
+            </motion.span>
         )}
-    </div>
+    </motion.div>
 );
 
 const Sidebar = ({ activeTab, onTabChange }) => {
     const { state: realTime } = useRealTime();
     const { user, logout } = useAuth();
     const { canManageUsers } = usePermission();
+    const navigate = useNavigate();
     const NAV_SECTIONS = buildNavSections(canManageUsers);
     const [collapsed, setCollapsed] = useState(() => {
         try { return localStorage.getItem('sidebar-collapsed') === 'true'; } catch { return false; }
     });
+
+    // ── Profile (avatar + display name) — fetched once per session, refreshed
+    // when ProfilePage dispatches the 'profile-updated' event.
+    const [profile, setProfile] = useState(null);
+    useEffect(() => {
+        let alive = true;
+        const load = () => authService.me()
+            .then(res => { if (alive) setProfile(res.data); })
+            .catch(() => {});
+        if (user) load();
+        const onUpdate = () => load();
+        window.addEventListener('profile-updated', onUpdate);
+        return () => { alive = false; window.removeEventListener('profile-updated', onUpdate); };
+    }, [user?.email]);
+
+    const avatarUrl   = resolveAvatarUrl(profile?.avatar_url);
+    const displayName = profile?.full_name || user?.email;
 
     const isScanning = realTime.scanStatus === 'RUNNING';
     const isConnected = realTime.isConnected;
@@ -256,25 +285,41 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 className="px-3 py-3 flex-shrink-0 flex flex-col gap-2"
                 style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}
             >
-                {/* User info row */}
-                {!collapsed && user && (
-                    <div className="flex items-center gap-2 px-1">
-                        <div
-                            className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] font-black"
-                            style={{ background: 'rgba(0,255,255,0.15)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.3)' }}
-                        >
-                            {(user.email || 'A')[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-[8px] font-bold text-white truncate">{user.email}</p>
-                            <p className="text-[7px] text-gray-600 uppercase tracking-widest">{user.role}</p>
-                        </div>
-                    </div>
+                {/* User info row — clickable, opens profile page */}
+                {user && (
+                    <button
+                        type="button"
+                        onClick={() => navigate('/profile')}
+                        className={`flex items-center gap-2 w-full rounded-md transition-colors hover:bg-white/[0.04] ${collapsed ? 'justify-center px-0 py-1' : 'px-1 py-1'}`}
+                        title={collapsed ? `${displayName} — open profile` : 'Open profile'}
+                    >
+                        {avatarUrl ? (
+                            <img
+                                src={avatarUrl}
+                                alt=""
+                                className="h-5 w-5 rounded-full object-cover flex-shrink-0"
+                                style={{ border: '1px solid rgba(0,255,255,0.3)' }}
+                            />
+                        ) : (
+                            <div
+                                className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] font-black"
+                                style={{ background: 'rgba(0,255,255,0.15)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.3)' }}
+                            >
+                                {(displayName || 'A')[0].toUpperCase()}
+                            </div>
+                        )}
+                        {!collapsed && (
+                            <div className="flex-1 min-w-0 text-left">
+                                <p className="text-[8px] font-bold text-white truncate">{displayName}</p>
+                                <p className="text-[7px] text-gray-600 uppercase tracking-widest">{user.role}</p>
+                            </div>
+                        )}
+                    </button>
                 )}
 
                 {/* Logout button */}
                 <button
-                    onClick={logout}
+                    onClick={() => { logout(); navigate('/login', { replace: true }); }}
                     className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
                     style={{ background: 'transparent', border: '1px solid transparent' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,0,85,0.08)'; e.currentTarget.style.border = '1px solid rgba(255,0,85,0.2)'; }}

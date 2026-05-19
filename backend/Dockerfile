@@ -3,10 +3,13 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Install system dependencies
+# `gosu` is used by docker-entrypoint.sh to drop privileges from root → celery
+# after chowning the avatar upload volume on first start.
 RUN apt-get update && apt-get install -y --fix-missing \
     nmap \
     wget \
     unzip \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Nuclei vulnerability scanner (pinned version for reproducible builds)
@@ -30,6 +33,10 @@ COPY . .
 RUN addgroup --system celery && adduser --system --ingroup celery celery \
     && chown -R celery:celery /app
 
-USER celery
+# Make the entrypoint executable. We deliberately do NOT switch to USER celery
+# here — the entrypoint runs as root, chowns the upload volume, then drops to
+# the celery user via gosu.
+RUN chmod +x /app/docker-entrypoint.sh
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--loop", "uvloop"]

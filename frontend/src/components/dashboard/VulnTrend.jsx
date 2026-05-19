@@ -68,6 +68,10 @@ const VulnTrend = ({ data = [] }) => {
                                 fill="url(#vulnGrad)"
                                 dot={{ r: 3, fill: '#00ffff', strokeWidth: 0 }}
                                 activeDot={{ r: 5 }}
+                                isAnimationActive
+                                animationDuration={900}
+                                animationEasing="ease-out"
+                                isUpdateAnimationActive={false}
                             />
                         </AreaChart>
                     </ResponsiveContainer>

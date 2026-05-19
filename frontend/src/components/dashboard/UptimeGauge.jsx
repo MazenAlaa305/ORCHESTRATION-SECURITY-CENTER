@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import useCountUp from '../../hooks/useCountUp';
 
 const getColor = (v) => {
     if (v > 80) return '#00ff88';
@@ -33,6 +35,8 @@ const UptimeGauge = ({ value = 100 }) => {
         prevRef.current = value;
     }, [value]);
 
+    const animatedValue = useCountUp(Math.round(value), { duration: 900 });
+
     return (
         <div className="glass-card p-4 flex flex-col items-center justify-center relative overflow-hidden">
             <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-3 w-full text-left">
@@ -55,18 +59,20 @@ const UptimeGauge = ({ value = 100 }) => {
                         cx={radius}
                         cy={radius}
                     />
-                    {/* Progress arc */}
-                    <circle
+                    {/* Progress arc — animated sweep on mount and value change */}
+                    <motion.circle
                         stroke={color}
                         fill="transparent"
                         strokeDasharray={`${circumference} ${circumference}`}
-                        strokeDashoffset={dashOffset}
+                        initial={{ strokeDashoffset: circumference }}
+                        animate={{ strokeDashoffset: dashOffset }}
+                        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
                         strokeLinecap="round"
                         strokeWidth={strokeWidth}
                         r={normalizedR}
                         cx={radius}
                         cy={radius}
-                        style={{ transition: 'stroke-dashoffset 0.9s ease-out, stroke 0.5s ease' }}
+                        style={{ transition: 'stroke 0.5s ease' }}
                     />
                 </svg>
 
@@ -75,8 +81,8 @@ const UptimeGauge = ({ value = 100 }) => {
                     className="absolute inset-0 flex flex-col items-center justify-center"
                     style={{ transform: 'rotate(0deg)' }}
                 >
-                    <span className="text-xl font-black text-white leading-none">
-                        {Math.round(value)}%
+                    <span className="text-xl font-black text-white leading-none tabular-nums">
+                        {animatedValue}%
                     </span>
                     {trend !== 0 && (
                         <span

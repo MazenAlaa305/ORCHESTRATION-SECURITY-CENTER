@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import LiveConsole from '../components/dashboard/LiveConsole';
 import ShortcutCheatsheet from '../components/ShortcutCheatsheet';
@@ -21,41 +22,57 @@ const EnvSwitcher = () => {
     const { activeEnv, setActiveEnv } = useEnvStore();
     return (
         <div
-            className="flex items-center gap-0.5 rounded-lg p-0.5"
+            className="flex items-center gap-0.5 rounded-lg p-0.5 relative"
             style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
             title="Scope filter — restricts Targets view by environment"
         >
-            {ENVS.map(e => (
-                <button
-                    key={e.id}
-                    onClick={() => setActiveEnv(e.id)}
-                    className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${
-                        activeEnv === e.id
-                            ? 'text-cyan-300'
-                            : 'text-gray-600 hover:text-gray-300'
-                    }`}
-                    style={activeEnv === e.id ? {
-                        background: 'rgba(0,255,255,0.1)',
-                        border: '1px solid rgba(0,255,255,0.2)',
-                    } : undefined}
-                >
-                    {e.label}
-                </button>
-            ))}
+            {ENVS.map(e => {
+                const isActive = activeEnv === e.id;
+                return (
+                    <motion.button
+                        key={e.id}
+                        onClick={() => setActiveEnv(e.id)}
+                        whileHover={{ y: -1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`relative px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors ${
+                            isActive ? 'text-cyan-300' : 'text-gray-600 hover:text-gray-300'
+                        }`}
+                    >
+                        {isActive && (
+                            <motion.span
+                                layoutId="env-switcher-active"
+                                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                                className="absolute inset-0 rounded-md"
+                                style={{ background: 'rgba(0,255,255,0.1)', border: '1px solid rgba(0,255,255,0.2)' }}
+                            />
+                        )}
+                        <span className="relative z-10">{e.label}</span>
+                    </motion.button>
+                );
+            })}
         </div>
     );
 };
 
 // ── Health pill ───────────────────────────────────────────────────────────────
 const HealthPill = ({ label, healthy }) => (
-    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${
-        healthy
-            ? 'bg-green-500/10 border-green-500/25 text-green-400'
-            : 'bg-red-500/10  border-red-500/25  text-red-400'
-    }`}>
-        <span className={`h-1.5 w-1.5 rounded-full ${healthy ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+    <motion.div
+        layout
+        animate={{
+            backgroundColor: healthy ? 'rgba(34,197,94,0.1)'  : 'rgba(239,68,68,0.1)',
+            borderColor:     healthy ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)',
+            color:           healthy ? '#4ade80' : '#f87171',
+        }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wider"
+    >
+        <motion.span
+            animate={{ backgroundColor: healthy ? '#4ade80' : '#f87171' }}
+            transition={{ duration: 0.4 }}
+            className={`h-1.5 w-1.5 rounded-full ${healthy ? 'animate-pulse' : ''}`}
+        />
         {label}
-    </div>
+    </motion.div>
 );
 
 // ── Top command bar ───────────────────────────────────────────────────────────

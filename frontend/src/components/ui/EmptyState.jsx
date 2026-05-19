@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 /**
  * Reusable "no data" placeholder.
@@ -16,9 +17,12 @@ export default function EmptyState({
     action = null,
 }) {
     return (
-        <div
+        <motion.div
             role="status"
             aria-live="polite"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -29,14 +33,41 @@ export default function EmptyState({
                 color: '#7e8fa3',
             }}
         >
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>{icon}</div>
-            <div style={{ color: '#cfe1f2', fontWeight: 600 }}>{title}</div>
+            <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}
+            >
+                {icon}
+            </motion.div>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.15, duration: 0.3 }}
+                style={{ color: '#cfe1f2', fontWeight: 600 }}
+            >
+                {title}
+            </motion.div>
             {message && (
-                <div style={{ marginTop: '0.25rem', fontSize: 13, maxWidth: 360 }}>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.22, duration: 0.3 }}
+                    style={{ marginTop: '0.25rem', fontSize: 13, maxWidth: 360 }}
+                >
                     {message}
-                </div>
+                </motion.div>
             )}
-            {action && <div style={{ marginTop: '1rem' }}>{action}</div>}
-        </div>
+            {action && (
+                <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.3 }}
+                    style={{ marginTop: '1rem' }}
+                >
+                    {action}
+                </motion.div>
+            )}
+        </motion.div>
     );
 }

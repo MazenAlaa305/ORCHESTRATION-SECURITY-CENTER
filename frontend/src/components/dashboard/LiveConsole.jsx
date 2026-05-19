@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { TerminalSquare, X, Minimize2, Maximize2, Trash2, ChevronsDown, Copy, Check } from 'lucide-react';
 
 const LOG_COLORS = {
@@ -92,10 +93,17 @@ const LiveConsole = () => {
     return (
         <>
             {/* Toggle Button — always visible at bottom right */}
+            <AnimatePresence>
             {!isOpen && (
-                <button
+                <motion.button
+                    initial={{ y: 40, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 40, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.96 }}
                     onClick={() => setIsOpen(true)}
-                    className="fixed bottom-0 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-black/90 border border-cyber-accent/30 text-cyber-accent text-[10px] font-black uppercase tracking-widest rounded-t-xl hover:bg-cyber-accent/10 hover:border-cyber-accent/60 transition-all group backdrop-blur-xl shadow-neon"
+                    className="fixed bottom-0 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-black/90 border border-cyber-accent/30 text-cyber-accent text-[10px] font-black uppercase tracking-widest rounded-t-xl hover:bg-cyber-accent/10 hover:border-cyber-accent/60 transition-colors group backdrop-blur-xl shadow-neon"
                     id="live-console-toggle"
                 >
                     <TerminalSquare className="h-3.5 w-3.5" />
@@ -104,13 +112,19 @@ const LiveConsole = () => {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-success opacity-75" />
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyber-success" />
                     </span>
-                </button>
+                </motion.button>
             )}
+            </AnimatePresence>
 
             {/* Drawer Panel */}
+            <AnimatePresence>
             {isOpen && (
-                <div
-                    className={`fixed bottom-0 left-0 right-0 z-50 ${drawerHeight} flex flex-col bg-black/95 backdrop-blur-xl border-t border-cyber-accent/20 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] transition-all duration-300`}
+                <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+                    className={`fixed bottom-0 left-0 right-0 z-50 ${drawerHeight} flex flex-col bg-black/95 backdrop-blur-xl border-t border-cyber-accent/20 shadow-[0_-10px_60px_rgba(0,0,0,0.8)]`}
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 >
                     {/* Console Header */}
@@ -170,10 +184,16 @@ const LiveConsole = () => {
                         )}
 
                         {logs.map((line, i) => (
-                            <div key={i} className={`text-[11px] leading-6 ${getLogClass(line)}`}>
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.18, ease: 'easeOut' }}
+                                className={`text-[11px] leading-6 ${getLogClass(line)}`}
+                            >
                                 <span className="text-gray-700 select-none mr-2">{String(i + 1).padStart(3, ' ')} │</span>
                                 <span>{line}</span>
-                            </div>
+                            </motion.div>
                         ))}
                         <div ref={logsEndRef} />
                     </div>
@@ -194,8 +214,9 @@ const LiveConsole = () => {
                             <ChevronsDown className="h-3 w-3" />Scroll to bottom
                         </button>
                     </div>
-                </div>
+                </motion.div>
             )}
+            </AnimatePresence>
         </>
     );
 };

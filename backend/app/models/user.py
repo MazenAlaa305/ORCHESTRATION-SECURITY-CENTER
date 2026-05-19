@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, String, Text
 from app.core.database import Base
 
 
@@ -28,3 +28,9 @@ class User(Base):
     # Force password change on first login (set True for seeded admin)
     force_password_change = Column(Boolean, default=False, nullable=False)
     disabled = Column(Boolean, default=False, nullable=False)
+
+    # ── Profile fields (self-service editable via PATCH /auth/me) ────────────
+    full_name = Column(String(120), nullable=True)
+    bio = Column(Text, nullable=True)
+    phone = Column(String(40), nullable=True)
+    avatar_url = Column(String(512), nullable=True)
