@@ -31,9 +31,9 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 |---|---|---|
 | Leadership / DevOps | Omar Kapil | — |
 | Backend & AI Core | Reem Amin | Yousef Abdel Hady, Mohamed Shaban |
-| Frontend & Visualization | Marize Ehap | Omnia Helmy, Rahma Ebrahem |
+| Frontend & Visualization | Omnia Helmy, Rahma Ebrahem |
 | Security & Scanning | Shahd Paher | Mariz Ehap |
-| QA & Documentation | (shared) | Yosef Ali, Mazin Alla, Omar Tarek |
+| QA & Documentation | (shared) | Yosef Ali, Mazin Alaa, Omar Tarek |
 
 ---
 
@@ -224,17 +224,17 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 5. Marize Ehap — Frontend Lead
+## 5. AI — Frontend Lead
 
 **Role summary.** Owns React app architecture, routing, the API client, auth context, and the contract between frontend and backend.
 
 **Files & folders owned**
 
-- [frontend/src/App.jsx](frontend/src/App.jsx)
-- [frontend/src/main.jsx](frontend/src/main.jsx)
+- **[frontend/src/App.jsx](frontend/src/App.jsx)**
+- **[frontend/src/main.jsx](frontend/src/main.jsx)**
 - [frontend/src/context/AuthContext.jsx](frontend/src/context/AuthContext.jsx)
-- [frontend/src/context/RealTimeContext.jsx](frontend/src/context/RealTimeContext.jsx)
-- [frontend/src/services/api.js](frontend/src/services/api.js)
+- **[frontend/src/context/RealTimeContext.jsx](frontend/src/context/RealTimeContext.jsx)**
+- **[frontend/src/services/api.js](frontend/src/services/api.js)**
 - [frontend/src/layout/](frontend/src/layout/)
 - [frontend/src/pages/Dashboard.jsx](frontend/src/pages/Dashboard.jsx)
 - [frontend/src/components/LoginPage.jsx](frontend/src/components/LoginPage.jsx)
@@ -489,7 +489,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 11. Mazin Alla — QA: E2E & Frontend
+## 11. Mazin Alaa — QA: E2E & Frontend
 
 **Role summary.** Owns end-to-end flows: real browser automation against the full stack, plus frontend unit/component tests.
 
