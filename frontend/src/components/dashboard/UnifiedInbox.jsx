@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ShieldOff, X, ShieldAlert, Globe, Lock, Activity, Terminal, AlertTriangle, Info } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShieldOff, X, ShieldAlert, Globe, Lock, Activity, Terminal, AlertTriangle, Info, Search } from 'lucide-react';
 import api from '../../services/api';
 import { useConfig } from '../../context/ConfigContext';
 
@@ -17,10 +17,45 @@ const formatTs = (ts) => {
     return isNaN(d) ? ts : d.toLocaleString();
 };
 
+// Wazuh rule level → severity band (official Wazuh scale, 0–15).
+//   0–3   informational / low
+//   4–7   medium
+//   8–11  high
+//   12–15 critical
+// The previous mapping classified levels 8–9 as MEDIUM and never produced
+// a CRITICAL band, so genuine high/critical alerts were rendered as medium.
 const getSeverity = (level) => {
-    if (level >= 10) return { label: 'HIGH',   color: 'red',    hex: '#ef4444' };
-    if (level >= 5)  return { label: 'MEDIUM', color: 'orange', hex: '#f97316' };
-    return                  { label: 'LOW',    color: 'blue',   hex: '#3b82f6' };
+    const n = Number(level) || 0;
+    if (n >= 12) return { label: 'CRITICAL', color: 'rose',   hex: '#e11d48' };
+    if (n >= 8)  return { label: 'HIGH',     color: 'red',    hex: '#ef4444' };
+    if (n >= 4)  return { label: 'MEDIUM',   color: 'orange', hex: '#f97316' };
+    return            { label: 'LOW',      color: 'blue',   hex: '#3b82f6' };
+};
+
+// Flatten an alert into a single lowercase string we can search against.
+const buildSearchHaystack = (a) => {
+    const parts = [
+        a?.rule?.description,
+        a?.rule?.id,
+        a?.rule?.level,
+        ...(a?.rule?.groups || []),
+        ...(a?.rule?.mitre?.id || []),
+        ...(a?.rule?.mitre?.tactic || []),
+        ...(a?.rule?.mitre?.technique || []),
+        a?.agent?.name,
+        a?.agent?.id,
+        a?.agent?.ip,
+        a?.manager?.name,
+        a?.location,
+        a?.data?.srcip,
+        a?.data?.srcuser,
+        a?.data?.dstip,
+        a?.data?.dstuser,
+        a?.full_log,
+        a?.['@timestamp'],
+        getSeverity(a?.rule?.level).label,
+    ];
+    return parts.filter(Boolean).join(' ').toLowerCase();
 };
 
 // Pick an icon based on rule groups / description keywords
@@ -56,7 +91,24 @@ const UnifiedInbox = () => {
     const [lastUpdated, setLastUpdated] = useState(null);
     const [newCount, setNewCount]     = useState(0);
     const [sevFilter, setSevFilter]   = useState('ALL');
+    const [query, setQuery]           = useState('');
     const knownKeysRef = useRef(new Set());
+    const searchInputRef = useRef(null);
+
+    // Global keyboard shortcut: "/" or Ctrl/Cmd+K focuses the SIEM search box.
+    useEffect(() => {
+        const onKey = (e) => {
+            const tag = (e.target?.tagName || '').toLowerCase();
+            const typing = tag === 'input' || tag === 'textarea' || e.target?.isContentEditable;
+            if ((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+                searchInputRef.current?.select();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
 
     useEffect(() => {
         if (!configLoaded) return;
@@ -147,15 +199,21 @@ const UnifiedInbox = () => {
         return acc;
     }, {});
 
-    const filtered = sevFilter === 'ALL'
+    // Apply severity tab filter first, then free-text search.
+    const q = query.trim().toLowerCase();
+    const bySev = sevFilter === 'ALL'
         ? alerts
         : alerts.filter((a) => getSeverity(a.rule?.level || 0).label === sevFilter);
+    const filtered = q
+        ? bySev.filter((a) => buildSearchHaystack(a).includes(q))
+        : bySev;
 
     const SEV_TABS = [
-        { key: 'ALL',    label: 'All',    countKey: null },
-        { key: 'HIGH',   label: 'High',   countKey: 'HIGH',   dot: 'bg-red-500'    },
-        { key: 'MEDIUM', label: 'Medium', countKey: 'MEDIUM', dot: 'bg-orange-500' },
-        { key: 'LOW',    label: 'Low',    countKey: 'LOW',    dot: 'bg-blue-500'   },
+        { key: 'ALL',      label: 'All',      countKey: null },
+        { key: 'CRITICAL', label: 'Critical', countKey: 'CRITICAL', dot: 'bg-rose-600'   },
+        { key: 'HIGH',     label: 'High',     countKey: 'HIGH',     dot: 'bg-red-500'    },
+        { key: 'MEDIUM',   label: 'Medium',   countKey: 'MEDIUM',   dot: 'bg-orange-500' },
+        { key: 'LOW',      label: 'Low',      countKey: 'LOW',      dot: 'bg-blue-500'   },
     ];
 
     return (
@@ -221,6 +279,41 @@ const UnifiedInbox = () => {
                 })}
             </div>
 
+            {/* ── Search bar ── */}
+            <div className="px-5 pt-2 pb-2">
+                <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search alerts — rule, description, agent, IP, MITRE, full log…"
+                        className="w-full bg-[#0e0e18] border border-gray-800 focus:border-indigo-500/60 focus:outline-none rounded-lg pl-9 pr-20 py-2 text-xs text-gray-200 placeholder-gray-600 transition-colors"
+                        aria-label="Search SIEM alerts"
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        {query && (
+                            <button
+                                onClick={() => { setQuery(''); searchInputRef.current?.focus(); }}
+                                className="text-[10px] px-1.5 py-0.5 rounded text-gray-400 hover:text-white hover:bg-gray-800"
+                                aria-label="Clear search"
+                            >
+                                Clear
+                            </button>
+                        )}
+                        <kbd className="hidden sm:inline-flex items-center text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-gray-700 font-mono">
+                            /
+                        </kbd>
+                    </div>
+                </div>
+                {q && (
+                    <div className="text-[10px] text-gray-500 mt-1.5 px-1">
+                        {filtered.length} match{filtered.length === 1 ? '' : 'es'} for “{query}”
+                    </div>
+                )}
+            </div>
+
             {/* ── Alert list ── */}
             <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2.5 custom-scrollbar">
                 {filtered.length === 0 ? (
@@ -229,7 +322,13 @@ const UnifiedInbox = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p className="text-sm">{sevFilter === 'ALL' ? 'No active alerts. All quiet.' : `No ${sevFilter} alerts.`}</p>
+                        <p className="text-sm">
+                            {q
+                                ? `No alerts match “${query}”.`
+                                : sevFilter === 'ALL'
+                                    ? 'No active alerts. All quiet.'
+                                    : `No ${sevFilter} alerts.`}
+                        </p>
                     </div>
                 ) : (
                     filtered.map((alert, idx) => {
@@ -237,13 +336,27 @@ const UnifiedInbox = () => {
                         const sev   = getSeverity(level);
                         const Icon  = getEventIcon(alert);
 
-                        const barColor   = sev.color === 'red' ? 'bg-red-500' : sev.color === 'orange' ? 'bg-orange-500' : 'bg-blue-500';
-                        const badgeCls   = sev.color === 'red'
-                            ? 'bg-red-500/10 text-red-400 border-red-500/25'
-                            : sev.color === 'orange'
-                                ? 'bg-orange-500/10 text-orange-400 border-orange-500/25'
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/25';
-                        const iconColor  = sev.color === 'red' ? 'text-red-400' : sev.color === 'orange' ? 'text-orange-400' : 'text-blue-400';
+                        const barColor = sev.color === 'rose'
+                            ? 'bg-rose-600'
+                            : sev.color === 'red'
+                                ? 'bg-red-500'
+                                : sev.color === 'orange'
+                                    ? 'bg-orange-500'
+                                    : 'bg-blue-500';
+                        const badgeCls = sev.color === 'rose'
+                            ? 'bg-rose-600/10 text-rose-400 border-rose-600/30'
+                            : sev.color === 'red'
+                                ? 'bg-red-500/10 text-red-400 border-red-500/25'
+                                : sev.color === 'orange'
+                                    ? 'bg-orange-500/10 text-orange-400 border-orange-500/25'
+                                    : 'bg-blue-500/10 text-blue-400 border-blue-500/25';
+                        const iconColor = sev.color === 'rose'
+                            ? 'text-rose-400'
+                            : sev.color === 'red'
+                                ? 'text-red-400'
+                                : sev.color === 'orange'
+                                    ? 'text-orange-400'
+                                    : 'text-blue-400';
 
                         return (
                             <div key={alertKey(alert) || idx}
@@ -336,11 +449,13 @@ const AlertDetailModal = ({ alert, onClose }) => {
     const sev      = getSeverity(level);
     const Icon     = getEventIcon(alert);
 
-    const sevCls = sev.color === 'red'
-        ? 'bg-red-500/15 text-red-400 border-red-500/30'
-        : sev.color === 'orange'
-            ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-            : 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+    const sevCls = sev.color === 'rose'
+        ? 'bg-rose-600/15 text-rose-400 border-rose-600/35'
+        : sev.color === 'red'
+            ? 'bg-red-500/15 text-red-400 border-red-500/30'
+            : sev.color === 'orange'
+                ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                : 'bg-blue-500/15 text-blue-400 border-blue-500/30';
 
     const handleCopy = () => {
         try {

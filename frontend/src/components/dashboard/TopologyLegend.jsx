@@ -1,8 +1,9 @@
 const LEGEND_ITEMS = [
-    { color: '#00ffff', label: 'Gateway Hub',        pulse: false },
-    { color: '#00ff88', label: 'Operational',        pulse: false },
-    { color: '#ffaa00', label: 'Warning',            pulse: false },
-    { color: '#ff0055', label: 'Critical / Infected',pulse: true  },
+    { color: '#00ffff', label: 'Gateway Hub',         pulse: false },
+    { color: '#00ff88', label: 'Secure',              pulse: false, badge: true },
+    { color: '#00ff88', label: 'Operational',         pulse: false },
+    { color: '#ffaa00', label: 'Warning',             pulse: false },
+    { color: '#ff0055', label: 'Critical / Infected', pulse: true  },
 ];
 
 const TopologyLegend = ({ className = '' }) => (
@@ -34,16 +35,31 @@ const TopologyLegend = ({ className = '' }) => (
 
         {/* Items */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {LEGEND_ITEMS.map(({ color, label }) => (
+            {LEGEND_ITEMS.map(({ color, label, badge }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    <span
-                        style={{
-                            width: 10, height: 10, borderRadius: 3, flexShrink: 0,
-                            background: color,
-                            boxShadow: `0 0 8px ${color}aa`,
-                            display: 'inline-block',
-                        }}
-                    />
+                    {badge ? (
+                        <span
+                            style={{
+                                width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
+                                background: color,
+                                boxShadow: `0 0 8px ${color}aa`,
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                color: '#022e1a', fontSize: 8, fontWeight: 900, lineHeight: 1,
+                            }}
+                            aria-label="Secure device badge"
+                        >
+                            ✓
+                        </span>
+                    ) : (
+                        <span
+                            style={{
+                                width: 10, height: 10, borderRadius: 3, flexShrink: 0,
+                                background: color,
+                                boxShadow: `0 0 8px ${color}aa`,
+                                display: 'inline-block',
+                            }}
+                        />
+                    )}
                     <span style={{ fontSize: 10, fontWeight: 700, color: '#d0dae8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {label}
                     </span>

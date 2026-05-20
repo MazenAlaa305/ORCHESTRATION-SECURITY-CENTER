@@ -20,6 +20,81 @@ const getNodeColor = (node) => {
     return '#00ff88';
 };
 
+// ─── A device is "secure" when it has been scanned, has no vulns and no
+// elevated risk. We don't mark unscanned devices as secure (that would be
+// a false reassurance) — only those with explicit scan evidence.
+const isSecureDevice = (node) => {
+    if (!node) return false;
+    if (node.id === 'hub' || node.isSubnet) return false;
+    const risk      = Number(node.riskScore) || 0;
+    const vulns     = Number(node.vulnCount) || 0;
+    const crit      = (node.criticality || '').toUpperCase();
+    const hasScan   = node.scanned === true
+        || node.details?.last_scan_at != null
+        || node.details?.last_scanned_at != null
+        || node.details?.lastScanAt != null
+        || (node.details?.services?.length > 0)
+        || node.details?.os_name != null
+        || node.details?.os_family != null;
+    if (!hasScan)        return false;
+    if (vulns > 0)       return false;
+    if (risk >= 20)      return false;
+    if (crit === 'CRITICAL' || crit === 'HIGH' || crit === 'MEDIUM') return false;
+    return true;
+};
+
+// ─── OS family inference from os_name string (used when backend
+// did not populate os_family). Kept conservative: only return a family
+// if a well-known token is matched, otherwise null so UI shows "Unknown".
+const inferOsFamily = (osName) => {
+    const s = (osName || '').toLowerCase();
+    if (!s) return null;
+    if (/(ubuntu|debian|centos|rhel|red\s*hat|fedora|arch|alpine|kali|suse|gentoo|amazon\s*linux|oracle\s*linux|linux)/.test(s)) return 'Linux';
+    if (/(windows|win10|win11|win7|win8|server\s*200|server\s*201|server\s*202)/.test(s))                                  return 'Windows';
+    if (/(macos|mac\s*os|darwin|osx|os\s*x)/.test(s))                                                                       return 'macOS';
+    if (/(ios|iphone|ipad)/.test(s))                                                                                         return 'iOS';
+    if (/(android)/.test(s))                                                                                                 return 'Android';
+    if (/(freebsd|openbsd|netbsd|bsd)/.test(s))                                                                              return 'BSD';
+    if (/(cisco|ios-xe|nx-os|junos|mikrotik|routeros|pfsense|opnsense)/.test(s))                                             return 'Network OS';
+    if (/(esxi|vmware|hyper-?v|xen)/.test(s))                                                                                return 'Hypervisor';
+    return null;
+};
+
+// ─── Format uptime: accepts seconds, ms-since-epoch boot ts, or
+// pre-formatted strings. Returns a short human-readable label or null
+// when we genuinely don't know.
+const formatUptime = (raw) => {
+    if (raw == null || raw === '') return null;
+    if (typeof raw === 'string' && !/^\d+(\.\d+)?$/.test(raw.trim())) {
+        return raw; // already formatted ("3d 4h", "up 5 days, ...")
+    }
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    // Heuristic: huge values are ms-since-epoch boot times; convert to seconds-since-boot.
+    let secs = n;
+    if (n > 1e10) secs = Math.max(0, Math.floor((Date.now() - n) / 1000));
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+};
+
+// ─── Normalize an asset/device into the topology node shape, filling in
+// derived OS family and uptime so the detail panel never shows blanks
+// just because the backend was sparse.
+const normalizeDeviceDetails = (raw = {}) => {
+    const out = { ...raw };
+    if (!out.os_family) {
+        const inferred = inferOsFamily(out.os_name);
+        if (inferred) out.os_family = inferred;
+    }
+    const fmtUp = formatUptime(out.uptime ?? out.uptime_seconds ?? out.boot_time);
+    if (fmtUp) out.uptime = fmtUp;
+    return out;
+};
+
 // ─── Canvas device icon renderer ──────────────────────────
 const drawDeviceIcon = (ctx, group, cx, cy, r, color) => {
     const s = r * 0.52;
@@ -312,22 +387,22 @@ const buildTreeGraph = (zoneMap) => {
 const DEMO_GRAPH = (() => {
     const demoZoneMap = {
         DMZ:  { meta: { name: 'DMZ',  cidr: '10.10.10.0/24', icon: '🌐' }, devices: [
-            { id:'d1', name:'WEB-01',   ip:'10.10.10.10', group:'server',   riskScore:88, criticality:'CRITICAL', vulnCount:7, infoCount:0, val:16 },
-            { id:'d2', name:'API-GW',   ip:'10.10.10.20', group:'router',   riskScore:55, criticality:'MEDIUM',   vulnCount:3, infoCount:0, val:16 },
-            { id:'d3', name:'DNS-SVR',  ip:'10.10.10.30', group:'router',   riskScore:45, criticality:'MEDIUM',   vulnCount:2, infoCount:0, val:16 },
+            { id:'d1', name:'WEB-01',   ip:'10.10.10.10', group:'server',   riskScore:88, criticality:'CRITICAL', vulnCount:7, infoCount:0, val:16, scanned:true },
+            { id:'d2', name:'API-GW',   ip:'10.10.10.20', group:'router',   riskScore:55, criticality:'MEDIUM',   vulnCount:3, infoCount:0, val:16, scanned:true },
+            { id:'d3', name:'DNS-SVR',  ip:'10.10.10.30', group:'router',   riskScore:45, criticality:'MEDIUM',   vulnCount:2, infoCount:0, val:16, scanned:true },
         ]},
         CORP: { meta: { name: 'CORP', cidr: '10.10.20.0/24', icon: '🏢' }, devices: [
-            { id:'d4', name:'FILE-SVR', ip:'10.10.20.10', group:'server',   riskScore:72, criticality:'HIGH',     vulnCount:4, infoCount:0, val:16 },
-            { id:'d5', name:'MAIL-SVR', ip:'10.10.20.20', group:'server',   riskScore:62, criticality:'HIGH',     vulnCount:3, infoCount:0, val:16 },
-            { id:'d6', name:'WS-01',    ip:'10.10.20.40', group:'desktop',  riskScore:35, criticality:'MEDIUM',   vulnCount:1, infoCount:0, val:16 },
+            { id:'d4', name:'FILE-SVR', ip:'10.10.20.10', group:'server',   riskScore:72, criticality:'HIGH',     vulnCount:4, infoCount:0, val:16, scanned:true },
+            { id:'d5', name:'MAIL-SVR', ip:'10.10.20.20', group:'server',   riskScore:62, criticality:'HIGH',     vulnCount:3, infoCount:0, val:16, scanned:true },
+            { id:'d6', name:'WS-01',    ip:'10.10.20.40', group:'desktop',  riskScore:35, criticality:'MEDIUM',   vulnCount:1, infoCount:0, val:16, scanned:true },
         ]},
         DATA: { meta: { name: 'DATA', cidr: '10.10.30.0/24', icon: '🗄' }, devices: [
-            { id:'d7', name:'DB-01',    ip:'10.10.30.10', group:'database', riskScore:88, criticality:'CRITICAL', vulnCount:6, infoCount:0, val:16 },
-            { id:'d8', name:'REDIS',    ip:'10.10.30.20', group:'database', riskScore:80, criticality:'CRITICAL', vulnCount:5, infoCount:0, val:16 },
+            { id:'d7', name:'DB-01',    ip:'10.10.30.10', group:'database', riskScore:88, criticality:'CRITICAL', vulnCount:6, infoCount:0, val:16, scanned:true },
+            { id:'d8', name:'REDIS',    ip:'10.10.30.20', group:'database', riskScore:80, criticality:'CRITICAL', vulnCount:5, infoCount:0, val:16, scanned:true },
         ]},
         MGMT: { meta: { name: 'MGMT', cidr: '10.10.40.0/24', icon: '📡' }, devices: [
-            { id:'d9',  name:'TRAF-GEN', ip:'10.10.40.10', group:'server', riskScore:10, criticality:'LOW', vulnCount:0, infoCount:0, val:16 },
-            { id:'d10', name:'LOG-SHIP', ip:'10.10.40.20', group:'server', riskScore:10, criticality:'LOW', vulnCount:0, infoCount:0, val:16 },
+            { id:'d9',  name:'TRAF-GEN', ip:'10.10.40.10', group:'server', riskScore:10, criticality:'LOW', vulnCount:0, infoCount:0, val:16, scanned:true },
+            { id:'d10', name:'LOG-SHIP', ip:'10.10.40.20', group:'server', riskScore:10, criticality:'LOW', vulnCount:0, infoCount:0, val:16, scanned:true },
         ]},
     };
     return buildTreeGraph(demoZoneMap);
@@ -528,6 +603,39 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             const zid        = t.zone?.toUpperCase() || zone.id;
 
             if (!zoneMap[zid]) zoneMap[zid] = { meta: { name: zid, cidr: zone.cidr, icon: zone.icon || '🔷' }, devices: [] };
+            const labDetails = normalizeDeviceDetails({
+                ip_address:  t.hostname,
+                hostname:    t.name,
+                device_type: group,
+                os_name:     t.os || null,
+                os_family:   t.os_family || null,
+                uptime:      t.uptime || t.uptime_seconds || null,
+                status:      'active',
+                open_ports:  String(t.port),
+                risk_score:  riskScore,
+                criticality,
+                zone:        zid,
+                description: t.description,
+                services: t.port ? [{
+                    port:         t.port,
+                    protocol:     'tcp',
+                    state:        'open',
+                    service_name: t.protocol || 'unknown',
+                    product:      t.name || '',
+                    version:      '',
+                    cpe:          '',
+                }] : [],
+                vulnerabilities: (t.vulns || []).map((v, i) => ({
+                    id:          String(i),
+                    title:       v.name || v.title || v.type || 'Vulnerability',
+                    severity:    (v.severity || 'medium').toLowerCase(),
+                    type:        v.type || '',
+                    url:         v.url  || '',
+                    cve_id:      v.cve_id || '',
+                    description: v.description || v.detail || '',
+                    status:      'open',
+                })),
+            });
             zoneMap[zid].devices.push({
                 id:          `lab_${t.container}`,
                 name:        t.name || t.hostname,
@@ -538,37 +646,8 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 val:         16,
                 riskScore,
                 criticality,
-                details: {
-                    ip_address:  t.hostname,
-                    hostname:    t.name,
-                    device_type: group,
-                    os_name:     t.os || null,
-                    status:      'active',
-                    open_ports:  String(t.port),
-                    risk_score:  riskScore,
-                    criticality,
-                    zone:        zid,
-                    description: t.description,
-                    services: t.port ? [{
-                        port:         t.port,
-                        protocol:     'tcp',
-                        state:        'open',
-                        service_name: t.protocol || 'unknown',
-                        product:      t.name || '',
-                        version:      '',
-                        cpe:          '',
-                    }] : [],
-                    vulnerabilities: (t.vulns || []).map((v, i) => ({
-                        id:          String(i),
-                        title:       v.name || v.title || v.type || 'Vulnerability',
-                        severity:    (v.severity || 'medium').toLowerCase(),
-                        type:        v.type || '',
-                        url:         v.url  || '',
-                        cve_id:      v.cve_id || '',
-                        description: v.description || v.detail || '',
-                        status:      'open',
-                    })),
-                },
+                scanned:     true,
+                details:     labDetails,
             });
         });
         setGraphData(buildTreeGraph(zoneMap));
@@ -580,6 +659,15 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         assets.forEach((asset) => {
             const zone = inferZone(asset.ip_address);
             if (!zoneMap[zone.id]) zoneMap[zone.id] = { meta: { name: zone.name, cidr: zone.cidr, icon: zone.icon || '🔷' }, devices: [] };
+            const normalized = normalizeDeviceDetails(asset);
+            const scanned = (
+                asset.last_scan_at != null ||
+                asset.last_scanned_at != null ||
+                asset.scanned === true ||
+                (Array.isArray(asset.services) && asset.services.length > 0) ||
+                asset.os_name != null ||
+                asset.os_family != null
+            );
             zoneMap[zone.id].devices.push({
                 id:          asset.id || asset.ip_address,
                 name:        asset.hostname || asset.ip_address,
@@ -590,7 +678,8 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 val:         10,
                 riskScore:   asset.risk_score  || 0,
                 criticality: asset.criticality || 'MEDIUM',
-                details:     asset,
+                scanned,
+                details:     normalized,
             });
         });
         setGraphData(buildTreeGraph(zoneMap));
@@ -628,7 +717,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 const { data: detail } = await networkService.getAssetDetail(node.id);
                 setSelectedNode(prev =>
                     prev?.id === node.id
-                        ? { ...prev, details: { ...(prev.details || {}), ...detail }, vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0 }
+                        ? { ...prev, details: normalizeDeviceDetails({ ...(prev.details || {}), ...detail }), vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0, scanned: true }
                         : prev
                 );
             } catch (_) {}
@@ -760,6 +849,51 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             ctx.globalAlpha = isRisk ? 1 : 0.82;
             drawDeviceIcon(ctx, node.group || 'desktop', node.x, node.y, half, color);
             ctx.globalAlpha = 1;
+
+            // ── Secure device badge (green shield ✓) ─────────────
+            // Drawn over the bottom-right corner of the device box when
+            // isSecureDevice(node) returns true. A soft halo behind the
+            // node further differentiates safe devices at a glance.
+            if (isSecureDevice(node)) {
+                const safe = '#00ff88';
+                // soft outer halo
+                ctx.save();
+                ctx.shadowColor = safe;
+                ctx.shadowBlur  = 14 * PX;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, half * 1.55, 0, Math.PI * 2);
+                ctx.strokeStyle = `${safe}55`;
+                ctx.lineWidth = 1.2 * PX;
+                ctx.stroke();
+                ctx.restore();
+
+                // badge circle at bottom-right
+                const bx = node.x + half - 1 * PX;
+                const by = node.y + half - 1 * PX;
+                const br = 5 * PX;
+                ctx.save();
+                ctx.shadowColor = safe;
+                ctx.shadowBlur  = 6 * PX;
+                ctx.beginPath();
+                ctx.arc(bx, by, br, 0, Math.PI * 2);
+                ctx.fillStyle   = safe;
+                ctx.fill();
+                ctx.strokeStyle = '#003a20';
+                ctx.lineWidth   = 0.8 * PX;
+                ctx.stroke();
+                ctx.shadowBlur  = 0;
+                // checkmark
+                ctx.beginPath();
+                ctx.moveTo(bx - br * 0.45, by + br * 0.05);
+                ctx.lineTo(bx - br * 0.10, by + br * 0.40);
+                ctx.lineTo(bx + br * 0.55, by - br * 0.40);
+                ctx.strokeStyle = '#022e1a';
+                ctx.lineWidth   = 1.4 * PX;
+                ctx.lineCap     = 'round';
+                ctx.lineJoin    = 'round';
+                ctx.stroke();
+                ctx.restore();
+            }
         }
 
         ctx.shadowBlur = 0;
@@ -884,10 +1018,11 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                             const crit = (node.criticality || '').toUpperCase();
                             const critRisk = crit === 'CRITICAL' ? 90 : crit === 'HIGH' ? 70 : crit === 'MEDIUM' ? 40 : crit === 'LOW' ? 15 : 0;
                             const eff = node.riskScore > 0 ? node.riskScore : critRisk;
-                            const lbl = eff >= 75 ? 'CRITICAL' : eff >= 50 ? 'HIGH' : eff >= 20 ? 'MEDIUM' : eff > 0 ? 'LOW' : 'NONE';
-                            const rc  = eff >= 75 ? '#ff0055' : eff >= 50 ? '#ff6a00' : eff >= 20 ? '#ffaa00' : eff > 0 ? '#00ccff' : '#00ff88';
+                            const secure = isSecureDevice(node);
+                            const lbl = secure ? 'SECURE' : (eff >= 75 ? 'CRITICAL' : eff >= 50 ? 'HIGH' : eff >= 20 ? 'MEDIUM' : eff > 0 ? 'LOW' : 'NONE');
+                            const rc  = secure ? '#00ff88' : (eff >= 75 ? '#ff0055' : eff >= 50 ? '#ff6a00' : eff >= 20 ? '#ffaa00' : eff > 0 ? '#00ccff' : '#00ff88');
                             const v = node.vulnCount || 0;
-                            return `<div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${rc}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:180px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase">${node.name}</div><div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${rc}22;border:1px solid ${rc}66;color:${rc}">${lbl}</div></div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px">${node.ip || 'INTERNAL'}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk</span><span style="font-size:11px;font-weight:800;color:${rc}">${eff}%</span></div><div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden"><div style="height:100%;width:${eff}%;background:${rc};border-radius:2px"></div></div>${v > 0 ? `<div style="margin-top:8px;font-size:10px;color:${rc}">⚠ ${v} vuln${v === 1 ? '' : 's'}</div>` : ''}</div>`;
+                            return `<div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${rc}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:180px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase">${node.name}</div><div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${rc}22;border:1px solid ${rc}66;color:${rc}">${secure ? '✓ ' : ''}${lbl}</div></div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px">${node.ip || 'INTERNAL'}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk</span><span style="font-size:11px;font-weight:800;color:${rc}">${eff}%</span></div><div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden"><div style="height:100%;width:${eff}%;background:${rc};border-radius:2px"></div></div>${v > 0 ? `<div style="margin-top:8px;font-size:10px;color:${rc}">⚠ ${v} vuln${v === 1 ? '' : 's'}</div>` : ''}${secure ? `<div style="margin-top:8px;font-size:10px;color:#00ff88;font-weight:700">✓ Secure · scanned, no vulns</div>` : ''}</div>`;
                         }}
                         linkColor={(link) => link.value >= 3 ? 'rgba(0,255,255,0.45)' : 'rgba(0,255,255,0.14)'}
                         linkWidth={(link) => link.value >= 3 ? 2.5 : 1.2}

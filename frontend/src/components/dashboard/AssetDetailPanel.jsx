@@ -6,6 +6,23 @@ const AssetDetailPanel = ({ node, onClose }) => {
 
     const { details = {}, vulnCount } = node;
 
+    // Mirrors NetworkTopology.isSecureDevice — duplicated here to avoid
+    // cross-import coupling. A device is "secure" only when we have positive
+    // scan evidence (no vulns, no elevated risk, scan ran). Unscanned hosts
+    // are intentionally NOT shown as secure.
+    const _risk = Number(node.riskScore) || 0;
+    const _vulns = Number(vulnCount || details?.vulnerabilities?.length || 0);
+    const _crit = (node.criticality || details?.criticality || '').toUpperCase();
+    const _hasScan = (
+        node.scanned === true ||
+        details?.last_scan_at != null ||
+        details?.last_scanned_at != null ||
+        (details?.services?.length > 0) ||
+        details?.os_name != null ||
+        details?.os_family != null
+    );
+    const isSecure = _hasScan && _vulns === 0 && _risk < 20 && _crit !== 'CRITICAL' && _crit !== 'HIGH' && _crit !== 'MEDIUM';
+
     // Full scan services first; fall back to open_ports string
     const scannedServices = details?.services || [];
     const fallbackServices = !scannedServices.length && details?.open_ports
@@ -59,6 +76,36 @@ const AssetDetailPanel = ({ node, onClose }) => {
 
             {/* Content Scrollable Area */}
             <div className="overflow-y-auto flex-1 p-4 space-y-6">
+
+                {isSecure && (
+                    <div
+                        className="rounded-lg p-3 flex items-center gap-3"
+                        style={{
+                            background: 'rgba(0,255,136,0.08)',
+                            border: '1px solid rgba(0,255,136,0.35)',
+                            boxShadow: '0 0 16px rgba(0,255,136,0.12) inset',
+                        }}
+                    >
+                        <span
+                            className="flex items-center justify-center rounded-full font-black"
+                            style={{
+                                width: 28, height: 28,
+                                background: '#00ff88',
+                                color: '#022e1a',
+                                boxShadow: '0 0 12px rgba(0,255,136,0.6)',
+                            }}
+                            aria-label="Secure device"
+                        >✓</span>
+                        <div>
+                            <div className="text-emerald-300 text-xs font-black uppercase tracking-widest">
+                                Secure Device
+                            </div>
+                            <div className="text-emerald-200/70 text-[11px] leading-snug">
+                                Scanned · no open vulnerabilities · risk below threshold.
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* 1. Identity Section */}
                 <section>
