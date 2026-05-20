@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import ProfilePage from './pages/ProfilePage';
+import AboutUsPage from './pages/AboutUsPage';
 import ProtectedRoute from './components/ui/ProtectedRoute';
 import { fadeInUp } from './lib/motion';
 
@@ -38,6 +39,10 @@ const AnimatedRoutes = () => {
                 <Route
                     path="/signup"
                     element={<RouteShell><SignUpPage /></RouteShell>}
+                />
+                <Route
+                    path="/about"
+                    element={<RouteShell><AboutUsPage /></RouteShell>}
                 />
                 <Route
                     path="/profile"

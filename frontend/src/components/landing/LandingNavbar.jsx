@@ -10,6 +10,7 @@ const NAV_LINKS = [
     { label: 'How it works',href: '#how-it-works' },
     { label: 'Use cases',   href: '#use-cases' },
     { label: 'FAQ',         href: '#faq' },
+    { label: 'About us',    to: '/about' },
 ];
 
 export default function LandingNavbar() {
@@ -47,13 +48,23 @@ export default function LandingNavbar() {
 
                 <nav className="hidden md:flex items-center gap-8">
                     {NAV_LINKS.map((l) => (
-                        <a
-                            key={l.href}
-                            href={l.href}
-                            className="text-sm text-white/70 hover:text-cyber-accent transition-colors"
-                        >
-                            {l.label}
-                        </a>
+                        l.to ? (
+                            <Link
+                                key={l.label}
+                                to={l.to}
+                                className="text-sm text-white/70 hover:text-cyber-accent transition-colors"
+                            >
+                                {l.label}
+                            </Link>
+                        ) : (
+                            <a
+                                key={l.label}
+                                href={l.href}
+                                className="text-sm text-white/70 hover:text-cyber-accent transition-colors"
+                            >
+                                {l.label}
+                            </a>
+                        )
                     ))}
                 </nav>
 
@@ -91,14 +102,25 @@ export default function LandingNavbar() {
                     >
                         <div className="px-6 py-4 flex flex-col gap-3">
                             {NAV_LINKS.map((l) => (
-                                <a
-                                    key={l.href}
-                                    href={l.href}
-                                    onClick={() => setOpen(false)}
-                                    className="text-white/80 py-2 text-sm"
-                                >
-                                    {l.label}
-                                </a>
+                                l.to ? (
+                                    <Link
+                                        key={l.label}
+                                        to={l.to}
+                                        onClick={() => setOpen(false)}
+                                        className="text-white/80 py-2 text-sm"
+                                    >
+                                        {l.label}
+                                    </Link>
+                                ) : (
+                                    <a
+                                        key={l.label}
+                                        href={l.href}
+                                        onClick={() => setOpen(false)}
+                                        className="text-white/80 py-2 text-sm"
+                                    >
+                                        {l.label}
+                                    </a>
+                                )
                             ))}
                             <div className="flex gap-3 pt-2">
                                 {user ? (
