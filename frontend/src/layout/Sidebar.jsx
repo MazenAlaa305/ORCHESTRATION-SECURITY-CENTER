@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users, Home } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users, Home, Info } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -327,6 +327,24 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                         )}
                     </button>
                 )}
+
+                {/* About us link */}
+                <button
+                    type="button"
+                    onClick={() => navigate('/about')}
+                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
+                    style={{ background: 'transparent', border: '1px solid transparent' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,255,0.06)'; e.currentTarget.style.border = '1px solid rgba(0,255,255,0.2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
+                    title="About us"
+                >
+                    <Info className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(0,255,255,0.7)' }} />
+                    {!collapsed && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'rgba(0,255,255,0.7)' }}>
+                            About us
+                        </span>
+                    )}
+                </button>
 
                 {/* Logout button */}
                 <button
