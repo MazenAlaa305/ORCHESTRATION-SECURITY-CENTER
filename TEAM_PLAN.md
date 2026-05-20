@@ -540,15 +540,13 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 **Files & folders owned**
 
-- [README.md](README.md), [TEAM_PLAN.md](TEAM_PLAN.md), [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md) — the three repo docs
-- Presentation generators: [generate_presentation.py](generate_presentation.py), [generate_fyp_doc.py](generate_fyp_doc.py), [build_presentation.py](build_presentation.py)
-- [demo/](demo/) — demo scripts and narrative
+- [README.md](README.md), [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md) 
 - Final presentation deck: `FINAL_PRESENTATION.pptx`
 - FYP documentation source: `FYP_Documentation.docx`
 
 **Critical points**
 
-- **Three top-level docs only.** README, TEAM_PLAN, TECHNICAL_NOTES. No new root MDs.
+- **Three top-level docs only.** README, TECHNICAL_NOTES. No new root MDs.
 - **No duplicated truth.** Swagger at `http://localhost:8000/docs` is the canonical API reference.
 - **Diagrams as Mermaid**, embedded directly inside `TECHNICAL_NOTES.md` so they render in GitHub.
 - **Demo script is rehearsed weekly** in the run-up to defense.
