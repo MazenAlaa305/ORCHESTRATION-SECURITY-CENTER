@@ -28,6 +28,11 @@ LAB_TARGETS = [
         "url": "http://lab_webserver:3000",
         "vulns": ["sqli", "xss", "bola", "idor", "broken-auth", "ssrf"],
         "cvss": 9.5,
+        "os": "Ubuntu 22.04 LTS (Node.js 18)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:0a",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "4d 7h",
         "description": "OWASP Juice Shop — intentionally vulnerable web application",
     },
     {
@@ -40,6 +45,11 @@ LAB_TARGETS = [
         "url": "http://lab_api_gateway:8081",
         "vulns": ["info-disclosure", "header-leak", "directory-listing", "swagger-exposure"],
         "cvss": 6.0,
+        "os": "Ubuntu 20.04 LTS (Spring Boot)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:0b",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "4d 7h",
         "description": "API gateway with information disclosure vulnerabilities",
     },
     {
@@ -52,6 +62,11 @@ LAB_TARGETS = [
         "url": "dns://lab_dns_server:53",
         "vulns": ["zone-transfer", "recursion-enabled"],
         "cvss": 5.0,
+        "os": "Alpine Linux 3.18 (CoreDNS 1.11)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:0c",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "4d 6h",
         "description": "CoreDNS server with zone transfer enabled",
     },
     {
@@ -64,6 +79,11 @@ LAB_TARGETS = [
         "url": "smb://lab_fileserver:445",
         "vulns": ["weak-credentials", "smb-enum", "sensitive-data-exposure"],
         "cvss": 8.0,
+        "os": "Ubuntu 22.04 LTS (Samba 4.17)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:14",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "3d 22h",
         "description": "Samba file server with weak credentials and exposed shares",
     },
     {
@@ -76,6 +96,11 @@ LAB_TARGETS = [
         "url": "smtp://lab_mailserver:3025",
         "vulns": ["weak-credentials", "plaintext-protocols"],
         "cvss": 7.0,
+        "os": "Alpine Linux 3.17 (Greenmail 2.0)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:15",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "3d 22h",
         "description": "Greenmail server with plaintext SMTP/POP3/IMAP",
     },
     {
@@ -88,6 +113,11 @@ LAB_TARGETS = [
         "url": "postgresql://lab_database:5432",
         "vulns": ["weak-credentials", "pii-plaintext", "no-encryption"],
         "cvss": 9.0,
+        "os": "Debian 11 (PostgreSQL 15.3)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:1e",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "5d 1h",
         "description": "PostgreSQL with weak password and sensitive data in plaintext",
     },
     {
@@ -100,7 +130,29 @@ LAB_TARGETS = [
         "url": "redis://lab_redis_cache:6380",
         "vulns": ["no-auth", "unauthenticated-access", "data-exfiltration"],
         "cvss": 8.5,
+        "os": "Alpine Linux 3.18 (Redis 7.2)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:1f",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "5d 1h",
         "description": "Redis with no authentication and protected-mode disabled",
+    },
+    {
+        "container": "lab_bastion",
+        "name": "Hardened Bastion",
+        "hostname": "lab_bastion",
+        "zone": "mgmt",
+        "port": 2222,
+        "protocol": "ssh",
+        "url": "ssh://lab_bastion:2222",
+        "vulns": [],
+        "cvss": 0,
+        "os": "Ubuntu 22.04 LTS (OpenSSH 9.0, MFA enforced)",
+        "os_family": "Linux",
+        "mac_address": "02:42:ac:11:00:28",
+        "mac_vendor": "Docker Inc.",
+        "uptime": "12d 4h",
+        "description": "Hardened bastion host — patched, MFA-enforced, no exposed vulnerabilities",
     },
 ]
 
@@ -212,9 +264,20 @@ class LabManager:
                     ip_address=ip,
                     hostname=lab_target["name"],
                     device_type="server",
+                    os_name=lab_target.get("os"),
+                    mac_address=lab_target.get("mac_address"),
+                    open_ports=str(lab_target.get("port")) if lab_target.get("port") else None,
                     last_seen=datetime.utcnow()
                 )
                 db_session.add(asset)
+            else:
+                # Backfill OS/MAC on existing rows if missing — keeps re-seeds idempotent
+                if not existing_asset.os_name and lab_target.get("os"):
+                    existing_asset.os_name = lab_target["os"]
+                if not existing_asset.mac_address and lab_target.get("mac_address"):
+                    existing_asset.mac_address = lab_target["mac_address"]
+                if not existing_asset.open_ports and lab_target.get("port"):
+                    existing_asset.open_ports = str(lab_target["port"])
 
             # 2. Register as Target if scannable by Nuclei (HTTP/HTTPS)
             if lab_target["protocol"] in ("http", "https"):

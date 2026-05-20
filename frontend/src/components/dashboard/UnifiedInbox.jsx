@@ -3,7 +3,7 @@ import { ShieldOff, X, ShieldAlert, Globe, Lock, Activity, Terminal, AlertTriang
 import api from '../../services/api';
 import { useConfig } from '../../context/ConfigContext';
 
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 5_000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

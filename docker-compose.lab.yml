@@ -262,7 +262,7 @@ services:
       - TARGET_DB=10.10.30.10
       - TARGET_REDIS=10.10.30.20:6380
       - TARGET_DNS=10.10.10.30
-      - TRAFFIC_INTENSITY=low
+      - TRAFFIC_INTENSITY=high
       - LOG_OUTPUT=/var/log/traffic/traffic.log
     volumes:
       - lab_traffic_logs:/var/log/traffic

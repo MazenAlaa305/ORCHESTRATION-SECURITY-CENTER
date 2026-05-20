@@ -95,6 +95,21 @@ const normalizeDeviceDetails = (raw = {}) => {
     return out;
 };
 
+// ─── Merge fetched detail into existing details without clobbering
+// already-populated fields with null/undefined/empty values. The async
+// asset-detail endpoint is sparse for lab targets, so we keep the rich
+// values we already injected and only fill in genuinely new data.
+const mergeDetailPreserving = (base = {}, incoming = {}) => {
+    const out = { ...base };
+    for (const [k, v] of Object.entries(incoming)) {
+        if (v == null) continue;
+        if (typeof v === 'string' && v.trim() === '') continue;
+        if (Array.isArray(v) && v.length === 0 && Array.isArray(base[k]) && base[k].length > 0) continue;
+        out[k] = v;
+    }
+    return out;
+};
+
 // ─── Canvas device icon renderer ──────────────────────────
 const drawDeviceIcon = (ctx, group, cx, cy, r, color) => {
     const s = r * 0.52;
@@ -609,8 +624,10 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 device_type: group,
                 os_name:     t.os || null,
                 os_family:   t.os_family || null,
+                mac_address: t.mac_address || null,
+                mac_vendor:  t.mac_vendor  || null,
                 uptime:      t.uptime || t.uptime_seconds || null,
-                status:      'active',
+                status:      t.status || 'active',
                 open_ports:  String(t.port),
                 risk_score:  riskScore,
                 criticality,
@@ -717,7 +734,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 const { data: detail } = await networkService.getAssetDetail(node.id);
                 setSelectedNode(prev =>
                     prev?.id === node.id
-                        ? { ...prev, details: normalizeDeviceDetails({ ...(prev.details || {}), ...detail }), vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0, scanned: true }
+                        ? { ...prev, details: normalizeDeviceDetails(mergeDetailPreserving(prev.details || {}, detail)), vulnCount: detail.vuln_count || prev.vulnCount || 0, infoCount: detail.info_count || prev.infoCount || 0, scanned: true }
                         : prev
                 );
             } catch (_) {}
@@ -730,7 +747,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                     const { data: detail } = await networkService.getAssetDetail(match.id);
                     setSelectedNode(prev =>
                         prev?.id === node.id
-                            ? { ...prev, details: { ...(prev.details || {}), ...detail }, vulnCount: detail.vuln_count || 0, infoCount: detail.info_count || 0 }
+                            ? { ...prev, details: normalizeDeviceDetails(mergeDetailPreserving(prev.details || {}, detail)), vulnCount: detail.vuln_count || prev.vulnCount || 0, infoCount: detail.info_count || prev.infoCount || 0 }
                             : prev
                     );
                 }

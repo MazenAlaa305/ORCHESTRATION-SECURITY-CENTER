@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import time
+import random
 import logging
 from datetime import datetime, timezone
 from typing import List, Dict
@@ -108,16 +109,52 @@ WAZUH_TEMPLATE = {
 # ── Wazuh Rule Mapping ────────────────────────────────────────────────────────
 
 WAZUH_RULES = {
-    ("authentication", "failure"):  {"id": "5710", "level": 5,  "description": "Authentication failure",            "groups": ["authentication_failure"]},
-    ("suspicious", "port_scan"):    {"id": "510",  "level": 6,  "description": "Port scan detected",                "groups": ["recon", "network_scan"]},
-    ("suspicious", "brute_force"):  {"id": "5712", "level": 10, "description": "Brute force attack detected",       "groups": ["authentication_failure", "brute_force"]},
-    ("suspicious", "data_exfil"):   {"id": "9001", "level": 12, "description": "Possible data exfiltration",        "groups": ["data_loss", "suspicious_activity"]},
-    ("web", "failure"):             {"id": "31101","level": 5,  "description": "Web application error",             "groups": ["web", "accesslog"]},
-    ("database", "error"):          {"id": "50100","level": 7,  "description": "Database connection error",          "groups": ["database", "service_availability"]},
-    ("cache", "error"):             {"id": "50200","level": 7,  "description": "Cache service error",                "groups": ["cache", "service_availability"]},
-    ("email", "error"):             {"id": "3601", "level": 4,  "description": "SMTP connection failure",            "groups": ["smtp", "email"]},
-    ("dns", "failure"):             {"id": "12100","level": 3,  "description": "DNS query failure",                  "groups": ["dns", "network"]},
-    ("file_access", "success"):     {"id": "18100","level": 2,  "description": "File share accessed",                "groups": ["smb", "file_integrity"]},
+    ("authentication", "failure"):       {"id": "5710", "level": 5,  "description": "Authentication failure",          "groups": ["authentication_failure"]},
+    ("suspicious", "port_scan"):         {"id": "510",  "level": 6,  "description": "Port scan detected",              "groups": ["recon", "network_scan"]},
+    ("suspicious", "brute_force"):       {"id": "5712", "level": 10, "description": "Brute force attack detected",     "groups": ["authentication_failure", "brute_force"]},
+    ("suspicious", "data_exfil"):        {"id": "9001", "level": 12, "description": "Possible data exfiltration",      "groups": ["data_loss", "suspicious_activity"]},
+    ("suspicious", "data_exfil_success"):{"id": "9002", "level": 14, "description": "Confirmed data exfiltration",     "groups": ["data_loss", "critical_incident"]},
+    ("suspicious", "privilege_escalation"):{"id": "9003","level": 13,"description": "Privilege escalation detected",   "groups": ["privilege_escalation", "critical_incident"]},
+    ("suspicious", "ransomware_activity"):{"id": "9004","level": 15, "description": "Ransomware activity detected",    "groups": ["ransomware", "critical_incident"]},
+    ("suspicious", "credential_dump"):   {"id": "9005", "level": 13, "description": "Credential dumping detected",     "groups": ["credential_access", "critical_incident"]},
+    ("suspicious", "lateral_movement"):  {"id": "9006", "level": 12, "description": "Lateral movement detected",       "groups": ["lateral_movement", "critical_incident"]},
+    ("web", "failure"):                  {"id": "31101","level": 5,  "description": "Web application error",           "groups": ["web", "accesslog"]},
+    ("database", "error"):               {"id": "50100","level": 7,  "description": "Database connection error",        "groups": ["database", "service_availability"]},
+    ("cache", "error"):                  {"id": "50200","level": 7,  "description": "Cache service error",              "groups": ["cache", "service_availability"]},
+    ("email", "error"):                  {"id": "3601", "level": 4,  "description": "SMTP connection failure",          "groups": ["smtp", "email"]},
+    ("dns", "failure"):                  {"id": "12100","level": 3,  "description": "DNS query failure",                "groups": ["dns", "network"]},
+    ("file_access", "success"):          {"id": "18100","level": 2,  "description": "File share accessed",              "groups": ["smb", "file_integrity"]},
+    # Low/informational baseline events so the SIEM has a realistic mix.
+    ("web", "success"):                  {"id": "31100","level": 2,  "description": "Web request",                      "groups": ["web", "accesslog"]},
+    ("dns", "success"):                  {"id": "12101","level": 1,  "description": "DNS query",                        "groups": ["dns", "network"]},
+    ("cache", "success"):                {"id": "50201","level": 1,  "description": "Cache operation",                  "groups": ["cache"]},
+}
+
+# Aliases for event_action values that should resolve to the same rule as
+# their canonical key. Lets the generator emit verbose actions like
+# "brute_force_attempt" / "port_scan_detected" without falling through to
+# the level-1 default rule (which was producing HIGH-severity events
+# rendered as LOW in the UI).
+ACTION_ALIASES = {
+    "brute_force_attempt":  "brute_force",
+    "brute_force_burst":    "brute_force",
+    "port_scan_detected":   "port_scan",
+    "port_scan_attempt":    "port_scan",
+    "data_exfil_detected":  "data_exfil",
+    "data_exfiltration":    "data_exfil",
+    "auth_failure":         "failure",
+    "login_failed":         "failure",
+}
+
+# Last-resort severity → Wazuh rule level, applied only when no specific
+# WAZUH_RULES key matched. Mirrors the Wazuh band convention used by the
+# frontend (0-3 low, 4-7 medium, 8-11 high, 12-15 critical).
+SEVERITY_FALLBACK_LEVEL = {
+    "critical": 13,
+    "high":     10,
+    "medium":   6,
+    "low":      3,
+    "info":     2,
 }
 
 
@@ -126,13 +163,37 @@ def to_wazuh_alert(event: Dict) -> Dict:
     category = event.get("event_category", "")
     status = event.get("status", "")
     action = event.get("event_action", "")
+    canonical_action = ACTION_ALIASES.get(action, action)
+    canonical_status = ACTION_ALIASES.get(status, status)
 
-    # Find matching rule
-    rule = WAZUH_RULES.get((category, status))
-    if not rule:
-        rule = WAZUH_RULES.get((category, action))
-    if not rule:
-        rule = {"id": "99999", "level": 1, "description": f"Lab event: {category}/{action}", "groups": ["sme-lab"]}
+    # Find matching rule — try (category, status), then (category, action),
+    # falling back to alias-normalized variants before giving up.
+    rule = (
+        WAZUH_RULES.get((category, status))
+        or WAZUH_RULES.get((category, action))
+        or WAZUH_RULES.get((category, canonical_status))
+        or WAZUH_RULES.get((category, canonical_action))
+    )
+
+    severity = (event.get("severity") or "low").lower()
+    severity_level = SEVERITY_FALLBACK_LEVEL.get(severity, 1)
+
+    if rule:
+        # The event's own severity wins when it's stronger than the table's
+        # generic level. Stops e.g. an SMB-access-denied or port-scan event
+        # (which the generator marks "high") from being rendered as MEDIUM
+        # just because the static rule table assigns level 5/6. Description
+        # / id / groups still come from the rule table so Wazuh metadata
+        # stays consistent.
+        if severity_level > rule["level"]:
+            rule = {**rule, "level": severity_level, "groups": list(rule.get("groups", [])) + [severity]}
+    else:
+        rule = {
+            "id": "99999",
+            "level": severity_level,
+            "description": f"Lab event: {category}/{action}",
+            "groups": ["sme-lab", severity],
+        }
 
     return {
         "@timestamp": event.get("@timestamp", datetime.now(timezone.utc).isoformat()),
@@ -230,9 +291,13 @@ def bulk_index(client: httpx.Client, events: List[Dict]):
         lines.append(json.dumps({"index": {"_index": f"{INDEX_PREFIX}-events-{today}"}}))
         lines.append(json.dumps(ecs_doc))
 
-        # Wazuh-compatible alert index (only for non-trivial events)
+        # Wazuh-compatible alert index. Index all severities so the SIEM
+        # shows a realistic mix (low informational events alongside
+        # critical incidents). LOW events get sampled at 25% to avoid
+        # drowning the inbox with routine noise — every medium/high/critical
+        # event always goes through.
         severity = event.get("severity", "low")
-        if severity in ("medium", "high"):
+        if severity != "low" or random.random() < 0.25:
             lines.append(json.dumps({"index": {"_index": f"wazuh-alerts-4.x-{today}"}}))
             lines.append(json.dumps(wazuh_doc))
 

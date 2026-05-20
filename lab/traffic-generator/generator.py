@@ -69,7 +69,7 @@ def emit_event(category: str, action: str, source_ip: str, dest_ip: str,
         "destination_port": dest_port,
         "protocol": protocol,
         "status": status,
-        "severity": _severity_for(category, status),
+        "severity": _severity_for(category, status, action),
         "details": details or {},
         "lab_zone": _zone_for_ip(dest_ip),
         "generator": "osc-traffic-gen"
@@ -84,7 +84,13 @@ def emit_event(category: str, action: str, source_ip: str, dest_ip: str,
     print(line, flush=True)
 
 
-def _severity_for(category: str, status: str) -> str:
+def _severity_for(category: str, status: str, action: str = "") -> str:
+    # Critical: confirmed data exfil, privilege escalation, ransomware activity.
+    if category == "suspicious" and action in (
+        "data_exfil_success", "privilege_escalation", "ransomware_activity",
+        "credential_dump", "lateral_movement"
+    ):
+        return "critical"
     if status == "failure" and category == "authentication":
         return "high"
     if category == "suspicious":
@@ -338,7 +344,17 @@ def gen_suspicious_traffic():
     interval = INTERVALS[INTENSITY]["suspicious"]
 
     while True:
-        attack_type = random.choice(["port_scan", "brute_force", "data_exfil"])
+        # Weighted mix so critical events appear regularly but stay rare
+        # enough to feel like real-world incidents amid the noise.
+        attack_type = random.choices(
+            population=[
+                "port_scan", "brute_force", "data_exfil",
+                "data_exfil_success", "privilege_escalation",
+                "ransomware_activity", "credential_dump", "lateral_movement",
+            ],
+            weights=[28, 28, 18, 6, 6, 5, 5, 4],
+            k=1,
+        )[0]
 
         if attack_type == "port_scan":
             target_ip = random.choice(["10.10.10.10", "10.10.20.10", "10.10.30.10"])
@@ -376,6 +392,48 @@ def gen_suspicious_traffic():
                        {"query": "SELECT * FROM employees",
                         "rows_returned": random.randint(100, 5000),
                         "data_volume_kb": random.randint(500, 10000)})
+
+        # ── CRITICAL attacks ────────────────────────────────────────────
+        elif attack_type == "data_exfil_success":
+            emit_event("suspicious", "data_exfil_success", "10.10.20.40", "8.8.8.8",
+                       443, "HTTPS", "success",
+                       {"bytes_out": random.randint(50_000_000, 5_000_000_000),
+                        "destination_country": random.choice(["RU", "CN", "KP", "IR"]),
+                        "table": random.choice(["employees", "customers", "payment_cards", "credentials"])})
+
+        elif attack_type == "privilege_escalation":
+            emit_event("suspicious", "privilege_escalation",
+                       random.choice(["10.10.20.40", "10.10.20.41"]), "10.10.30.10",
+                       22, "SSH", "success",
+                       {"from_user": "svc_app",
+                        "to_user": "root",
+                        "technique": random.choice(["sudo_misconfig", "kernel_exploit", "suid_binary"]),
+                        "process": random.choice(["bash", "pkexec", "su"])})
+
+        elif attack_type == "ransomware_activity":
+            emit_event("suspicious", "ransomware_activity",
+                       random.choice(["10.10.20.40", "10.10.20.41"]),
+                       random.choice(["10.10.20.10", "10.10.30.10"]),
+                       445, "SMB", "success",
+                       {"files_encrypted": random.randint(50, 5000),
+                        "extension": random.choice([".lockbit", ".crypted", ".enc", ".HELP_DECRYPT"]),
+                        "ransom_note_dropped": True})
+
+        elif attack_type == "credential_dump":
+            emit_event("suspicious", "credential_dump",
+                       "10.10.20.40", "10.10.40.30",
+                       0, "LSASS", "success",
+                       {"tool": random.choice(["mimikatz", "lsadump", "procdump"]),
+                        "credentials_extracted": random.randint(3, 25)})
+
+        elif attack_type == "lateral_movement":
+            emit_event("suspicious", "lateral_movement",
+                       "10.10.20.40", random.choice(["10.10.20.10", "10.10.30.10", "10.10.30.20"]),
+                       random.choice([445, 3389, 22, 5985]),
+                       random.choice(["SMB", "RDP", "SSH", "WinRM"]),
+                       "success",
+                       {"technique": random.choice(["pass_the_hash", "psexec", "wmi_exec", "remote_powershell"]),
+                        "user": "Administrator"})
 
         time.sleep(random.uniform(interval * 0.5, interval * 1.5))
 
