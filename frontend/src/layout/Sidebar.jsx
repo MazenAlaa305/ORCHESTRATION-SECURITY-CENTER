@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users, Home, Info } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Scan, Activity, Settings, ChevronLeft, Brain, FileText, LogOut, Bookmark, Users, Info } from 'lucide-react';
 import { useRealTime } from '../context/RealTimeContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -226,17 +226,6 @@ const Sidebar = ({ activeTab, onTabChange }) => {
 
             {/* ── Navigation ────────────────────────────────────────────── */}
             <div className="flex-1 py-4 flex flex-col gap-1 px-2.5 overflow-y-auto">
-                {/* Home — navigates out to the public landing page */}
-                <div className="mb-3 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <NavItem
-                        icon={<Home className="h-3.5 w-3.5 shrink-0" style={{ color: 'rgba(148,163,184,0.6)' }} />}
-                        label="Home"
-                        collapsed={collapsed}
-                        active={false}
-                        onClick={() => navigate('/')}
-                    />
-                </div>
-
                 {NAV_SECTIONS.map(section => (
                     <div key={section.label} className="mb-4">
                         {!collapsed && (
@@ -296,6 +285,42 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 className="px-3 py-3 flex-shrink-0 flex flex-col gap-2"
                 style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}
             >
+                {/* OSC — navigates out to the public landing page */}
+                <button
+                    type="button"
+                    onClick={() => navigate('/')}
+                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
+                    style={{ background: 'transparent', border: '1px solid transparent' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,255,0.06)'; e.currentTarget.style.border = '1px solid rgba(0,255,255,0.2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
+                    title="OSC — landing page"
+                >
+                    <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#00ffff' }} />
+                    {!collapsed && (
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#00ffff' }}>
+                            OSC
+                        </span>
+                    )}
+                </button>
+
+                {/* About us link */}
+                <button
+                    type="button"
+                    onClick={() => navigate('/about')}
+                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
+                    style={{ background: 'transparent', border: '1px solid transparent' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,255,0.06)'; e.currentTarget.style.border = '1px solid rgba(0,255,255,0.2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
+                    title="About us"
+                >
+                    <Info className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(0,255,255,0.7)' }} />
+                    {!collapsed && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'rgba(0,255,255,0.7)' }}>
+                            About us
+                        </span>
+                    )}
+                </button>
+
                 {/* User info row — clickable, opens profile page */}
                 {user && (
                     <button
@@ -327,24 +352,6 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                         )}
                     </button>
                 )}
-
-                {/* About us link */}
-                <button
-                    type="button"
-                    onClick={() => navigate('/about')}
-                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
-                    style={{ background: 'transparent', border: '1px solid transparent' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,255,0.06)'; e.currentTarget.style.border = '1px solid rgba(0,255,255,0.2)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
-                    title="About us"
-                >
-                    <Info className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(0,255,255,0.7)' }} />
-                    {!collapsed && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'rgba(0,255,255,0.7)' }}>
-                            About us
-                        </span>
-                    )}
-                </button>
 
                 {/* Logout button */}
                 <button
