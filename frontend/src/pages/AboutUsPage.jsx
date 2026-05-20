@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Plus, Save, X, RotateCcw, Users } from 'lucide-react';
+import { Pencil, Plus, Save, X, RotateCcw, Users, Upload, ImageOff } from 'lucide-react';
 import LandingNavbar from '../components/landing/LandingNavbar';
 import LandingFooter from '../components/landing/LandingFooter';
 import TeamMemberCard from '../components/landing/TeamMemberCard';
@@ -26,6 +26,39 @@ const loadStored = () => {
         return null;
     }
 };
+
+// Resize and re-encode an uploaded image to keep localStorage usage bounded.
+// Returns a JPEG data URL (or PNG if the source is transparent). The target is
+// a square, centre-cropped, at most `maxSize` px on each side.
+const fileToResizedDataUrl = (file, maxSize = 480, quality = 0.82) =>
+    new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('Please choose an image file.'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Could not read the file.'));
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Could not decode the image.'));
+            img.onload = () => {
+                const side = Math.min(img.width, img.height);
+                const sx = (img.width - side) / 2;
+                const sy = (img.height - side) / 2;
+                const out = Math.min(maxSize, side);
+                const canvas = document.createElement('canvas');
+                canvas.width = out;
+                canvas.height = out;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, sx, sy, side, side, 0, 0, out, out);
+                const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                resolve(canvas.toDataURL(mime, quality));
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
 
 const slugify = (s) =>
     String(s || '')
@@ -65,13 +98,18 @@ export default function AboutUsPage() {
         }
     };
 
+    // Editing the About page is restricted to admins. Analysts and viewers
+    // only ever see the read-only view; these guards are defence-in-depth in
+    // case a mutation handler is reached without the gating UI.
     const saveCopy = (next) => {
+        if (!isAdmin) return;
         setCopy(next);
         persist(next, team);
         setEditingCopy(false);
     };
 
     const upsertMember = (member) => {
+        if (!isAdmin) return;
         const id = member.id || slugify(member.name);
         const incoming = { ...member, id };
         const exists = team.some((m) => m.id === id);
@@ -84,6 +122,7 @@ export default function AboutUsPage() {
     };
 
     const deleteMember = (id) => {
+        if (!isAdmin) return;
         if (!window.confirm('Remove this team member from the About page?')) return;
         const next = team.filter((m) => m.id !== id);
         setTeam(next);
@@ -91,6 +130,7 @@ export default function AboutUsPage() {
     };
 
     const resetAll = () => {
+        if (!isAdmin) return;
         if (!window.confirm('Reset the About page to the original content? Your edits will be lost.')) return;
         setCopy(DEFAULT_ABOUT_COPY);
         setTeam(DEFAULT_TEAM);
@@ -196,14 +236,14 @@ export default function AboutUsPage() {
             <LandingFooter />
 
             <AnimatePresence>
-                {editingCopy && (
+                {isAdmin && editingCopy && (
                     <CopyEditorModal
                         initial={copy}
                         onCancel={() => setEditingCopy(false)}
                         onSave={saveCopy}
                     />
                 )}
-                {editingMember && (
+                {isAdmin && editingMember && (
                     <MemberEditorModal
                         initial={editingMember.__new ? null : editingMember}
                         onCancel={() => setEditingMember(null)}
@@ -310,7 +350,32 @@ function MemberEditorModal({ initial, onCancel, onSave }) {
         initial || { id: '', name: '', role: '', bio: '', email: '', linkedin: '', photo: '' },
     );
     const [errors, setErrors] = useState({});
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    const fileInputRef = useRef(null);
     const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+    const onPickFile = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = ''; // allow re-picking the same file
+        if (!file) return;
+        if (file.size > 8 * 1024 * 1024) {
+            setUploadError('File is larger than 8 MB. Pick a smaller image.');
+            return;
+        }
+        setUploadError('');
+        setUploading(true);
+        try {
+            const dataUrl = await fileToResizedDataUrl(file, 480, 0.82);
+            setForm((f) => ({ ...f, photo: dataUrl }));
+        } catch (err) {
+            setUploadError(err.message || 'Upload failed.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const clearPhoto = () => setForm((f) => ({ ...f, photo: '' }));
 
     const validate = () => {
         const next = {};
@@ -380,20 +445,74 @@ function MemberEditorModal({ initial, onCancel, onSave }) {
                 </div>
 
                 <div>
-                    <label className={labelCls}>Photo URL (Drive share link supported)</label>
-                    <input className={inputCls} value={form.photo} onChange={set('photo')} placeholder="https://… or Drive open?id=… link" />
-                    {form.photo && (
-                        <div className="mt-3 flex items-center gap-3">
-                            <img
-                                src={form.photo.includes('drive.google.com') ? driveImage(form.photo) : form.photo}
-                                alt="preview"
-                                referrerPolicy="no-referrer"
-                                className="h-14 w-14 rounded-full object-cover ring-1 ring-white/15"
-                                onError={(e) => { e.currentTarget.style.opacity = '0.3'; }}
-                            />
-                            <span className="text-xs text-white/45">Preview</span>
+                    <label className={labelCls}>Photo</label>
+
+                    <div className="flex items-start gap-4">
+                        {/* Preview */}
+                        <div className="relative shrink-0">
+                            {form.photo ? (
+                                <img
+                                    src={form.photo.includes('drive.google.com') ? driveImage(form.photo) : form.photo}
+                                    alt="preview"
+                                    referrerPolicy="no-referrer"
+                                    className="h-20 w-20 rounded-full object-cover ring-1 ring-white/15"
+                                    onError={(e) => { e.currentTarget.style.opacity = '0.3'; }}
+                                />
+                            ) : (
+                                <div className="h-20 w-20 rounded-full bg-white/[0.03] ring-1 ring-white/10 flex items-center justify-center text-white/30">
+                                    <ImageOff className="h-6 w-6" />
+                                </div>
+                            )}
+                            {form.photo && (
+                                <button
+                                    type="button"
+                                    onClick={clearPhoto}
+                                    aria-label="Remove photo"
+                                    className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-cyber-bg ring-1 ring-white/15 text-white/70 hover:text-cyber-critical hover:ring-cyber-critical/50 flex items-center justify-center"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            )}
                         </div>
-                    )}
+
+                        {/* Upload + URL */}
+                        <div className="flex-1 min-w-0 space-y-2">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                onChange={onPickFile}
+                                className="hidden"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-cyber-accent/10 ring-1 ring-cyber-accent/40 hover:ring-cyber-accent text-cyber-accent text-xs font-semibold px-3 py-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
+                                >
+                                    <Upload className="h-3.5 w-3.5" />
+                                    {uploading ? 'Processing…' : (form.photo ? 'Replace photo' : 'Upload photo')}
+                                </button>
+                                <span className="text-[10px] text-white/40 self-center">
+                                    PNG / JPG / WEBP — resized to 480 px.
+                                </span>
+                            </div>
+
+                            <input
+                                className={inputCls}
+                                value={form.photo?.startsWith('data:') ? '' : (form.photo || '')}
+                                onChange={set('photo')}
+                                placeholder="…or paste an image URL / Drive share link"
+                            />
+                            {form.photo?.startsWith('data:') && (
+                                <p className="text-[10px] text-white/40">Using uploaded image.</p>
+                            )}
+                            {uploadError && (
+                                <p className="text-xs text-cyber-critical">{uploadError}</p>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-2">
