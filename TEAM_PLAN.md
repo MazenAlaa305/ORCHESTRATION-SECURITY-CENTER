@@ -53,6 +53,8 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 - [infra/caddy/Caddyfile](infra/caddy/Caddyfile)
 - [.github/](.github/) — GitHub Actions workflows
 - [.env](.env) (template / non-secret defaults)
+- [backend/app/services/ai_advisor.py](backend/app/services/ai_advisor.py) — cross-cutting AI advisory wrapper used by reports + dashboard
+- [backend/app/services/scoring_explainer.py](backend/app/services/scoring_explainer.py) — human-readable score explanations consumed by reports + dashboard
 
 **Critical points**
 
@@ -141,8 +143,6 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 - [backend/app/services/agent_orchestrator.py](backend/app/services/agent_orchestrator.py) — 4-stage pipeline (Recon → Attack → Validation → Risk Scoring)
 - [backend/app/services/unified_risk_engine.py](backend/app/services/unified_risk_engine.py) — Risk/Health scores, ActionItem generation
 - [backend/app/services/intelligence_agent.py](backend/app/services/intelligence_agent.py) — Gemini integration (advisory)
-- [backend/app/services/ai_advisor.py](backend/app/services/ai_advisor.py)
-- [backend/app/services/scoring_explainer.py](backend/app/services/scoring_explainer.py)
 - [backend/app/services/llm_guard.py](backend/app/services/llm_guard.py) — LLM safety / bias checks
 - [backend/app/services/cvss.py](backend/app/services/cvss.py)
 - [backend/app/services/sla.py](backend/app/services/sla.py)
@@ -532,9 +532,11 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 12. Omar Tarek — Documentation & Presentation
+## 12. Omar Tarek — Documentation, Presentation & Report Generation
 
-**Role summary.** Owns external-facing materials: this repo's documentation, the FYP write-up, presentation decks, and demo narrative.
+**Role summary.** Owns external-facing artifacts: repo documentation, the FYP write-up, presentation decks, demo narrative — **and the end-to-end PDF report generation pipeline** that produces audit-ready security reports for each completed scan.
+
+### 12.A Documentation & Presentation
 
 **Files & folders owned**
 
@@ -546,29 +548,95 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 **Critical points**
 
-- **Three top-level docs only.** README, TEAM_PLAN, TECHNICAL_NOTES. Deeper material goes under `docs/`.
-- **No duplicated truth.** API details belong in Swagger + `docs/API_GUIDE.md`. Don't re-paste them here.
+- **Three top-level docs only.** README, TEAM_PLAN, TECHNICAL_NOTES. No new root MDs.
+- **No duplicated truth.** Swagger at `http://localhost:8000/docs` is the canonical API reference.
 - **Diagrams as Mermaid**, embedded directly inside `TECHNICAL_NOTES.md` so they render in GitHub.
 - **Demo script is rehearsed weekly** in the run-up to defense.
-- **Generators are reproducible.** `generate_fyp_doc.py` must produce the current FYP doc from current source.
+- **Generators are reproducible.** `generate_fyp_doc.py` must produce the current FYP doc from the current source.
+
+### 12.B Report Generation (PDF, signing, integrity)
+
+**Files & folders owned**
+
+- [backend/app/api/v1/endpoints/reports.py](backend/app/api/v1/endpoints/reports.py) — `/reports/*` endpoints (generate, download, meta, verify, legacy AI summary)
+- [backend/app/services/pdf_generator.py](backend/app/services/pdf_generator.py) — `PDFReportGenerator` (ReportLab, 7-section layout, styles, severity palette)
+- [backend/app/services/report_signer.py](backend/app/services/report_signer.py) — canonical findings hash + PDF signature + verification
+- `Report` ORM model in [backend/app/models/scan.py](backend/app/models/scan.py) (PDF bytes, findings hash, signature, generated_at)
+- Frontend report viewer/trigger: [frontend/src/components/dashboard/Reports.jsx](frontend/src/components/dashboard/Reports.jsx), [frontend/src/components/ReportGenerator.jsx](frontend/src/components/ReportGenerator.jsx)
+
+**How a report is generated (pipeline)**
+
+1. **Trigger.** `POST /reports/{scan_id}/generate` (role: `ANALYST` or `ADMIN`). Frontend `Reports.jsx` calls this for any completed scan.
+2. **Source-of-truth pull.** `_build_scan_data(scan, db)` loads the **same data the dashboard KPI uses** — all open `Vulnerability` rows, all `NetworkAsset` rows, and the scan's `ActionItem` rows — so the report number matches what the user sees on screen.
+3. **Risk score recomputation.** The same dashboard formula is re-applied:
+   `risk = (critical/5)·60 + (high/10)·25 + (medium/20)·10 + (low/30)·5`, clamped to [0, 100]. This guarantees the PDF risk score equals the dashboard risk score at generation time.
+4. **Findings canonicalization & hash.** `_findings_for_scan()` builds a deterministic list (id, type, severity, url, template_id, cvss_score, cvss_vector, status). `canonical_findings_hash()` JSON-serializes with sorted keys and produces a **SHA-256 fingerprint** — this hash binds the PDF to the exact finding set it documents.
+5. **PDF build.** `PDFReportGenerator.generate_report(scan_data, scan_id, findings_hash)` assembles the 7-section document using ReportLab `SimpleDocTemplate`.
+6. **Signing.** `sign_pdf(pdf_bytes)` produces a cryptographic signature over the byte stream.
+7. **Persistence.** A `Report` row is inserted with `id` (UUID), `scan_id`, `generated_at`, `findings_hash`, `signature`, and `pdf_bytes` blob.
+8. **Response.** Returns `{report_id, scan_id, generated_at, findings_hash, signed}`.
+9. **Download.** `GET /reports/{report_id}/pdf` streams the stored bytes (`Content-Disposition: attachment`).
+10. **Verification.** `GET /reports/{report_id}/verify` re-runs `verify_signature(pdf_bytes, signature)` and returns whether the stored PDF is intact.
+
+**Report contents (7 sections)**
+
+| # | Section | What it contains |
+|---|---|---|
+| 1 | **Cover page** | Target hostname/URL, scan type, scan ID, generated-at timestamp, brand styling |
+| 2 | **Executive Summary** | C-suite narrative — risk score, asset count, finding totals by severity, "what this means for the business" |
+| 3 | **Business Impact Analysis** | Per-asset criticality (db / web / mail / workstation), exposure surface, weighted impact |
+| 4 | **Vulnerability Categorization** | CVSS-aligned breakdown (Critical 9.0–10.0, High 7.0–8.9, Medium 4.0–6.9, Low 0.1–3.9, Info 0.0) with counts and palette |
+| 5 | **Technical Findings** | Per-vulnerability detail — title, CVE, CVSS score + vector, host/URL/port/service, parameter, evidence-grounded description, detected_by, confidence |
+| 6 | **Remediation Roadmap** | Action items sorted by priority (IMMEDIATE / HIGH / SCHEDULED), title, description, owner type |
+| 7 | **Appendix — integrity** | Scan metadata, `findings_hash` (SHA-256), signature footprint, generation timestamp |
+
+**Design tokens used in the PDF** (locked, do not drift from dashboard palette):
+`PRIMARY=#4338ca` (indigo-700), `ACCENT=#06b6d4` (cyan-500), `INK=#111827`, `MUTED=#6b7280`, `SOFT_BG=#f3f4f6`. Severity colors: critical `#b91c1c`, high `#ea580c`, medium `#ca8a04`, low `#2563eb`, info `#6b7280`.
+
+**Critical points**
+
+- **The PDF must equal the dashboard.** `_build_scan_data` pulls live DB state with the same filters as the dashboard KPI. If the dashboard says "Risk 67 · 12 vulns", the PDF must say the same. Any change to the dashboard scoring formula requires the same change here, in the **same PR**.
+- **Findings hash is the integrity anchor.** It is computed **before** the PDF bytes are produced, then embedded in the PDF and stored in the `Report` row. Anyone with the PDF and the public verification key can re-compute and confirm that the findings list has not been altered.
+- **`pdf_bytes` is stored in the DB.** Reports are reproducible from the DB alone; no filesystem dependency.
+- **`reportlab` is imported lazily** inside the endpoint to keep app boot fast.
+- **Legacy `/reports/{scan_id}` (GET)** returns AI summary text via `ai_advisor` and is kept only for backwards compatibility — new clients must use the `/generate` + `/pdf` pair.
+- **Role gate.** Only `ANALYST` and `ADMIN` can generate; any authenticated user can verify.
+- **No PII beyond what's in scan data.** The report must never include credentials, env vars, or raw secrets.
 
 **Recent updates**
 
-- Repo docs consolidated from ~13 root MDs into the three above.
-- `docs/audit/baseline_2026-04-24.md` added for industry-standard comparison.
+- Report data pipeline switched from "scan.vulnerabilities" to **all open vulnerabilities** so the report matches the live dashboard, not a frozen scan snapshot.
+- Risk score in the report is now recomputed with the **exact dashboard formula** to eliminate drift.
+- `Report` model added `pdf_bytes` blob — reports are now fully self-contained in the DB.
+- Verification endpoint added: `GET /reports/{report_id}/verify` confirms the PDF byte stream matches the stored signature.
+- Repo docs consolidated from ~13 root MDs into the three top-level docs.
 
 **Q&A**
 
 1. *Q: Where does a new architectural decision get recorded?*
-   A: `TECHNICAL_NOTES.md`, under "Architecture Decisions".
+   A: `TECHNICAL_NOTES.md` under "Architecture Decisions".
 2. *Q: A teammate wants a new top-level `.md` — what do I say?*
-   A: Add a section to one of the three docs, or a file under `docs/`. No new root MDs.
-3. *Q: How do I update the API guide?*
-   A: Swagger UI at `http://localhost:8000/docs` is the canonical reference, auto-generated from FastAPI. Prose-style notes about the API go in `TECHNICAL_NOTES.md`.
+   A: Add a section to one of the three docs. No new root MDs.
+3. *Q: How is the API guide kept up-to-date?*
+   A: Swagger UI at `/docs` is canonical and auto-generated from FastAPI. Prose-style notes go in `TECHNICAL_NOTES.md`.
 4. *Q: Where do screenshots for the README live?*
-   A: Project root or a new `screenshots/` folder next to the README. Reference with relative paths.
+   A: Project root or a `screenshots/` folder next to the README. Reference with relative paths.
 5. *Q: How is the FYP document built?*
-   A: `python generate_fyp_doc.py` — outputs `.docx`. Source content lives in this repo's documentation.
+   A: `python generate_fyp_doc.py` → `.docx`. Source content lives in this repo's documentation.
+6. *Q: A user complains "the PDF risk score is different from the dashboard" — what do I check?*
+   A: Confirm both are reading the same DB state, then compare formulas in `_build_scan_data` (reports.py) vs. the dashboard KPI. They must be identical. If divergence is real, fix at the source — never patch only one side.
+7. *Q: How do I add a new section to the PDF?*
+   A: Extend `PDFReportGenerator.generate_report` with a new helper (mirror `_cover_page`, `_executive_summary`, etc.), append the elements list in the right order. Add a unit test that the new section appears for a synthetic `scan_data`.
+8. *Q: How do I verify a report has not been tampered with?*
+   A: `GET /reports/{report_id}/verify`. It re-signs the stored `pdf_bytes` and compares to the stored signature; returns `{valid, signature_match, findings_hash}`.
+9. *Q: A scan has 0 findings — what does the PDF look like?*
+   A: It still generates: Cover + Executive Summary ("No open vulnerabilities at scan time") + empty categorization + empty technical findings + an empty remediation roadmap + appendix with hash. The report is signed regardless.
+10. *Q: Where does the AI prose in the report come from?*
+    A: It does **not**. The PDF pipeline is fully deterministic. AI-generated remediation prose lives on the dashboard via `ai_advisor` (owned by Omar Kapil). The PDF only includes deterministic remediation text from `Vulnerability.remediation_steps` / `remediation` fields.
+11. *Q: How long does a report take to generate?*
+    A: Typically 1–3 seconds for a scan with < 200 findings. The `reportlab` build dominates; signing is sub-millisecond.
+12. *Q: Are reports purged?*
+    A: No automatic purge today. Reports accumulate in the DB. Coordinate with Reem Amin on a future retention policy if size becomes an issue.
 
 ---
 
