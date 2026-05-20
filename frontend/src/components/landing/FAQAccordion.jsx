@@ -5,7 +5,7 @@ import SectionContainer from './shared/SectionContainer';
 
 const FAQS = [
     {
-        q: 'Do I need a dedicated security analyst to use found 404?',
+        q: 'Do I need a dedicated security analyst to use OSC?',
         a: 'No. The platform was designed for SME IT admins. Findings are translated into plain-language action items and the AI advisor explains every alert in business terms.',
     },
     {
@@ -25,7 +25,7 @@ const FAQS = [
         a: 'There are three default roles — admin, analyst, and viewer — each with granular permissions for scans, findings, and configuration. Roles can be customized per deployment.',
     },
     {
-        q: 'Is found 404 open source?',
+        q: 'Is OSC open source?',
         a: 'The platform is built on a 100% open-source core (Nmap, Nuclei, OpenVAS, Wazuh, FastAPI, React). The orchestration layer is released under a permissive license — see the docs for details.',
     },
 ];

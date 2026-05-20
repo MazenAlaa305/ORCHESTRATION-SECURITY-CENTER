@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, PlayCircle, ShieldAlert, Activity, Zap } from 'lucide-react';
+import { ArrowRight, PlayCircle, ShieldAlert, Activity, Zap, LayoutDashboard } from 'lucide-react';
 import GradientButton from './shared/GradientButton';
 import { stagger, staggerItem } from '../../lib/motion';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Hero() {
+    const { user } = useAuth();
     return (
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
             {/* Ambient glows */}
@@ -60,9 +62,15 @@ export default function Hero() {
                         </motion.p>
 
                         <motion.div variants={staggerItem} className="mt-8 flex flex-wrap items-center gap-4">
-                            <GradientButton to="/signup" variant="primary" size="lg" icon={ArrowRight}>
-                                Start free
-                            </GradientButton>
+                            {user ? (
+                                <GradientButton to="/dashboard/overview" variant="primary" size="lg" icon={LayoutDashboard}>
+                                    Open dashboard
+                                </GradientButton>
+                            ) : (
+                                <GradientButton to="/signup" variant="primary" size="lg" icon={ArrowRight}>
+                                    Start free
+                                </GradientButton>
+                            )}
                             <GradientButton href="#how-it-works" variant="secondary" size="lg" icon={PlayCircle}>
                                 See how it works
                             </GradientButton>
@@ -99,7 +107,7 @@ function HeroMockup() {
                 <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-                <span className="ml-auto text-[10px] text-white/40 font-mono">found-404 // core node</span>
+                <span className="ml-auto text-[10px] text-white/40 font-mono">osc // core node</span>
             </div>
 
             <div className="p-5 space-y-4">

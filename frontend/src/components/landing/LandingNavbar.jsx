@@ -37,8 +37,11 @@ export default function LandingNavbar() {
                     <div className="h-9 w-9 rounded-lg bg-cyber-accent/10 ring-1 ring-cyber-accent/40 flex items-center justify-center">
                         <Shield className="h-4.5 w-4.5 text-cyber-accent" />
                     </div>
-                    <span className="font-display text-white font-bold text-lg tracking-tight">
-                        found <span className="text-cyber-accent">404</span>
+                    <span className="font-display text-white font-bold text-lg tracking-tight leading-none">
+                        <span className="text-cyber-accent">OSC</span>
+                        <span className="hidden sm:block text-[8px] font-bold uppercase tracking-[0.25em] text-white/45 mt-0.5">
+                            Orchestration Security Center
+                        </span>
                     </span>
                 </Link>
 

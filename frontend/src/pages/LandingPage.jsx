@@ -15,7 +15,7 @@ import LandingFooter from '../components/landing/LandingFooter';
 export default function LandingPage() {
     useEffect(() => {
         const prev = document.title;
-        document.title = 'found 404 — Security orchestration for SMEs';
+        document.title = 'OSC — Orchestration Security Center';
         return () => { document.title = prev; };
     }, []);
 

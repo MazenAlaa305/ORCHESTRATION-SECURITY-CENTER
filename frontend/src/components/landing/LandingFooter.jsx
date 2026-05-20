@@ -49,8 +49,11 @@ export default function LandingFooter() {
                             <div className="h-9 w-9 rounded-lg bg-cyber-accent/10 ring-1 ring-cyber-accent/40 flex items-center justify-center">
                                 <Shield className="h-4.5 w-4.5 text-cyber-accent" />
                             </div>
-                            <span className="font-display text-white font-bold text-lg">
-                                found <span className="text-cyber-accent">404</span>
+                            <span className="font-display text-white font-bold text-lg leading-none">
+                                <span className="text-cyber-accent">OSC</span>
+                                <span className="block text-[8px] font-bold uppercase tracking-[0.25em] text-white/45 mt-0.5">
+                                    Orchestration Security Center
+                                </span>
                             </span>
                         </Link>
                         <p className="text-white/55 text-sm max-w-xs leading-relaxed">
@@ -94,7 +97,7 @@ export default function LandingFooter() {
 
                 <div className="mt-12 pt-6 border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <p className="text-white/40 text-xs">
-                        © {new Date().getFullYear()} found 404 · Orchestration Security Center. All rights reserved.
+                        © {new Date().getFullYear()} Orchestration Security Center (OSC). All rights reserved.
                     </p>
                     <p className="text-white/40 text-xs">Built as a graduation project — Team of 11.</p>
                 </div>

@@ -1,9 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield } from 'lucide-react';
+import { ArrowRight, Shield, LayoutDashboard } from 'lucide-react';
 import GradientButton from './shared/GradientButton';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function FinalCTA() {
+    const { user } = useAuth();
     return (
         <section className="relative py-24 md:py-32">
             <div className="mx-auto max-w-5xl px-6 md:px-10">
@@ -27,22 +29,44 @@ export default function FinalCTA() {
                             <Shield className="h-6 w-6 text-cyber-accent" />
                         </div>
                         <h2 className="font-display text-white text-3xl md:text-5xl font-bold leading-tight tracking-tight">
-                            Ready to see your network's
-                            <br />
-                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyber-accent via-cyber-teal to-cyber-accent">
-                                hidden risks?
-                            </span>
+                            {user ? (
+                                <>
+                                    Welcome back.
+                                    <br />
+                                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyber-accent via-cyber-teal to-cyber-accent">
+                                        Ready to keep watching?
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    Ready to see your network's
+                                    <br />
+                                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyber-accent via-cyber-teal to-cyber-accent">
+                                        hidden risks?
+                                    </span>
+                                </>
+                            )}
                         </h2>
                         <p className="mt-5 text-white/65 text-lg max-w-xl mx-auto">
-                            Spin up the lab in five minutes. No credit card, no commitments.
+                            {user
+                                ? 'Jump back into the dashboard to review the latest findings.'
+                                : 'Spin up the lab in five minutes. No credit card, no commitments.'}
                         </p>
                         <div className="mt-8 flex flex-wrap justify-center gap-4">
-                            <GradientButton to="/signup" variant="primary" size="lg" icon={ArrowRight}>
-                                Start free
-                            </GradientButton>
-                            <GradientButton to="/login" variant="secondary" size="lg">
-                                Sign in
-                            </GradientButton>
+                            {user ? (
+                                <GradientButton to="/dashboard/overview" variant="primary" size="lg" icon={LayoutDashboard}>
+                                    Open dashboard
+                                </GradientButton>
+                            ) : (
+                                <>
+                                    <GradientButton to="/signup" variant="primary" size="lg" icon={ArrowRight}>
+                                        Start free
+                                    </GradientButton>
+                                    <GradientButton to="/login" variant="secondary" size="lg">
+                                        Sign in
+                                    </GradientButton>
+                                </>
+                            )}
                         </div>
                     </div>
                 </motion.div>

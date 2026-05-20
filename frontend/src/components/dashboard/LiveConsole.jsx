@@ -25,7 +25,7 @@ const getLogClass = (line) => {
 };
 
 const DEMO_LOGS = [
-    '[00:00:01] [SYSTEM] found 404 Core Node initialized.',
+    '[00:00:01] [SYSTEM] OSC Core Node initialized.',
     '[00:00:02] [RECON] Starting Nmap scan on target...',
     '[00:00:05] [RECON] Discovered 3 open ports: 22, 80, 443',
     '[00:00:08] [ATTACK] Nuclei template chain loaded: CVE-2024-xxxx group',

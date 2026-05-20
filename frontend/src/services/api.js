@@ -94,7 +94,7 @@ export const targetService = {
 
 export const pentesterService = {
     /**
-     * found 404 API Service
+     * OSC API Service
      * Handles all communication with the backend
      */
     startAIScan: (targetId, config = {}) => api.post('/scans/ai', {

@@ -7,7 +7,7 @@ const CASES = [
     {
         icon: Users,
         title: 'IT admins at SMEs',
-        text: 'You wear ten hats. found 404 gives you a security posture you can actually action — without becoming a SOC analyst.',
+        text: 'You wear ten hats. OSC gives you a security posture you can actually action — without becoming a SOC analyst.',
         points: ['One dashboard for everything', 'Plain-language remediations', 'Alerts that matter'],
     },
     {
