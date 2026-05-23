@@ -2220,32 +2220,75 @@ const SCRIPTS = [
     else if (x < 0.15) prev();
   });
 
-  document.addEventListener('keydown', (e) => {
+  const enterFullscreen = () => {
+    const el = document.documentElement;
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (!fn) { showToast('Fullscreen API unavailable — open the file directly in Chrome/Edge'); return; }
+    try {
+      const p = fn.call(el);
+      if (p && p.catch) p.catch(err => showToast('Fullscreen blocked: ' + (err.message || 'permission denied')));
+    } catch (err) { showToast('Fullscreen failed: ' + err.message); }
+  };
+  const exitFullscreen = () => {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (fn) try { fn.call(document); } catch (_) {}
+  };
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+
+  let toastTimer = null;
+  const showToast = (msg) => {
+    let t = document.getElementById('__toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = '__toast';
+      t.style.cssText = 'position:fixed;left:50%;top:120px;transform:translateX(-50%);background:rgba(0,0,0,.78);backdrop-filter:blur(10px);border:1px solid rgba(0,255,255,.4);border-radius:10px;padding:10px 18px;font-family:"JetBrains Mono",monospace;font-size:12px;color:#9bdedf;letter-spacing:.12em;z-index:300;pointer-events:none;opacity:0;transition:opacity .25s ease';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2400);
+  };
+
+  const handleKey = (e) => {
     if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
     else if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); e.shiftKey ? prev() : next(); }
     else if (e.key === 's' || e.key === 'S') {
-      speaker.classList.toggle('on');
-      speaker.setAttribute('aria-hidden', speaker.classList.contains('on') ? 'false' : 'true');
+      e.preventDefault();
+      const isOn = speaker.classList.toggle('on');
+      speaker.setAttribute('aria-hidden', isOn ? 'false' : 'true');
+      showToast(isOn ? '▸ Speaker script ON' : '▸ Speaker script OFF');
     }
     else if (e.key === 't' || e.key === 'T') {
+      e.preventDefault();
       timerVisible = !timerVisible;
       timerOv.classList.toggle('on', timerVisible);
+      showToast(timerVisible ? '▸ Timer ON' : '▸ Timer OFF');
     }
     else if (e.key === 'f' || e.key === 'F') {
-      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-      else document.exitFullscreen?.();
+      e.preventDefault();
+      if (!fsElement()) enterFullscreen();
+      else exitFullscreen();
     }
     else if (e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
       document.body.classList.toggle('blanked');
     }
     else if (e.key === 'Escape') {
-      if (document.fullscreenElement) document.exitFullscreen?.();
+      if (fsElement()) exitFullscreen();
       else if (document.body.classList.contains('blanked')) document.body.classList.remove('blanked');
     }
     else if (e.key === 'Home') { e.preventDefault(); go(0); }
     else if (e.key === 'End') { e.preventDefault(); go(slides.length-1); }
-  });
+  };
+
+  window.addEventListener('keydown', handleKey);
+
+  // Make the deck focusable + auto-focus on init / click
+  document.body.setAttribute('tabindex', '-1');
+  document.body.focus();
+  document.addEventListener('click', () => document.body.focus(), { capture: true });
 
   // touch
   let tx = 0;
