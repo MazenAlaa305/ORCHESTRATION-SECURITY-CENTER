@@ -76,7 +76,8 @@
       "PowerShell(winget --version 2>&1)",
       "PowerShell(scoop --version 2>&1)",
       "PowerShell(choco --version 2>&1)",
-      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements)"
+      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements)",
+      "Bash(Start-Sleep 8)"
     ],
     "additionalDirectories": [
       "C:\\Users\\omar\\AppData\\Local\\Temp"
