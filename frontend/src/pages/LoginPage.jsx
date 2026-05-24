@@ -94,8 +94,7 @@ export default function LoginPage() {
                 {/* Glass card */}
                 <motion.div
                     variants={staggerItem}
-                    animate={error ? { x: [0, -8, 8, -6, 6, 0] } : undefined}
-                    transition={error ? { duration: 0.45 } : undefined}
+                    {...(error ? { animate: { x: [0, -8, 8, -6, 6, 0], opacity: 1, y: 0 }, transition: { duration: 0.45 } } : {})}
                     className="rounded-2xl p-8"
                      style={{
                          background: 'linear-gradient(135deg, rgba(77,189,177,0.06) 0%, rgba(16,34,43,0.7) 40%, rgba(10,26,34,0.8) 100%)',
