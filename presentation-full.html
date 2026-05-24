@@ -269,16 +269,39 @@ p.lede{margin-top:12px;color:#aec9cd;max-width:820px;font-size:14.5px;line-heigh
 .stp .b strong{color:#fff}
 .stp .b code{font-family:'JetBrains Mono',monospace;font-size:11px;color:#9be9ec;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px}
 
-/* screenshot mock */
-.shot{padding:14px;display:flex;flex-direction:column;gap:8px;min-height:0}
-.shot .frame{flex:1;min-height:0;border-radius:10px;border:1.5px dashed rgba(0,255,255,.35);background:linear-gradient(135deg,rgba(0,255,255,.04),rgba(20,50,70,.4));display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;position:relative;overflow:hidden}
-.shot .frame::before{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(0,255,255,.04) 19px,rgba(0,255,255,.04) 20px),repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(0,255,255,.04) 19px,rgba(0,255,255,.04) 20px)}
-.shot .frame .lbl{font-family:'JetBrains Mono',monospace;font-size:12px;color:#7fd9d9;letter-spacing:.14em;text-transform:uppercase;z-index:1}
-.shot .frame .sub{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#86a4a9;z-index:1}
+/* screenshot — real image with graceful fallback */
+.shot{padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.shot .frame{flex:1;min-height:0;border-radius:10px;border:1px solid rgba(0,255,255,.18);background:#0a1620;position:relative;overflow:hidden}
+.shot .frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#0a1620;z-index:2;display:block}
+.shot .frame .fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,rgba(0,255,255,.04),rgba(20,50,70,.4));z-index:1}
+.shot .frame .fallback::before{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(0,255,255,.05) 19px,rgba(0,255,255,.05) 20px),repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(0,255,255,.05) 19px,rgba(0,255,255,.05) 20px);pointer-events:none}
+.shot .frame .fallback .lbl{font-family:'JetBrains Mono',monospace;font-size:12px;color:#7fd9d9;letter-spacing:.14em;text-transform:uppercase;z-index:1}
+.shot .frame .fallback .sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:#86a4a9;z-index:1;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.4);border:1px solid rgba(0,255,255,.2)}
 .shot .tabhdr{display:flex;align-items:center;gap:8px;padding:0 4px}
 .shot .tabhdr .tn{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#7fd9d9;letter-spacing:.12em;text-transform:uppercase}
 .shot .tabhdr .dot3{display:flex;gap:5px}
 .shot .tabhdr .dot3 span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)}
+.shot.compact{padding:8px}
+.shot.compact .tabhdr{display:none}
+
+/* wizard step grid — for Add Target multi-step flow */
+.wizgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px;flex:1;min-height:0}
+.wizstep{display:flex;flex-direction:column;gap:8px;min-height:0;padding:10px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(0,255,255,.15);position:relative}
+.wizstep::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:rgba(0,255,255,.4);font-family:'JetBrains Mono',monospace;font-size:14px;z-index:2}
+.wizstep:last-child::after{display:none}
+.wizstep .wsh{display:flex;align-items:center;gap:8px;padding:2px 4px}
+.wizstep .wsn{width:22px;height:22px;border-radius:50%;background:rgba(0,255,255,.12);border:1px solid rgba(0,255,255,.4);color:var(--neon);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px}
+.wizstep .wst{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#9bdedf;letter-spacing:.12em;text-transform:uppercase}
+.wizstep .wsi{flex:1;min-height:0;border-radius:6px;border:1px solid rgba(0,255,255,.15);background:#0a1620;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
+.wizstep .wsi img{width:100%;height:100%;object-fit:cover;object-position:top}
+.wizstep .wsi .ph{font-family:'JetBrains Mono',monospace;font-size:9px;color:#7fa6ab;padding:4px 8px;text-align:center;line-height:1.4}
+.wizstep .wsd{font-size:11px;color:#cfe9ec;line-height:1.4;padding:0 2px;min-height:30px}
+.wizstep .wsd strong{color:#fff}
+
+/* triple-screenshot row for multi-screen flows */
+.tripleshot{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px;flex:1;min-height:0}
+.tripleshot .shot{padding:10px}
+.tripleshot .shot .tabhdr .tn{font-size:9.5px}
 
 /* table */
 table.t{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px}
@@ -992,479 +1015,439 @@ LLM_OPTIONAL = True</div>
 </section>
 
 <!-- ====================================================================== -->
-<!-- SECTION 5 · TABS TOUR                                                    -->
+<!-- SECTION 5 · TABS TOUR  (uses real screenshots from presentation-assets/) -->
 <!-- ====================================================================== -->
 
-<!-- 5.1 · Overview -->
+<!-- 5.1 · Command Center / Overview -->
 <section class="slide" data-section="5" data-target="50" data-pres="rahma-ibrahim">
   <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Overview <span class="neon">·</span> the analyst's home screen</h1>
+    <div class="eyebrow">05 · Command Center</div>
+    <h1 class="title">Security Ops <span class="neon">·</span> the analyst's home</h1>
     <div class="title-underline"></div>
-    <p class="lede">First thing an analyst sees every morning. Designed for at-a-glance answers.</p>
+    <p class="lede">The first screen every morning — six KPI cards, the live Risk gauge, severity distribution, and the Action Queue.</p>
   </div>
-  <div class="row2">
+  <div class="row2" style="grid-template-columns:1.4fr .6fr">
     <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">overview</div></div>
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">command center · /dashboard</div></div>
       <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:80%;height:80%;opacity:.85">
-          <rect x="10" y="10" width="80" height="44" rx="6" fill="rgba(0,255,255,.06)" stroke="#00ffff" stroke-opacity=".4"/>
-          <text x="20" y="28" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">RISK SCORE</text>
-          <text x="20" y="46" fill="#00ffff" font-family="Syne" font-size="16" font-weight="700">72</text>
-          <rect x="100" y="10" width="80" height="44" rx="6" fill="rgba(0,255,136,.06)" stroke="#00ff88" stroke-opacity=".4"/>
-          <text x="110" y="28" fill="#88dac0" font-family="JetBrains Mono" font-size="7">HEALTH</text>
-          <text x="110" y="46" fill="#00ff88" font-family="Syne" font-size="16" font-weight="700">98%</text>
-          <rect x="190" y="10" width="80" height="44" rx="6" fill="rgba(255,170,0,.06)" stroke="#ffaa00" stroke-opacity=".4"/>
-          <text x="200" y="28" fill="#ffd070" font-family="JetBrains Mono" font-size="7">ACTIVE</text>
-          <text x="200" y="46" fill="#ffaa00" font-family="Syne" font-size="16" font-weight="700">3</text>
-          <rect x="280" y="10" width="70" height="44" rx="6" fill="rgba(0,255,255,.06)" stroke="#00ffff" stroke-opacity=".4"/>
-          <text x="290" y="28" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">MTTR</text>
-          <text x="290" y="46" fill="#00ffff" font-family="Syne" font-size="14" font-weight="700">4.2h</text>
-          <circle cx="90" cy="140" r="55" fill="none" stroke="rgba(0,255,255,.15)" stroke-width="8"/>
-          <circle cx="90" cy="140" r="55" fill="none" stroke="#00ffff" stroke-width="8" stroke-dasharray="248 346" transform="rotate(-90 90 140)" stroke-linecap="round"/>
-          <text x="90" y="138" text-anchor="middle" fill="#00ffff" font-family="Syne" font-size="22" font-weight="700">72</text>
-          <text x="90" y="152" text-anchor="middle" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">RISK</text>
-          <rect x="170" y="80" width="180" height="130" rx="6" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.1)"/>
-          <text x="180" y="96" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">ACTION CENTER · TOP 5</text>
-          <rect x="178" y="106" width="164" height="18" rx="3" fill="rgba(255,0,85,.1)"/><text x="184" y="118" fill="#ff8888" font-family="JetBrains Mono" font-size="7">[87] smb-anon-share-writable</text>
-          <rect x="178" y="128" width="164" height="18" rx="3" fill="rgba(255,170,0,.1)"/><text x="184" y="140" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">[63] tls-weak-cipher</text>
-          <rect x="178" y="150" width="164" height="18" rx="3" fill="rgba(255,170,0,.1)"/><text x="184" y="162" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">[58] ssh-default-creds</text>
-          <rect x="178" y="172" width="164" height="18" rx="3" fill="rgba(0,255,255,.06)"/><text x="184" y="184" fill="#9bdedf" font-family="JetBrains Mono" font-size="7">[42] redis-no-auth</text>
-          <rect x="178" y="194" width="164" height="14" rx="3" fill="rgba(0,255,255,.04)"/><text x="184" y="204" fill="#9bdedf" font-family="JetBrains Mono" font-size="7">[34] http-server-banner</text>
-        </svg>
+        <img src="presentation-assets/dashboard-overview.png" alt="Command Center dashboard" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Command Center</div><div class="sub">presentation-assets/dashboard-overview.png</div></div>
       </div>
     </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">How to use this tab</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">Glance at the <strong>four KPI cards</strong>: Risk · Health · Active Scans · MTTR.</div></div>
-        <div class="stp"><div class="n">2</div><div class="b">Read the central <strong>Risk Score gauge</strong>: &gt;80 green, &gt;50 cyan, &gt;20 amber, else red.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Open the <strong>Action Center</strong> queue on the right — five prioritized items.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Click any action → drops into the Vulnerabilities drawer with full context.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">Live updates stream in via WebSocket — no refresh button needed.</div></div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">What's on screen</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b"><strong>Six KPI cards</strong>: Health · Vulns · In Progress · SLA Overdue · Assets · Status.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b"><strong>Health Score gauge</strong> + <strong>Severity Distribution</strong> bars (Critical→Info).</div></div>
+        <div class="stp"><div class="n">3</div><div class="b"><strong>Quick Scan widget</strong> · type a target → click Scan → pipeline kicks off.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b"><strong>Live Topology</strong> · live <strong>Orchestration Log</strong> · 14-day Exposure Trend.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b"><strong>Action Queue</strong> on the right — discovered devices &amp; urgent items.</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 5.2 · Scans -->
-<section class="slide" data-section="5" data-target="50" data-pres="mohamed-shaban">
+<!-- 5.2 · Scanner Hub — Nodes / Targets -->
+<section class="slide" data-section="5" data-target="45" data-pres="mohamed-shaban">
   <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Scans <span class="neon">·</span> the operational heart</h1>
+    <div class="eyebrow">05 · Scanner · Nodes</div>
+    <h1 class="title">Scan Targets <span class="neon">·</span> the operational hub</h1>
     <div class="title-underline"></div>
-    <p class="lede">Where the four-stage pipeline lights up live, in front of you.</p>
+    <p class="lede">Every registered target as a card. One click to scan, one click to AI-analyse, one click to delete.</p>
   </div>
-  <div class="row2">
+  <div class="row2" style="grid-template-columns:1.4fr .6fr">
     <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">scans</div></div>
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">scanner · operations · nodes</div></div>
       <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:84%;height:84%;opacity:.85">
-          <rect x="10" y="10" width="120" height="30" rx="6" fill="#00ffff" fill-opacity=".2" stroke="#00ffff" stroke-opacity=".6"/>
-          <text x="70" y="30" text-anchor="middle" fill="#00ffff" font-family="Syne" font-size="11" font-weight="700">+ QUICK SCAN</text>
-          <rect x="10" y="58" width="340" height="56" rx="6" fill="rgba(255,255,255,.03)" stroke="rgba(0,255,255,.2)"/>
-          <text x="20" y="74" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">PIPELINE · scan a3f9c7</text>
-          <g><circle cx="60" cy="98" r="9" fill="#00ff88" fill-opacity=".3" stroke="#00ff88"/><text x="60" y="102" text-anchor="middle" fill="#00ff88" font-family="JetBrains Mono" font-size="8">✓</text><text x="60" y="116" text-anchor="middle" fill="#88dac0" font-family="JetBrains Mono" font-size="6">RECON</text></g>
-          <g><circle cx="140" cy="98" r="9" fill="#00ff88" fill-opacity=".3" stroke="#00ff88"/><text x="140" y="102" text-anchor="middle" fill="#00ff88" font-family="JetBrains Mono" font-size="8">✓</text><text x="140" y="116" text-anchor="middle" fill="#88dac0" font-family="JetBrains Mono" font-size="6">ATTACK</text></g>
-          <g><circle cx="220" cy="98" r="9" fill="#00ffff" fill-opacity=".3" stroke="#00ffff"><animate attributeName="r" values="9;11;9" dur="1.4s" repeatCount="indefinite"/></circle><text x="220" y="102" text-anchor="middle" fill="#00ffff" font-family="JetBrains Mono" font-size="8">●</text><text x="220" y="116" text-anchor="middle" fill="#9bdedf" font-family="JetBrains Mono" font-size="6">VALIDATE</text></g>
-          <g><circle cx="300" cy="98" r="9" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.2)"/><text x="300" y="116" text-anchor="middle" fill="#86a4a9" font-family="JetBrains Mono" font-size="6">SCORE</text></g>
-          <line x1="70" y1="98" x2="131" y2="98" stroke="#00ff88" stroke-width="2"/>
-          <line x1="149" y1="98" x2="211" y2="98" stroke="#00ff88" stroke-width="2"/>
-          <line x1="229" y1="98" x2="291" y2="98" stroke="rgba(0,255,255,.2)" stroke-width="2" stroke-dasharray="3 3"/>
-          <rect x="10" y="124" width="340" height="86" rx="6" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.1)"/>
-          <text x="20" y="140" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">SCAN HISTORY</text>
-          <text x="20" y="158" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">a3f9c7  10.10.20.11  ● running</text>
-          <text x="20" y="174" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">b2e8d1  10.10.30.5   ✓ done · 14 findings</text>
-          <text x="20" y="190" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">c1d7e2  10.10.10.3   ✓ done · 8 findings</text>
-          <text x="20" y="206" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">d0c6f3  10.10.40.2   ✗ aborted</text>
-        </svg>
+        <img src="presentation-assets/operations-nodes.png" alt="Scanner Nodes view" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Scanner / Nodes</div><div class="sub">presentation-assets/operations-nodes.png</div></div>
       </div>
     </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">How to launch a scan</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">Click <strong>Quick Scan</strong> → enter target (IP, hostname, or URL) → confirm.</div></div>
-        <div class="stp"><div class="n">2</div><div class="b">The <strong>Scan Pipeline Panel</strong> lights up live as each of the four stages completes.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Progress streams in via WebSocket from the <code>celery_worker</code> container.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Click any row in <strong>Scan History</strong> to inspect findings.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">If something goes wrong, <strong>Abort</strong> stops the Celery task cleanly.</div></div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">Card actions</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b">Sub-tabs · <strong>Scan · History · Nodes · Lab</strong> · plus environment chips ALL / LAB / PROD.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b"><strong>Asset Discovery</strong> auto-discovers; <strong>Add Target</strong> opens the 5-step wizard (next slide).</div></div>
+        <div class="stp"><div class="n">3</div><div class="b">Each card shows URL · environment tag · last scan time.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b"><strong>Scan</strong> button → fires the pipeline on that target.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b"><strong>AI</strong> button → runs the IntelligenceAgent on existing findings.</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 5.3 · Targets -->
-<section class="slide" data-section="5" data-target="50" data-pres="reem-ameen">
-  <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Targets <span class="neon">·</span> tell the platform what to protect</h1>
-    <div class="title-underline"></div>
-    <p class="lede">Asset value, sensitivity, and compliance tags drive the Risk Engine multiplier.</p>
-  </div>
-  <div class="row2">
-    <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">targets</div></div>
-      <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:84%;height:84%;opacity:.85">
-          <rect x="10" y="10" width="120" height="26" rx="6" fill="#00ffff" fill-opacity=".18" stroke="#00ffff" stroke-opacity=".5"/>
-          <text x="70" y="28" text-anchor="middle" fill="#00ffff" font-family="Syne" font-size="10" font-weight="700">+ ADD TARGET</text>
-          <rect x="140" y="48" width="210" height="160" rx="8" fill="rgba(255,255,255,.04)" stroke="rgba(0,255,255,.3)"/>
-          <text x="150" y="64" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">ADD TARGET WIZARD</text>
-          <rect x="148" y="72" width="194" height="16" rx="3" fill="rgba(255,255,255,.04)"/><text x="154" y="83" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">URL / IP   ▸  10.10.20.11</text>
-          <rect x="148" y="92" width="194" height="16" rx="3" fill="rgba(255,255,255,.04)"/><text x="154" y="103" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">Asset value · ● Critical</text>
-          <rect x="148" y="112" width="194" height="16" rx="3" fill="rgba(255,255,255,.04)"/><text x="154" y="123" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">Sensitivity · PII · PCI</text>
-          <rect x="148" y="132" width="194" height="16" rx="3" fill="rgba(255,255,255,.04)"/><text x="154" y="143" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">Environment · Production</text>
-          <rect x="148" y="152" width="194" height="16" rx="3" fill="rgba(255,255,255,.04)"/><text x="154" y="163" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">Scope allowlist · /api/*</text>
-          <rect x="148" y="172" width="194" height="16" rx="3" fill="rgba(255,0,85,.06)" stroke="rgba(255,0,85,.3)"/><text x="154" y="183" fill="#ff8888" font-family="JetBrains Mono" font-size="7">🔒 Creds · Fernet-encrypted</text>
-          <rect x="10" y="48" width="120" height="160" rx="8" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)"/>
-          <text x="20" y="64" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">REGISTERED · 4</text>
-          <text x="20" y="80" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">● file-srv     CRIT</text>
-          <text x="20" y="96" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">● api-gw      HIGH</text>
-          <text x="20" y="112" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">● juice-shop  MED</text>
-          <text x="20" y="128" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">● dns         LOW</text>
-        </svg>
-      </div>
-    </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">How to register a target</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">Paste a <strong>URL or IP</strong> in the wizard.</div></div>
-        <div class="stp"><div class="n">2</div><div class="b">Pick <strong>asset value</strong>: Critical · High · Medium · Low — this becomes the Risk Engine multiplier.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Choose <strong>data sensitivity</strong> (PII / PCI / HIPAA), mark <strong>environment</strong>, attach compliance tags.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Define the <strong>scope allowlist</strong> + rate limits so production stays safe.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">Optional credentials are <strong>Fernet-encrypted</strong> before touching the database.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 5.4 · Vulnerabilities -->
-<section class="slide" data-section="5" data-target="50" data-pres="shahd-baher">
-  <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Vulnerabilities <span class="neon">·</span> the triage view</h1>
-    <div class="title-underline"></div>
-    <p class="lede">Every finding from every scan, filterable, with AI-generated remediation steps.</p>
-  </div>
-  <div class="row2">
-    <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">vulnerabilities</div></div>
-      <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:86%;height:86%;opacity:.85">
-          <rect x="10" y="10" width="55" height="18" rx="9" fill="rgba(255,0,85,.18)" stroke="#ff0055" stroke-opacity=".5"/><text x="37" y="22" text-anchor="middle" fill="#ff5577" font-family="JetBrains Mono" font-size="7">CRIT (3)</text>
-          <rect x="70" y="10" width="55" height="18" rx="9" fill="rgba(255,170,0,.15)" stroke="#ffaa00" stroke-opacity=".4"/><text x="97" y="22" text-anchor="middle" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">HIGH (8)</text>
-          <rect x="130" y="10" width="55" height="18" rx="9" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.15)"/><text x="157" y="22" text-anchor="middle" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">MED (14)</text>
-          <rect x="190" y="10" width="55" height="18" rx="9" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.15)"/><text x="217" y="22" text-anchor="middle" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">LOW (22)</text>
-          <rect x="10" y="40" width="200" height="170" rx="6" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)"/>
-          <rect x="14" y="46" width="192" height="22" rx="3" fill="rgba(255,0,85,.12)"/><text x="20" y="60" fill="#ff8888" font-family="JetBrains Mono" font-size="7">[87] smb-anon-share-writable</text>
-          <rect x="14" y="70" width="192" height="22" rx="3" fill="rgba(255,0,85,.06)"/><text x="20" y="84" fill="#ff8888" font-family="JetBrains Mono" font-size="7">[82] sql-injection · /search</text>
-          <rect x="14" y="94" width="192" height="22" rx="3" fill="rgba(255,170,0,.1)"/><text x="20" y="108" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">[63] tls-weak-cipher</text>
-          <rect x="14" y="118" width="192" height="22" rx="3" fill="rgba(255,170,0,.06)"/><text x="20" y="132" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">[58] ssh-default-creds</text>
-          <rect x="14" y="142" width="192" height="22" rx="3" fill="rgba(255,255,255,.04)"/><text x="20" y="156" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">[42] redis-no-auth</text>
-          <rect x="14" y="166" width="192" height="22" rx="3" fill="rgba(255,255,255,.04)"/><text x="20" y="180" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">[34] http-server-banner</text>
-          <rect x="220" y="40" width="130" height="170" rx="6" fill="rgba(0,255,255,.04)" stroke="rgba(0,255,255,.25)"/>
-          <text x="226" y="56" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">DRAWER · CVSS</text>
-          <text x="226" y="74" fill="#fff" font-family="Syne" font-size="11" font-weight="700">CVSS 9.1</text>
-          <text x="226" y="88" fill="#cfe9ec" font-family="JetBrains Mono" font-size="6">AV:N · AC:L · PR:N</text>
-          <text x="226" y="102" fill="#7fd9d9" font-family="JetBrains Mono" font-size="6">▸ AI Remediation</text>
-          <text x="226" y="116" fill="#cfe9ec" font-family="JetBrains Mono" font-size="6">1. Disable anon access</text>
-          <text x="226" y="128" fill="#cfe9ec" font-family="JetBrains Mono" font-size="6">2. Require auth</text>
-          <text x="226" y="140" fill="#cfe9ec" font-family="JetBrains Mono" font-size="6">3. Restrict by IP</text>
-          <rect x="226" y="174" width="50" height="18" rx="4" fill="rgba(0,255,136,.15)" stroke="#00ff88" stroke-opacity=".5"/><text x="251" y="186" text-anchor="middle" fill="#00ff88" font-family="JetBrains Mono" font-size="7">✓ FIXED</text>
-          <rect x="282" y="174" width="62" height="18" rx="4" fill="rgba(255,170,0,.1)" stroke="#ffaa00" stroke-opacity=".4"/><text x="313" y="186" text-anchor="middle" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">FALSE POS</text>
-        </svg>
-      </div>
-    </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">How to triage findings</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">Filter by <strong>severity</strong>, <strong>status</strong>, or target.</div></div>
-        <div class="stp"><div class="n">2</div><div class="b">Click any row → <strong>Incident Detail Drawer</strong> slides in.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Read the full <strong>CVSS breakdown</strong> + attack vector + complexity.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Follow the <strong>AI-generated remediation</strong> steps in plain English.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">Mark as <strong>Fixed · False Positive · Risk Accepted</strong> — every decision is logged.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 5.5 · Network -->
-<section class="slide" data-section="5" data-target="50" data-pres="omnia-helmy">
-  <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Network <span class="neon">·</span> situational awareness</h1>
-    <div class="title-underline"></div>
-    <p class="lede">A force-directed topology of every asset. At a glance, see which corner of the network is on fire.</p>
-  </div>
-  <div class="row2">
-    <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">network</div></div>
-      <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:86%;height:86%;opacity:.9">
-          <line x1="100" y1="60" x2="180" y2="110" stroke="rgba(0,255,255,.2)" stroke-width="1"/>
-          <line x1="180" y1="110" x2="260" y2="60" stroke="rgba(0,255,255,.2)" stroke-width="1"/>
-          <line x1="180" y1="110" x2="100" y2="170" stroke="rgba(0,255,255,.2)" stroke-width="1"/>
-          <line x1="180" y1="110" x2="260" y2="170" stroke="rgba(0,255,255,.2)" stroke-width="1"/>
-          <line x1="180" y1="110" x2="280" y2="115" stroke="rgba(0,255,255,.2)" stroke-width="1"/>
-          <line x1="180" y1="110" x2="80" y2="120" stroke="rgba(0,255,255,.2)" stroke-width="1"/>
-          <circle cx="100" cy="60" r="14" fill="#ff0055" fill-opacity=".4" stroke="#ff0055"/><text x="100" y="64" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="7" font-weight="700">CRIT</text>
-          <circle cx="260" cy="60" r="11" fill="#ffaa00" fill-opacity=".4" stroke="#ffaa00"/><text x="260" y="63" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="6">MED</text>
-          <circle cx="180" cy="110" r="18" fill="#ff0055" fill-opacity=".6" stroke="#ff0055" stroke-width="2"><animate attributeName="r" values="18;20;18" dur="1.8s" repeatCount="indefinite"/></circle><text x="180" y="115" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="7" font-weight="700">file-srv</text>
-          <circle cx="100" cy="170" r="9" fill="#00ff88" fill-opacity=".3" stroke="#00ff88"/><text x="100" y="173" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="6">OK</text>
-          <circle cx="260" cy="170" r="10" fill="#ffaa00" fill-opacity=".4" stroke="#ffaa00"/><text x="260" y="173" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="6">MED</text>
-          <circle cx="280" cy="115" r="8" fill="#00ff88" fill-opacity=".3" stroke="#00ff88"/><text x="280" y="118" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="6">OK</text>
-          <circle cx="80" cy="120" r="8" fill="#00ff88" fill-opacity=".3" stroke="#00ff88"/>
-          <rect x="10" y="190" width="340" height="22" rx="4" fill="rgba(0,0,0,.3)"/>
-          <text x="20" y="204" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">Click node → Asset Detail   ·   ⊕ zoom   ✋ pan   ⤤ drag</text>
-        </svg>
-      </div>
-    </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">How to read the topology</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b"><strong>Node colour</strong> = risk band (red critical · amber medium · green safe).</div></div>
-        <div class="stp"><div class="n">2</div><div class="b"><strong>Node size</strong> = vulnerability count on that asset.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Drag any node to reposition; the layout settles via force simulation.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Click → <strong>Asset Detail Panel</strong> opens with open ports, services, and findings.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">Built on <code>react-force-graph-2d</code> · canvas-rendered for performance.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 5.6 · Reports -->
-<section class="slide" data-section="5" data-target="50" data-pres="omar-elshafey">
-  <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Reports <span class="neon">·</span> what reaches the CEO</h1>
-    <div class="title-underline"></div>
-    <p class="lede">Executive-grade PDFs · technical detail in appendices · the headline number on the cover.</p>
-  </div>
-  <div class="row2">
-    <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">reports</div></div>
-      <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:84%;height:84%;opacity:.9">
-          <rect x="60" y="10" width="120" height="200" rx="4" fill="rgba(255,255,255,.92)" stroke="rgba(0,255,255,.3)"/>
-          <rect x="68" y="18" width="104" height="20" rx="2" fill="#10222b"/>
-          <text x="120" y="32" text-anchor="middle" fill="#00ffff" font-family="Syne" font-size="8" font-weight="700">OSC · SECURITY REPORT</text>
-          <text x="120" y="60" text-anchor="middle" fill="#10222b" font-family="Syne" font-size="14" font-weight="700">Executive</text>
-          <text x="120" y="74" text-anchor="middle" fill="#10222b" font-family="Syne" font-size="14" font-weight="700">Summary</text>
-          <circle cx="120" cy="118" r="22" fill="none" stroke="#ddd" stroke-width="5"/>
-          <circle cx="120" cy="118" r="22" fill="none" stroke="#ff0055" stroke-width="5" stroke-dasharray="100 138" transform="rotate(-90 120 118)" stroke-linecap="round"/>
-          <text x="120" y="122" text-anchor="middle" fill="#10222b" font-family="Syne" font-size="14" font-weight="700">72</text>
-          <text x="120" y="156" text-anchor="middle" fill="#666" font-family="JetBrains Mono" font-size="6">RISK · 47 FINDINGS</text>
-          <line x1="74" y1="170" x2="166" y2="170" stroke="#ddd"/>
-          <text x="76" y="183" fill="#10222b" font-family="JetBrains Mono" font-size="6">📄 Signed · SHA-256</text>
-          <text x="76" y="194" fill="#666" font-family="JetBrains Mono" font-size="6">2026-05-23 · 14:32 UTC</text>
-          <rect x="200" y="10" width="150" height="200" rx="6" fill="rgba(255,255,255,.04)" stroke="rgba(0,255,255,.2)"/>
-          <text x="210" y="26" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">SECTIONS · INCLUDE</text>
-          <rect x="210" y="36" width="14" height="14" rx="2" fill="#00ffff" fill-opacity=".4" stroke="#00ffff"/><text x="217" y="46" text-anchor="middle" fill="#10222b" font-family="JetBrains Mono" font-size="9" font-weight="700">✓</text><text x="230" y="46" fill="#e8fbff" font-family="JetBrains Mono" font-size="7">Executive Summary</text>
-          <rect x="210" y="56" width="14" height="14" rx="2" fill="#00ffff" fill-opacity=".4" stroke="#00ffff"/><text x="217" y="66" text-anchor="middle" fill="#10222b" font-family="JetBrains Mono" font-size="9" font-weight="700">✓</text><text x="230" y="66" fill="#e8fbff" font-family="JetBrains Mono" font-size="7">Technical Findings</text>
-          <rect x="210" y="76" width="14" height="14" rx="2" fill="#00ffff" fill-opacity=".4" stroke="#00ffff"/><text x="217" y="86" text-anchor="middle" fill="#10222b" font-family="JetBrains Mono" font-size="9" font-weight="700">✓</text><text x="230" y="86" fill="#e8fbff" font-family="JetBrains Mono" font-size="7">CVSS Breakdown</text>
-          <rect x="210" y="96" width="14" height="14" rx="2" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.2)"/><text x="230" y="106" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">Compliance · PCI</text>
-          <rect x="210" y="116" width="14" height="14" rx="2" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.2)"/><text x="230" y="126" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">Compliance · HIPAA</text>
-          <rect x="210" y="180" width="130" height="24" rx="6" fill="#00ffff" fill-opacity=".25" stroke="#00ffff" stroke-opacity=".6"/>
-          <text x="275" y="196" text-anchor="middle" fill="#00ffff" font-family="Syne" font-size="11" font-weight="700">↓ GENERATE PDF</text>
-        </svg>
-      </div>
-    </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">How to generate a report</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">Click <strong>Generate</strong> → pick sections (Exec · Technical · CVSS · Compliance).</div></div>
-        <div class="stp"><div class="n">2</div><div class="b">Under the hood: <strong>ReportLab</strong> lays out the document, <strong>Pillow</strong> renders charts.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">The PDF is <strong>digitally signed</strong> (SHA-256) so the recipient can verify integrity.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Headline risk number on the cover; technical detail in appendices.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">Download or email — same PDF goes to the CEO and to the auditor.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 5.7 · Lab -->
+<!-- 5.3 · Scan History -->
 <section class="slide" data-section="5" data-target="40" data-pres="mohamed-shaban">
   <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Lab <span class="neon">·</span> the practice environment</h1>
+    <div class="eyebrow">05 · Scanner · History</div>
+    <h1 class="title">Scan History <span class="neon">·</span> every run, replayable</h1>
     <div class="title-underline"></div>
-    <p class="lede">Manage the vulnerable container set we showed in section four — three clicks to a running demo.</p>
+    <p class="lede">Filter by status, profile, or date range. Expand any row to see the exact JSON payload that was sent — fully reproducible.</p>
   </div>
-  <div class="row2">
+  <div class="row2" style="grid-template-columns:1.4fr .6fr">
     <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">lab</div></div>
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">scanner · history</div></div>
       <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:86%;height:86%;opacity:.9">
-          <rect x="10" y="10" width="340" height="34" rx="6" fill="rgba(0,255,255,.06)" stroke="rgba(0,255,255,.25)"/>
-          <text x="20" y="26" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">LAB · 6 CONTAINERS · 4 ZONES</text>
-          <rect x="260" y="16" width="80" height="22" rx="4" fill="#00ffff" fill-opacity=".3" stroke="#00ffff" stroke-opacity=".6"/>
-          <text x="300" y="30" text-anchor="middle" fill="#00ffff" font-family="Syne" font-size="9" font-weight="700">⊕ SEED ALL</text>
-          <rect x="10" y="54" width="167" height="32" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(0,255,255,.18)"/>
-          <circle cx="22" cy="70" r="4" fill="#00ff88"/>
-          <text x="32" y="68" fill="#fff" font-family="Syne" font-size="9" font-weight="700">juice-shop</text>
-          <text x="32" y="80" fill="#7fd9d9" font-family="JetBrains Mono" font-size="6">DMZ · :3000 · running</text>
-          <rect x="140" y="60" width="32" height="18" rx="3" fill="rgba(255,170,0,.15)" stroke="#ffaa00" stroke-opacity=".4"/><text x="156" y="72" text-anchor="middle" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">stop</text>
-          <rect x="183" y="54" width="167" height="32" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(0,255,255,.18)"/>
-          <circle cx="195" cy="70" r="4" fill="#00ff88"/>
-          <text x="205" y="68" fill="#fff" font-family="Syne" font-size="9" font-weight="700">file-server</text>
-          <text x="205" y="80" fill="#ffd070" font-family="JetBrains Mono" font-size="6">CORP · :1139 · running</text>
-          <rect x="313" y="60" width="32" height="18" rx="3" fill="rgba(255,170,0,.15)" stroke="#ffaa00" stroke-opacity=".4"/><text x="329" y="72" text-anchor="middle" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">stop</text>
-          <rect x="10" y="92" width="167" height="32" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(0,255,255,.18)"/>
-          <circle cx="22" cy="108" r="4" fill="#00ff88"/>
-          <text x="32" y="106" fill="#fff" font-family="Syne" font-size="9" font-weight="700">api-gateway</text>
-          <text x="32" y="118" fill="#9bd6ff" font-family="JetBrains Mono" font-size="6">DMZ · :8081 · running</text>
-          <rect x="183" y="92" width="167" height="32" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(0,255,255,.18)"/>
-          <circle cx="195" cy="108" r="4" fill="#00ff88"/>
-          <text x="205" y="106" fill="#fff" font-family="Syne" font-size="9" font-weight="700">lab-postgres</text>
-          <text x="205" y="118" fill="#ff96ad" font-family="JetBrains Mono" font-size="6">DATA · :5433 · running</text>
-          <rect x="10" y="130" width="167" height="32" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(0,255,255,.18)"/>
-          <circle cx="22" cy="146" r="4" fill="#86a4a9"/>
-          <text x="32" y="144" fill="#fff" font-family="Syne" font-size="9" font-weight="700">mail · greenmail</text>
-          <text x="32" y="156" fill="#ffd070" font-family="JetBrains Mono" font-size="6">CORP · stopped</text>
-          <rect x="140" y="138" width="32" height="18" rx="3" fill="rgba(0,255,136,.15)" stroke="#00ff88" stroke-opacity=".4"/><text x="156" y="150" text-anchor="middle" fill="#00ff88" font-family="JetBrains Mono" font-size="7">▶ run</text>
-          <rect x="183" y="130" width="167" height="32" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(0,255,255,.18)"/>
-          <circle cx="195" cy="146" r="4" fill="#00ff88"/>
-          <text x="205" y="144" fill="#fff" font-family="Syne" font-size="9" font-weight="700">redis · weak-creds</text>
-          <text x="205" y="156" fill="#ff96ad" font-family="JetBrains Mono" font-size="6">DATA · :6380 · running</text>
-          <rect x="10" y="180" width="340" height="30" rx="5" fill="rgba(0,0,0,.3)"/>
-          <text x="20" y="200" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">↗ Open Juice Shop  ·  POST /api/v1/lab/seed → register all 6 as targets</text>
-        </svg>
+        <img src="presentation-assets/scan-history.png" alt="Scan history list" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Scan History</div><div class="sub">presentation-assets/scan-history.png</div></div>
       </div>
     </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">How to drive the lab</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">See all six containers · start/stop individually with one click.</div></div>
-        <div class="stp"><div class="n">2</div><div class="b">Click <strong>Open</strong> on Juice Shop → launches in a new tab.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Click <strong>Seed</strong> → POSTs to <code>/api/v1/lab/seed</code> · registers all 6 as targets.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Three clicks from a clean install to a running pipeline.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">Resets cleanly with one button — perfect for repeated demos.</div></div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">Row breakdown</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b">Columns: <strong>Time · Target · Profile · Status · Findings · Duration · Actions</strong>.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b"><strong>Expand a row</strong> → see scan ID, command preview, and findings summary.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b"><strong>EXPLAIN</strong> → AI walks you through what the scan found.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b"><strong>REPORT</strong> → generate the PDF straight from the row.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b">Compact toggle + Refresh for live monitoring during long runs.</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 5.8 · Settings -->
-<section class="slide" data-section="5" data-target="35" data-pres="reem-ameen">
+<!-- 5.4 · Add Target — 5-Step Guided Wizard -->
+<section class="slide" data-section="5" data-target="60" data-pres="reem-ameen">
   <div class="anim">
-    <div class="eyebrow">05 · Dashboard Tab</div>
-    <h1 class="title">Settings <span class="neon">·</span> feature flags &amp; safety rails</h1>
+    <div class="eyebrow">05 · Add Target · Wizard</div>
+    <h1 class="title">Add Target <span class="neon">·</span> 5-step guided wizard</h1>
     <div class="title-underline"></div>
-    <p class="lede">Every optional layer is toggleable. Defaults are safe. Token budgets keep LLM bills bounded.</p>
+    <p class="lede">Every field captured here flows into the Risk Engine multiplier. The wizard is opinionated — defaults are safe and you can't skip the safety step.</p>
   </div>
-  <div class="row2">
+  <div class="wizgrid">
+    <div class="wizstep pop delay-2">
+      <div class="wsh"><div class="wsn">1</div><div class="wst">Identity</div></div>
+      <div class="wsi"><img src="presentation-assets/wizard-step1-identity.png" alt="Step 1 Identity" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ph" style="display:none">wizard-step1-identity.png</div></div>
+      <div class="wsd"><strong>Name · URL · Notes</strong>. Identifies the target across the platform.</div>
+    </div>
+    <div class="wizstep pop delay-3">
+      <div class="wsh"><div class="wsn">2</div><div class="wst">Environment</div></div>
+      <div class="wsi"><img src="presentation-assets/wizard-step2-environment.png" alt="Step 2 Environment" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ph" style="display:none">wizard-step2-environment.png</div></div>
+      <div class="wsd"><strong>Lab · Dev · Staging · Prod</strong> + Asset Value + Data Sensitivity → the risk multipliers.</div>
+    </div>
+    <div class="wizstep pop delay-4">
+      <div class="wsh"><div class="wsn">3</div><div class="wst">Compliance</div></div>
+      <div class="wsi"><img src="presentation-assets/wizard-step3-compliance.png" alt="Step 3 Compliance" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ph" style="display:none">wizard-step3-compliance.png</div></div>
+      <div class="wsd">Tag with <strong>PCI · HIPAA · ISO · GDPR · NIST · OWASP</strong>. Findings get mapped to controls automatically.</div>
+    </div>
+    <div class="wizstep pop delay-5">
+      <div class="wsh"><div class="wsn">4</div><div class="wst">Safety</div></div>
+      <div class="wsi"><img src="presentation-assets/wizard-step4-safety.png" alt="Step 4 Safety" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ph" style="display:none">wizard-step4-safety.png</div></div>
+      <div class="wsd"><strong>Max RPS</strong> + <strong>scope allowlist</strong>. Production stays safe — the scanner can't reach outside.</div>
+    </div>
+    <div class="wizstep pop delay-6">
+      <div class="wsh"><div class="wsn">5</div><div class="wst">Review</div></div>
+      <div class="wsi"><img src="presentation-assets/wizard-step5-review.png" alt="Step 5 Review" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ph" style="display:none">wizard-step5-review.png</div></div>
+      <div class="wsd">Read-only summary of every choice. Click <strong>Create Target</strong> → wizard closes, scan-ready.</div>
+    </div>
+  </div>
+  <div class="glass anim delay-7" style="margin-top:18px;padding:14px 22px;display:flex;align-items:center;gap:16px;border-color:rgba(0,255,255,.25)">
+    <span class="tag">Asset value × CVSS × Exposure</span>
+    <p style="font-size:13px;color:#cfe9ec;flex:1">Every field in this wizard becomes a coefficient in the deterministic risk formula. <strong style="color:#fff">The wizard is the contract between business context and the math in §6.4.</strong></p>
+  </div>
+</section>
+
+<!-- 5.5 · Threat Center / Vulnerabilities — List -->
+<section class="slide" data-section="5" data-target="45" data-pres="shahd-baher">
+  <div class="anim">
+    <div class="eyebrow">05 · Threat Center · Vulnerabilities</div>
+    <h1 class="title">Vulnerabilities <span class="neon">·</span> the triage view</h1>
+    <div class="title-underline"></div>
+    <p class="lede">42 findings across Critical → Info, filterable by severity / status / target. Status workflow: Open → In Progress → Fixed / False Positive.</p>
+  </div>
+  <div class="row2" style="grid-template-columns:1.4fr .6fr">
     <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">settings</div></div>
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">threat center · vulns</div></div>
       <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:86%;height:86%;opacity:.9">
-          <text x="14" y="22" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">FEATURE FLAGS</text>
-          <rect x="10" y="28" width="340" height="26" rx="4" fill="rgba(255,255,255,.03)"/><text x="18" y="44" fill="#fff" font-family="Syne" font-size="10" font-weight="700">SIEM Integration</text><rect x="310" y="34" width="32" height="14" rx="7" fill="#00ff88" fill-opacity=".4" stroke="#00ff88" stroke-opacity=".6"/><circle cx="332" cy="41" r="5" fill="#00ff88"/>
-          <rect x="10" y="58" width="340" height="26" rx="4" fill="rgba(255,255,255,.03)"/><text x="18" y="74" fill="#fff" font-family="Syne" font-size="10" font-weight="700">SOAR · n8n workflows</text><rect x="310" y="64" width="32" height="14" rx="7" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.2)"/><circle cx="316" cy="71" r="5" fill="#86a4a9"/>
-          <rect x="10" y="88" width="340" height="26" rx="4" fill="rgba(255,255,255,.03)"/><text x="18" y="104" fill="#fff" font-family="Syne" font-size="10" font-weight="700">OpenVAS deep scan</text><rect x="310" y="94" width="32" height="14" rx="7" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.2)"/><circle cx="316" cy="101" r="5" fill="#86a4a9"/>
-          <text x="14" y="132" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">SAFETY RAILS</text>
-          <rect x="10" y="138" width="166" height="60" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(255,170,0,.3)"/><text x="18" y="152" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">LLM token budget</text><text x="18" y="172" fill="#00ffff" font-family="Syne" font-size="14" font-weight="700">100,000 / day</text><text x="18" y="190" fill="#86a4a9" font-family="JetBrains Mono" font-size="6">resets daily · alerts at 80%</text>
-          <rect x="184" y="138" width="166" height="60" rx="5" fill="rgba(255,255,255,.03)" stroke="rgba(255,170,0,.3)"/><text x="192" y="152" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">Scan rate limit</text><text x="192" y="172" fill="#00ffff" font-family="Syne" font-size="14" font-weight="700">10 req/s</text><text x="192" y="190" fill="#86a4a9" font-family="JetBrains Mono" font-size="6">per target · prod-safe default</text>
-        </svg>
+        <img src="presentation-assets/vuln-list.png" alt="Vulnerability list" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Vulnerabilities List</div><div class="sub">presentation-assets/vuln-list.png</div></div>
       </div>
     </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">What lives in Settings</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">Feature flags toggle <strong>SIEM · SOAR · OpenVAS</strong> — defaults are safe.</div></div>
-        <div class="stp"><div class="n">2</div><div class="b"><strong>LLM token budget</strong> caps Gemini spending per day.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b"><strong>Scan rate limits</strong> protect production targets from accidental DoS.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b"><strong>Password change</strong> uses bcrypt — same hashing as the auth system.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">Every flag has a default · fresh install works out of the box.</div></div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">How to triage</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b"><strong>Severity Distribution bar</strong> at top — instant breakdown of all 42 findings.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b">Filter by <strong>Min Sev · Severity · Status</strong>. Toggle <strong>Hide Closed</strong> + <strong>Group Duplicates</strong>.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b">Sort by <strong>Severity · Confidence · Type</strong>. Save the view for next time.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b">Per-row: <strong>status dropdown</strong> (Open → In Progress → Fixed / False Positive).</div></div>
+        <div class="stp"><div class="n">5</div><div class="b">Click <strong>Deep Dive</strong> → opens the side drawer (next slide).</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 5.9 · AI Advisor -->
-<section class="slide" data-section="5" data-target="50" data-pres="youssef-abdelhady">
+<!-- 5.6 · Vuln Drawer — Detail & CVSS -->
+<section class="slide" data-section="5" data-target="45" data-pres="shahd-baher">
   <div class="anim">
-    <div class="eyebrow">05 · Dashboard Panel</div>
-    <h1 class="title">AI Advisor <span class="neon">·</span> translation, not decision</h1>
+    <div class="eyebrow">05 · Vulnerability Drawer · 1/3</div>
+    <h1 class="title">Detail Drawer <span class="neon">·</span> CVSS &amp; context</h1>
     <div class="title-underline"></div>
-    <p class="lede">A panel that appears across Overview and Vulnerabilities. Powered by Gemini. <strong style="color:#fff">Never</strong> sets the priority number.</p>
+    <p class="lede">Side drawer with 33 findings paginated. CVSS broken down by attack vector, complexity, privileges, scope, and the CIA triad.</p>
   </div>
-  <div class="row2">
+  <div class="row2" style="grid-template-columns:1.4fr .6fr">
     <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">advisor · panel</div></div>
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">drawer · top</div></div>
       <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:86%;height:86%;opacity:.9">
-          <rect x="10" y="10" width="340" height="200" rx="8" fill="rgba(0,255,255,.04)" stroke="rgba(0,255,255,.3)"/>
-          <circle cx="30" cy="32" r="10" fill="rgba(0,255,255,.2)" stroke="#00ffff"/><text x="30" y="36" text-anchor="middle" fill="#00ffff" font-family="Syne" font-size="11" font-weight="700">AI</text>
-          <text x="50" y="30" fill="#fff" font-family="Syne" font-size="11" font-weight="700">Security Advisor</text>
-          <text x="50" y="42" fill="#7fd9d9" font-family="JetBrains Mono" font-size="7">gemini-1.5 · via IntelligenceAgent</text>
-          <rect x="18" y="58" width="324" height="34" rx="5" fill="rgba(255,0,85,.08)" stroke="rgba(255,0,85,.3)"/>
-          <text x="26" y="72" fill="#ff8888" font-family="JetBrains Mono" font-size="7">▸ TODAY · TOP PRIORITY</text>
-          <text x="26" y="86" fill="#fff" font-family="Outfit" font-size="9">Disable anonymous SMB share on file-srv. Allows full data exfil.</text>
-          <rect x="18" y="98" width="324" height="34" rx="5" fill="rgba(255,170,0,.08)" stroke="rgba(255,170,0,.3)"/>
-          <text x="26" y="112" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">▸ TODAY · SECOND</text>
-          <text x="26" y="126" fill="#fff" font-family="Outfit" font-size="9">Update TLS ciphers on api-gw. Current config flagged by PCI.</text>
-          <rect x="18" y="138" width="324" height="34" rx="5" fill="rgba(0,255,136,.06)" stroke="rgba(0,255,136,.25)"/>
-          <text x="26" y="152" fill="#88dac0" font-family="JetBrains Mono" font-size="7">▸ THIS WEEK</text>
-          <text x="26" y="166" fill="#fff" font-family="Outfit" font-size="9">Rotate default SSH key on dns. Low risk but easy win.</text>
-          <text x="18" y="190" fill="#86a4a9" font-family="JetBrains Mono" font-size="7">⚠ Advisor explains · Risk Engine decides the priority number</text>
-        </svg>
+        <img src="presentation-assets/vuln-detail-cvss.png" alt="Vulnerability drawer CVSS" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Drawer · CVSS</div><div class="sub">presentation-assets/vuln-detail-cvss.png</div></div>
       </div>
     </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">The design rule</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">Called through <strong>IntelligenceAgent</strong>, with a tight system prompt and a token-budget guard.</div></div>
-        <div class="stp"><div class="n">2</div><div class="b">Job: <strong>translate</strong> a CVE + CVSS into three sentences a non-technical CEO can act on.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Never sets the priority number. <strong>The Risk Engine decides</strong>; the AI explains.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">Defensible against the "hallucination" objection: <em>the score is auditable</em>.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">If no API key is configured, the panel falls back to a static rule-based template.</div></div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">What's shown</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b">Severity badge + title + paginator (← 1/33 →).</div></div>
+        <div class="stp"><div class="n">2</div><div class="b">Target URI + asset ID — clickable into Topology.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b">Four header stats: <strong>CVSS · Confidence · Status · Detected by</strong>.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b"><strong>Description</strong> in plain language.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b"><strong>CVSS Breakdown</strong> grid: AV · AC · PR · UI · Scope · Confidentiality · Integrity · Availability.</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 5.10 · Unified Inbox -->
-<section class="slide" data-section="5" data-target="40" data-pres="mariz-ehab">
+<!-- 5.7 · Vuln Drawer — AI Security Brief + Remediation -->
+<section class="slide" data-section="5" data-target="55" data-pres="youssef-abdelhady">
   <div class="anim">
-    <div class="eyebrow">05 · Dashboard Panel</div>
-    <h1 class="title">Unified Inbox <span class="neon">·</span> every signal in one timeline</h1>
+    <div class="eyebrow">05 · Vulnerability Drawer · 2/3</div>
+    <h1 class="title">AI Brief <span class="neon">·</span> attack story + remediation</h1>
     <div class="title-underline"></div>
-    <p class="lede">SIEM events, scan findings, SLA escalations — aggregated chronologically. The single pane of glass for an active incident.</p>
+    <p class="lede">Gemini transforms raw CVSS data into three things a non-technical CEO can act on: an <strong style="color:#fff">attack scenario</strong>, a <strong style="color:#fff">business impact</strong>, and a numbered <strong style="color:#fff">remediation plan</strong>.</p>
   </div>
   <div class="row2">
     <div class="glass shot anim delay-2">
-      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">inbox</div></div>
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">drawer · AI security brief</div></div>
       <div class="frame">
-        <svg viewBox="0 0 360 220" style="width:88%;height:88%;opacity:.9">
-          <rect x="10" y="10" width="60" height="20" rx="10" fill="rgba(0,255,255,.15)" stroke="#00ffff" stroke-opacity=".4"/><text x="40" y="24" text-anchor="middle" fill="#00ffff" font-family="JetBrains Mono" font-size="7">ALL · 47</text>
-          <rect x="75" y="10" width="64" height="20" rx="10" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/><text x="107" y="24" text-anchor="middle" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">SIEM · 18</text>
-          <rect x="144" y="10" width="64" height="20" rx="10" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/><text x="176" y="24" text-anchor="middle" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">SCAN · 25</text>
-          <rect x="213" y="10" width="64" height="20" rx="10" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/><text x="245" y="24" text-anchor="middle" fill="#cfe9ec" font-family="JetBrains Mono" font-size="7">SLA · 4</text>
-          <rect x="10" y="40" width="340" height="32" rx="4" fill="rgba(255,0,85,.08)" stroke="rgba(255,0,85,.25)"/>
-          <text x="20" y="55" fill="#ff8888" font-family="JetBrains Mono" font-size="7">14:32 · SIEM · WAZUH · brute-force srv-04</text>
-          <text x="20" y="67" fill="#cfe9ec" font-family="JetBrains Mono" font-size="6">120 failed ssh attempts · source 198.51.100.34</text>
-          <rect x="10" y="76" width="340" height="32" rx="4" fill="rgba(255,0,85,.05)" stroke="rgba(255,0,85,.2)"/>
-          <text x="20" y="91" fill="#ff8888" font-family="JetBrains Mono" font-size="7">14:31 · SCAN · finding · smb-anon-share-writable</text>
-          <text x="20" y="103" fill="#cfe9ec" font-family="JetBrains Mono" font-size="6">file-srv · risk score 87 · linked drawer</text>
-          <rect x="10" y="112" width="340" height="32" rx="4" fill="rgba(255,170,0,.07)" stroke="rgba(255,170,0,.25)"/>
-          <text x="20" y="127" fill="#ffcc88" font-family="JetBrains Mono" font-size="7">14:25 · SLA · breach · 4h</text>
-          <text x="20" y="139" fill="#cfe9ec" font-family="JetBrains Mono" font-size="6">CRIT finding open &gt; remediation SLA</text>
-          <rect x="10" y="148" width="340" height="32" rx="4" fill="rgba(255,255,255,.03)"/>
-          <text x="20" y="163" fill="#9bdedf" font-family="JetBrains Mono" font-size="7">14:18 · SCAN · started · 10.10.20.11</text>
-          <text x="20" y="175" fill="#86a4a9" font-family="JetBrains Mono" font-size="6">scan_id a3f9c7 · queued</text>
-          <rect x="10" y="184" width="340" height="22" rx="4" fill="rgba(0,255,136,.05)"/>
-          <text x="20" y="198" fill="#88dac0" font-family="JetBrains Mono" font-size="7">14:10 · SIEM · INFO · daemon restart srv-02</text>
-        </svg>
+        <img src="presentation-assets/vuln-ai-brief.png" alt="Vuln AI Security Brief" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">AI Security Brief</div><div class="sub">presentation-assets/vuln-ai-brief.png</div></div>
       </div>
     </div>
-    <div class="glass card anim delay-3" style="padding:24px 26px">
-      <h3 class="cardH">When to open the Inbox</h3>
-      <div class="steps" style="margin-top:6px">
-        <div class="stp"><div class="n">1</div><div class="b">During an active incident — when the question is <em>"what just happened, in what order?"</em></div></div>
-        <div class="stp"><div class="n">2</div><div class="b">Filter by <strong>source</strong> (SIEM · scan · SLA) or by <strong>severity</strong>.</div></div>
-        <div class="stp"><div class="n">3</div><div class="b">Each entry links back to its origin — click the scan event → drops into Vulnerabilities.</div></div>
-        <div class="stp"><div class="n">4</div><div class="b">SIEM events come from <strong>Wazuh</strong>; SLA escalations from the remediation queue.</div></div>
-        <div class="stp"><div class="n">5</div><div class="b">All entries persisted in PostgreSQL — full forensic timeline after the fact.</div></div>
+    <div class="glass shot anim delay-3">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">drawer · remediation</div></div>
+      <div class="frame">
+        <img src="presentation-assets/vuln-remediation.png" alt="Vuln remediation steps" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Remediation Steps</div><div class="sub">presentation-assets/vuln-remediation.png</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="glass anim delay-5" style="margin-top:14px;padding:14px 22px;display:flex;align-items:center;gap:16px;border-color:rgba(180,100,255,.3);background:rgba(180,100,255,.05)">
+    <span class="tag" style="background:rgba(180,100,255,.12);border-color:rgba(180,100,255,.4);color:#caa8ff">GEMINI AI</span>
+    <p style="font-size:13px;color:#cfe9ec;flex:1">Three numbered, actionable steps + a <strong style="color:#fff">Detection &amp; Monitoring</strong> block telling the SOC what logs to watch. Generated by the IntelligenceAgent — never sets the score, only explains it.</p>
+  </div>
+</section>
+
+<!-- 5.8 · Vuln Drawer — Proof of Concept + Actions -->
+<section class="slide" data-section="5" data-target="45" data-pres="shahd-baher">
+  <div class="anim">
+    <div class="eyebrow">05 · Vulnerability Drawer · 3/3</div>
+    <h1 class="title">Proof of Concept <span class="neon">·</span> verify &amp; act</h1>
+    <div class="title-underline"></div>
+    <p class="lede">A copy-pastable Nuclei command that reproduces the finding, plus three workflow buttons: <strong style="color:#fff">Re-validate · Mark as Fixed · False Positive</strong>.</p>
+  </div>
+  <div class="row2" style="grid-template-columns:1.4fr .6fr">
+    <div class="glass shot anim delay-2">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">drawer · poc &amp; actions</div></div>
+      <div class="frame">
+        <img src="presentation-assets/vuln-poc-actions.png" alt="Vuln PoC + Actions" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">PoC + Actions</div><div class="sub">presentation-assets/vuln-poc-actions.png</div></div>
+      </div>
+    </div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">Drawer bottom</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b"><strong>Verify the Fix</strong> — narrative paragraph on how to re-test.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b"><strong>Proof of Concept</strong> · Nuclei command in a copy-button code block.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b"><strong>Technical Details</strong> · expandable raw evidence (request / response).</div></div>
+        <div class="stp"><div class="n">4</div><div class="b">Actions: <span class="tag">Re-validate with AI</span> · <span class="tag s">Mark as Fixed</span> · <span class="tag w">False Positive</span>.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b">Every decision is logged to the hash-chained audit trail (§6.3).</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5.9 · Threat Center / Network Topology -->
+<section class="slide" data-section="5" data-target="45" data-pres="omnia-helmy">
+  <div class="anim">
+    <div class="eyebrow">05 · Threat Center · Topology</div>
+    <h1 class="title">Live Network Topology <span class="neon">·</span> the whole estate at a glance</h1>
+    <div class="title-underline"></div>
+    <p class="lede">Force-directed graph rendered with <code style="background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9be9ec">react-force-graph-2d</code>. Three zones — DASH (172.0.0.0/8), LOCAL (127.0.0.0/8), OTHER — all hanging off the Gateway Hub.</p>
+  </div>
+  <div class="row2" style="grid-template-columns:1.5fr .5fr">
+    <div class="glass shot anim delay-2">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">topology · fullscreen</div></div>
+      <div class="frame">
+        <img src="presentation-assets/topology-fullscreen.png" alt="Network topology" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Network Topology</div><div class="sub">presentation-assets/topology-fullscreen.png</div></div>
+      </div>
+    </div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">Reading the graph</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b"><strong>Cyan</strong> = Gateway Hub · <strong>Green</strong> = Operational · <strong>Amber</strong> = Warning · <strong>Pink</strong> = Critical / Infected.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b">Node <strong>size</strong> = vulnerability count.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b">Top-right controls: <strong>zoom · center · refresh · fullscreen</strong>.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b">Click a <strong>zone</strong> → side panel with aggregated stats (next slide).</div></div>
+        <div class="stp"><div class="n">5</div><div class="b">Click a <strong>node</strong> → asset detail with ports + risk score.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5.10 · Topology Drill — Zone & Asset -->
+<section class="slide" data-section="5" data-target="55" data-pres="omnia-helmy">
+  <div class="anim">
+    <div class="eyebrow">05 · Topology · Drill-down</div>
+    <h1 class="title">Drill from network <span class="neon">·</span> to zone <span class="neon">·</span> to asset</h1>
+    <div class="title-underline"></div>
+    <p class="lede">Two-click navigation from the whole network to a single asset's open ports. Zone panel aggregates; asset panel exposes identity, criticality, and ports.</p>
+  </div>
+  <div class="row2">
+    <div class="glass shot anim delay-2">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">click zone → other zone</div></div>
+      <div class="frame">
+        <img src="presentation-assets/topology-zone-detail.png" alt="Topology zone detail" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Zone Detail Panel</div><div class="sub">presentation-assets/topology-zone-detail.png</div></div>
+      </div>
+    </div>
+    <div class="glass shot anim delay-3">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">click asset → production database</div></div>
+      <div class="frame">
+        <img src="presentation-assets/topology-asset-detail.png" alt="Topology asset detail" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Asset Detail Panel</div><div class="sub">presentation-assets/topology-asset-detail.png</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="glass anim delay-5" style="margin-top:14px;padding:14px 22px;display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div>
+      <h3 class="cardH" style="font-size:16px;color:#9bdedf">Zone panel · OTHER zone</h3>
+      <p style="font-size:12.5px;color:#cfe9ec;line-height:1.55;margin-top:4px"><strong>7 devices · 10 vulns · 66% avg risk · 3 critical</strong>. Risk distribution bar + ranked device list with severity badges.</p>
+    </div>
+    <div>
+      <h3 class="cardH" style="font-size:16px;color:#9bdedf">Asset panel · Production Database</h3>
+      <p style="font-size:12.5px;color:#cfe9ec;line-height:1.55;margin-top:4px"><strong>Identity · OS · MAC · Uptime · Risk score 85% · CRITICAL</strong>. Open ports list + vulnerabilities scoped to that host.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5.11 · SIEM Unified Inbox -->
+<section class="slide" data-section="5" data-target="45" data-pres="mariz-ehab">
+  <div class="anim">
+    <div class="eyebrow">05 · Threat Center · SIEM</div>
+    <h1 class="title">Unified SIEM Inbox <span class="neon">·</span> every signal, one timeline</h1>
+    <div class="title-underline"></div>
+    <p class="lede">Live stream from Wazuh, scan findings, SLA escalations — aggregated chronologically with severity filters. 100 alerts at a glance · 24 low · 76 medium · plus criticals.</p>
+  </div>
+  <div class="row2" style="grid-template-columns:1.4fr .6fr">
+    <div class="glass shot anim delay-2">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">threat center · siem</div></div>
+      <div class="frame">
+        <img src="presentation-assets/siem-inbox.png" alt="SIEM Inbox" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">SIEM Inbox</div><div class="sub">presentation-assets/siem-inbox.png</div></div>
+      </div>
+    </div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">When to use it</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b">During an active incident — answers <em>"what just happened, in what order?"</em></div></div>
+        <div class="stp"><div class="n">2</div><div class="b">Live indicator + <strong>+N new</strong> badge as alerts arrive over WebSocket.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b">Filter by severity tab — <strong>All · High · Medium · Low</strong> + Pause to freeze the view.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b">Each row: severity badge · rule number · timestamp · summary · agent + IP chips.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b">Click any row → full event detail modal (next slide).</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5.12 · SIEM Event Detail — 3-section flow -->
+<section class="slide" data-section="5" data-target="50" data-pres="mariz-ehab">
+  <div class="anim">
+    <div class="eyebrow">05 · SIEM Event · Detail Modal</div>
+    <h1 class="title">SIEM Event Detail <span class="neon">·</span> rule → event → raw</h1>
+    <div class="title-underline"></div>
+    <p class="lede">Click any inbox row → modal shows the Wazuh rule, parsed event data, and the full raw log. <strong style="color:#fff">Copy JSON</strong> for incident response handoff.</p>
+  </div>
+  <div class="tripleshot">
+    <div class="glass shot pop delay-2">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">1 · rule details</div></div>
+      <div class="frame">
+        <img src="presentation-assets/siem-event-rule.png" alt="SIEM event rule" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Rule Details</div><div class="sub">siem-event-rule.png</div></div>
+      </div>
+    </div>
+    <div class="glass shot pop delay-3">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">2 · full log + event data</div></div>
+      <div class="frame">
+        <img src="presentation-assets/siem-event-data.png" alt="SIEM event data" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Full Log + Event Data</div><div class="sub">siem-event-data.png</div></div>
+      </div>
+    </div>
+    <div class="glass shot pop delay-4">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">3 · raw event JSON</div></div>
+      <div class="frame">
+        <img src="presentation-assets/siem-event-raw.png" alt="SIEM raw event" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Raw Event JSON</div><div class="sub">siem-event-raw.png</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="glass anim delay-6" style="margin-top:14px;padding:14px 22px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px">
+    <div><h3 class="cardH" style="font-size:14px;color:#9bdedf">Rule Details</h3><p style="font-size:11.5px;color:#cfe9ec;line-height:1.5;margin-top:4px">Rule ID · Level · Description · Groups · Agent ID · IP · Location · Source / Dest IP.</p></div>
+    <div><h3 class="cardH" style="font-size:14px;color:#9bdedf">Event Data</h3><p style="font-size:11.5px;color:#cfe9ec;line-height:1.5;margin-top:4px">Parsed JSON with HTTP request fields — srcip, dstport, protocol, method, path, status_code.</p></div>
+    <div><h3 class="cardH" style="font-size:14px;color:#9bdedf">Raw Event</h3><p style="font-size:11.5px;color:#cfe9ec;line-height:1.5;margin-top:4px">Unmodified Wazuh JSON — the forensic ground truth. <strong style="color:#fff">Copy JSON</strong> for handoff.</p></div>
+  </div>
+</section>
+
+<!-- 5.13 · AI Brain · Neural Console -->
+<section class="slide" data-section="5" data-target="45" data-pres="youssef-abdelhady">
+  <div class="anim">
+    <div class="eyebrow">05 · AI Brain · Neural Console</div>
+    <h1 class="title">AI Brain <span class="neon">·</span> watch the agents think</h1>
+    <div class="title-underline"></div>
+    <p class="lede">A dedicated tab that exposes every step of the four-stage pipeline as it runs — chain-of-thought, tool calls, and outbound JSON. <strong style="color:#fff">No black box</strong> — the whole pipeline is observable.</p>
+  </div>
+  <div class="row2" style="grid-template-columns:1.5fr .5fr">
+    <div class="glass shot anim delay-2">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">ai brain · neural console</div></div>
+      <div class="frame">
+        <img src="presentation-assets/ai-brain-overview.png" alt="AI Brain Neural Console" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">AI Brain · Neural Console</div><div class="sub">presentation-assets/ai-brain-overview.png</div></div>
+      </div>
+    </div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">What you see</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b"><strong>Security Pipeline</strong> bar across the top — 4 stage indicators turn green as each completes.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b"><strong>Neural Console</strong> · live stream of events with timestamps.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b">Each event has stage tag · title · expandable detail.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b">Expand → <strong>Neural Chain-of-Thought</strong> · then <strong>Outbound Result</strong> as JSON.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b">Optional <strong>Sync Scroll</strong> · auto-follows the latest event during long runs.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5.14 · AI Brain · Pipeline Complete -->
+<section class="slide" data-section="5" data-target="45" data-pres="youssef-abdelhady">
+  <div class="anim">
+    <div class="eyebrow">05 · AI Brain · Pipeline Complete</div>
+    <h1 class="title">Pipeline complete <span class="neon">·</span> all four stages green</h1>
+    <div class="title-underline"></div>
+    <p class="lede">End of a successful scan run. Every agent finished — RECON · ATTACK · VALIDATION · REPORTING. <code style="background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9be9ec">LINK ESTABLISHED · ENCRYPTION: AES-256</code> at the bottom.</p>
+  </div>
+  <div class="row2" style="grid-template-columns:1.5fr .5fr">
+    <div class="glass shot anim delay-2">
+      <div class="tabhdr"><div class="dot3"><span></span><span></span><span></span></div><div class="tn">ai brain · all stages complete</div></div>
+      <div class="frame">
+        <img src="presentation-assets/ai-brain-complete.png" alt="AI Brain pipeline complete" onerror="this.style.display='none'">
+        <div class="fallback"><div class="lbl">Pipeline Complete</div><div class="sub">presentation-assets/ai-brain-complete.png</div></div>
+      </div>
+    </div>
+    <div class="glass card anim delay-3" style="padding:22px">
+      <h3 class="cardH">End-of-run state</h3>
+      <div class="steps" style="margin-top:6px;gap:8px">
+        <div class="stp"><div class="n">1</div><div class="b"><strong>NMAP</strong> · Network reconnaissance completed.</div></div>
+        <div class="stp"><div class="n">2</div><div class="b"><strong>NUCLEI</strong> · Vulnerability scan completed.</div></div>
+        <div class="stp"><div class="n">3</div><div class="b"><strong>RISK ENGINE</strong> · Risk scoring completed.</div></div>
+        <div class="stp"><div class="n">4</div><div class="b"><strong>AI ADVISORY</strong> · Report generated — chain-of-thought + final JSON.</div></div>
+        <div class="stp"><div class="n">5</div><div class="b">Status bar: <span class="tag s">LINK ESTABLISHED</span> · <span class="tag">AES-256</span> · ready for next scan.</div></div>
       </div>
     </div>
   </div>
@@ -2083,35 +2066,47 @@ const SCRIPTS = [
   /* 17 · Divider → 5 */
   "We open the dashboard now.",
 
-  /* 18 · 5.1 Overview — Rahma Ibrahim */
-  "The Overview tab is the security analyst's home screen — the first thing they see every morning.\n\nFour KPI cards run across the top: Risk Score, Health, Active Scans, and Mean Time To Repair. The Risk Score gauge in the center is color-coded — above eighty is green and safe, above fifty is cyan, above twenty is amber, below twenty is red and critical.\n\nThe Action Center on the right is the prioritized queue — the five things our pipeline says you should fix today, sorted by score. To use this tab, an analyst opens it first thing, glances at the Action Center, and starts working from the top. Every panel here is live — updates stream in via WebSocket, no refresh button needed.",
+  /* 18 · 5.1 Command Center / Overview — Rahma Ibrahim */
+  "This is the Command Center — the dashboard every analyst opens first.\n\nThe top bar carries six KPI cards: Security Health out of one hundred, Vulnerabilities found, items In Progress, SLA Overdue, total Assets, and overall Status. Below that is the central row: the live Health Score gauge on the left, the Severity Distribution bar in the middle, and the live Orchestration Log on the right.\n\nFurther down: the Quick Scan widget for an immediate one-target run, the Live Network Topology preview, and the Exposure Trend chart for the last fourteen days. On the right edge, the Action Queue shows discovered devices and SLA-urgent items. Everything updates over WebSocket — no refresh, no polling.",
 
-  /* 19 · 5.2 Scans — Mohamed Shaban */
-  "The Scans tab is the operational heart.\n\nTo start a scan, click Quick Scan, enter a target — an IP, a hostname, or a URL — and confirm. The Scan Pipeline Panel below lights up live: you see the four stages — Recon, Attack, Validation, Scoring — illuminate as each one completes.\n\nBehind the scenes, the backend dispatches a Celery task and streams progress over WebSocket from the celery-worker container. Below the live view is the Scan History table — every scan we have ever run. Click any row to inspect findings. And if a scan goes off the rails, the Abort button stops the Celery task cleanly.",
+  /* 19 · 5.2 Scanner · Nodes / Targets — Mohamed Shaban */
+  "From the Command Center, we move to the Scanner. The Nodes sub-tab lists every registered target as a card.\n\nAt the top you have sub-navigation: Scan to launch a quick scan, History to review past runs, Nodes for this target list, and Lab to manage the practice environment. The environment chips on the right — ALL, LAB, PROD — filter the cards instantly.\n\nEach card shows the target name, the URL, an environment tag, and the time of the last scan. Two buttons per card: Scan to fire the full pipeline, and AI to run the IntelligenceAgent against the existing findings. Asset Discovery in the top right auto-discovers hosts; Add Target opens the five-step wizard you'll see next.",
 
-  /* 20 · 5.3 Targets — Reem Ameen Mahmoud */
-  "The Targets tab is where you tell the platform what to protect.\n\nThe Add Target wizard walks you through it. Paste a URL or an IP. Pick the asset's business value — Critical, High, Medium, Low. Choose the data sensitivity. Mark the environment. Attach compliance tags like PCI or HIPAA. Define the scope allowlist, and set rate limits so you do not crush a production service.\n\nThe credentials field at the bottom is encrypted with Fernet before it ever touches the database. That asset value you picked? It becomes the multiplier in the Risk Engine — that is exactly why this step matters.",
+  /* 20 · 5.3 Scanner · Scan History — Mohamed Shaban */
+  "Switching to the History sub-tab gives us every scan ever run, in a single table.\n\nColumns left to right: Time, Target, Profile, Status, Findings count, Duration, and Actions. The filter bar above lets you narrow by status, profile, or date range. Compact mode densifies the rows for quick visual scanning.\n\nClick the chevron next to any row and it expands into a Scan Summary — the scan ID, target, profile used, started and completed timestamps, duration — alongside the Findings totals and a Command Preview showing the exact JSON payload that was POSTed to slash-api-v1-scans. That payload makes every scan fully reproducible. Two row actions: Explain runs the AI narrator over the findings, Report generates the PDF.",
 
-  /* 21 · 5.4 Vulnerabilities — Shahd Baher Hussien */
-  "The Vulnerabilities tab is the analyst's triage view.\n\nFilter by severity, by status, or by target. Click any row and the Incident Detail Drawer slides in. Inside, you see the full CVSS breakdown — base score, vector, attack complexity — followed by AI-generated remediation steps in plain English.\n\nYou can mark a finding as Fixed, False Positive, or Risk Accepted with a justification. Every decision is logged and feeds back into our learning loop. The remediation guidance is what makes this tab usable by an SME without a security expert on staff.",
+  /* 21 · 5.4 Add Target — 5-Step Wizard — Reem Ameen Mahmoud */
+  "Now the most important wizard in the platform — Add Target. Five guided steps.\n\nStep one, Identity: name, base URL or IP, optional notes. Step two, Environment: pick Lab, Development, Staging, or Production — then asset value Low through Critical, and data sensitivity None, PII, or Financial. These three choices become the asset multiplier in the Risk Engine. Step three, Compliance: check the frameworks that apply — PCI-DSS, HIPAA, ISO-27001, GDPR, NIST CSF, OWASP ASVS. Findings get auto-mapped to controls.\n\nStep four, Safety: the max requests-per-second cap and the scope allowlist that bounds what the scanner can touch. Production targets stay under ten RPS; lab targets can go to a hundred. Step five, Review: a read-only summary of every choice with one button — Create Target. That's it. The target is now scan-ready, and every coefficient in the deterministic risk formula has a value.",
 
-  /* 22 · 5.5 Network — Omnia Helmy */
-  "The Network tab is the topology visualization.\n\nIt uses react-force-graph-2d to render every asset as a node and every relationship as an edge. Node color encodes risk — red is critical, amber is medium, green is safe. Node size encodes vulnerability count.\n\nYou can drag, zoom, and pan the canvas. Click any node and the Asset Detail Panel opens with its open ports, services, and findings. This view is for situational awareness — at a glance, you can see which corner of your network is on fire.",
+  /* 22 · 5.5 Threat Center · Vulnerabilities List — Shahd Baher Hussien */
+  "We move to the Threat Center — three sub-tabs: SIEM, Vulns, Topology. Starting with Vulns.\n\nThe Severity Distribution bar across the top shows the breakdown of all forty-two findings at a glance: six Critical, eight High, four Medium, two Low, twenty-two Info. Below that, the filter bar: search box, Min Sev dropdown, Hide Closed and Group Duplicates toggles, plus severity and status selectors. The Sort row underneath lets you order by Severity, Confidence, or Type.\n\nEach row shows the severity badge, the title, the target URI, a short description, the CVSS score, a Confidence bar, and the detector tag. The status dropdown on the right cycles a finding through Open, In Progress, Fixed, or False Positive. Click Deep Dive and the detail drawer slides in — that is the next slide.",
 
-  /* 23 · 5.6 Reports — Omar Elshafey */
-  "The Reports tab generates executive-grade PDFs.\n\nClick Generate, then pick which sections to include — Executive Summary, Technical Findings, CVSS Breakdown, Compliance Mapping. Under the hood, we use ReportLab to lay out the document and Pillow to render charts as images.\n\nThe PDF is digitally signed with SHA-256 before delivery, so the recipient can cryptographically verify it has not been tampered with. This is what gets sent to the CEO or the auditor. The technical detail lives in appendices. The headline number is on the cover.",
+  /* 23 · 5.6 Vulnerability Drawer · Detail & CVSS — Shahd Baher Hussien */
+  "This is the Vulnerability Detail Drawer — the deep-dive surface for any finding.\n\nAt the top: the severity badge, the title, a paginator showing one of thirty-three so the analyst can step through findings without closing the drawer, and a close button. Below that, the target URI and the asset ID — clickable to drop into Topology with that asset selected.\n\nFour stat blocks: CVSS Score with the full vector underneath, Confidence as a percentage bar, Status currently Open, and Detected by — which agent produced this finding. The Description gives the plain-language summary. Then the CVSS Breakdown grid: Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, and the CIA triad — Confidentiality, Integrity, Availability. Every field comes straight from the CVSS three-point-one vector string.",
 
-  /* 24 · 5.7 Lab — Mohamed Shaban */
-  "The Lab tab is where we manage the vulnerable practice environment we showed in section four.\n\nIt lists every container in the lab Compose file, with start and stop buttons. The Open link launches Juice Shop in a new tab. The Seed button sends a POST to the lab-seed endpoint, which inserts all six lab containers into the targets table — so you can immediately scan them.\n\nIt is the fastest way to demo the platform: three clicks from a clean install to a running pipeline.",
+  /* 24 · 5.7 Vulnerability Drawer · AI Brief + Remediation — Youssef Abdelhady */
+  "Scrolling down inside the drawer, we reach the AI Security Brief — powered by Gemini, called through the IntelligenceAgent.\n\nThree sections. Attack Scenario: a narrative of how an attacker would exploit this in this specific environment. Business Impact: what the customer loses if it goes unfixed — data, compliance, dollars, reputation. Then the numbered Remediation Steps. Five concrete actions in plain English: restrict network access, apply the vendor patch, harden the service configuration, rotate exposed credentials, re-run a targeted scan to confirm.\n\nBelow that, Detection and Monitoring tells the SOC team exactly which logs and which IOCs to watch. This is the part of the platform that makes it usable by an SME without a security expert on staff — the AI translates a CVSS vector into instructions. And it never sets the priority number — that is the Risk Engine's job.",
 
-  /* 25 · 5.8 Settings — Reem Ameen Mahmoud */
-  "The Settings tab is the configuration surface.\n\nFeature flags toggle the optional layers — SIEM, SOAR, OpenVAS. The token budget guard stops LLM calls from running away with your bill. Rate limits cap concurrent scans per target, so production stays safe.\n\nPassword change uses bcrypt — the same hashing the rest of the auth system uses. Every feature flag has a safe default — a fresh install works out of the box without touching this tab.",
+  /* 25 · 5.8 Vulnerability Drawer · PoC + Actions — Shahd Baher Hussien */
+  "Bottom of the drawer — the parts that move work forward.\n\nVerify the Fix is a narrative paragraph telling the analyst how to confirm the patch worked. Proof of Concept is a copy-pastable Nuclei command — in this case redis-cli dash h lab-redis-cache dash p 6380 KEYS asterisk — with a copy-to-clipboard button on the right. Technical Details, collapsed by default, contains the raw evidence: request, response, the full Nuclei output.\n\nThe Actions row has three buttons. Re-validate with AI re-runs the IntelligenceAgent if the analyst wants a fresh opinion. Mark as Fixed moves the finding to closed status. False Positive flags it for the learning loop with a justification. Every decision is logged to the SHA-256 hash-chained AgentLog, so the audit trail is tamper-evident.",
 
-  /* 26 · 5.9 AI Advisor — Youssef Abdelhady */
-  "The Security Advisor is a panel, not a tab. It appears on the Overview and inside the Vulnerabilities drawer.\n\nIt is Gemini, called through our IntelligenceAgent, with a tight system prompt and a token budget guard. Its job is translation: take a CVE and a CVSS score, and produce three sentences a non-technical CEO can act on.\n\nWe never let it set the priority number — that is the Risk Engine's job. The AI explains, the engine decides. That separation is deliberate, and it is what makes the platform defensible against the standard objection of AI hallucination. If no API key is configured, the panel falls back to a static rule-based template — the platform still works.",
+  /* 26 · 5.9 Threat Center · Network Topology — Omnia Helmy */
+  "The Topology sub-tab gives the situational-awareness view.\n\nA force-directed graph rendered with react-force-graph-2d. Three zones radiate out from the central Gateway Hub: DASH for the one-seventy-two-dot-zero range, LOCAL for the one-twenty-seven-dot-zero range, and OTHER for everything else. Each zone explodes downward into its individual hosts.\n\nThe legend on the left tells you what every node colour means: cyan for the Gateway Hub, green for Operational, amber for Warning, pink for Critical or Infected. Node size encodes vulnerability count — larger means more issues. Top-right toolbar: zoom in, zoom out, center, refresh, and fullscreen. Click any zone or any host node and a side panel opens with details — which is the next slide.",
 
-  /* 27 · 5.10 Unified Inbox — Mariz Ehab */
-  "The Unified Inbox aggregates every signal — Wazuh SIEM events, vulnerability findings, SLA escalations from the remediation queue — into one chronological view.\n\nFilter by source, by severity, or by time. Each entry links back to its origin. Click a scan event and it drops you into the Vulnerabilities drawer with the right finding selected.\n\nThis is where you go during an active incident — when the question is 'what just happened, and in what order'. All entries are persisted in PostgreSQL, so the forensic timeline is available after the fact too.",
+  /* 27 · 5.10 Topology Drill · Zone & Asset — Omnia Helmy */
+  "Two-click drill-down — from network to zone to single asset.\n\nLeft screenshot: click a zone, in this case OTHER. The side panel summarises the zone — seven devices, ten vulnerabilities, sixty-six percent average risk, three critical findings. A risk distribution bar shows the spread, and below it a ranked device list with severity badges — Redis Cache critical, Production Database critical, Corporate Mail Server high.\n\nRight screenshot: from there, click a device — say Production Database. A second side panel opens with the asset's full identity: OS family, OS name, MAC address, uptime, risk score eighty-five percent, criticality CRITICAL, current status Offline. Then a list of open ports, then the vulnerabilities scoped to that single host. From the whole network to a single asset's port list in two clicks.",
+
+  /* 28 · 5.11 Threat Center · SIEM Inbox — Mariz Ehab */
+  "The third Threat Center tab is SIEM — our Unified Inbox.\n\nEvery signal in one timeline: Wazuh SIEM events, scan findings, and SLA escalations. The header shows the inbox is Live and counts plus-two new alerts since you last looked. Updated timestamp on the right, with Pause and Refresh controls. Severity tabs below: All one hundred, High, Medium seventy-six, Low twenty-four.\n\nEach row carries the severity badge, the rule number, the timestamp, and the alert summary — for example, a Medium level-five Authentication Failure on the lab-monitor agent at ten-dot-ten-dot-twenty-dot-forty. Two chips below show the agent name, the source IP, and the rule group tag. Click any row and the full event detail modal opens — which is the next slide.",
+
+  /* 29 · 5.12 SIEM Event Detail · Rule → Event → Raw — Mariz Ehab */
+  "The SIEM event detail modal has three sections, scrolling top to bottom.\n\nFirst — Rule Details. The Wazuh rule ID, the severity level, the description, the rule groups, the agent that fired the alert with its ID and IP, the location inside the agent's filesystem, the source IP, and the destination IP.\n\nSecond — Full Log and Event Data. The Full Log block shows the original timestamped event line. The Event Data block underneath shows it pretty-printed as JSON — source IP, destination IP, port, protocol, HTTP method, path, status code, user agent. This is the parsed, structured form.\n\nThird — Raw Event. The unmodified Wazuh JSON object, the forensic ground truth. The Copy JSON button at the bottom lets the analyst hand it straight to incident response. Together these three sections answer every question an SOC team asks about a single alert.",
+
+  /* 30 · 5.13 AI Brain · Neural Console — Youssef Abdelhady */
+  "Now we move to the AI Brain — a dedicated page that exposes the four-stage pipeline as it thinks.\n\nAt the top, the Security Pipeline strip with four stage indicators: NMAP for recon, NUCLEI for vulnerability scanning, RISK ENGINE for scoring, AI ADVISORY for the Gemini-powered narrative. Each turns green and animates a check mark as that stage completes.\n\nBelow that is the Neural Console — a live stream of every pipeline event as it happens. Each event has a stage tag in brackets, the stage title, a timestamp, and a chevron to expand. Expand any event and you see two things: the Neural Chain-of-Thought, the agent's reasoning, and the Outbound Result, the structured JSON payload it produced. The Sync Scroll toggle in the top right auto-follows the latest event during long runs. No black box — the whole pipeline is observable, line by line.",
+
+  /* 31 · 5.14 AI Brain · Pipeline Complete — Youssef Abdelhady */
+  "And this is the end state of a successful scan run.\n\nAll four Security Pipeline stages glowing green — every agent ran to completion. The Neural Console below shows all four events in chronological order: Network Reconnaissance Completed at eighteen-oh-three-twenty, Vulnerability Scan Completed at eighteen-oh-three-twenty-one, Risk Scoring Completed at eighteen-oh-three-twenty-two, and AI Advisory Report Generated at eighteen-oh-three-twenty-two.\n\nThe REPORTING event is expanded showing the Neural Chain-of-Thought: scan pipeline complete, zero vulnerability findings across one host, remediation advice and risk scores are ready for review — plus the Outbound Result with the totals. At the bottom: LINK ESTABLISHED, ENCRYPTION AES-256, AI AGENT ready for the next scan. The whole platform is now ready to start over with a new target.",
 
   /* 28 · Divider → 6 */
   "We open the hood now.",
