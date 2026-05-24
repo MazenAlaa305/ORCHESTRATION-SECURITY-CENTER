@@ -77,7 +77,9 @@
       "PowerShell(scoop --version 2>&1)",
       "PowerShell(choco --version 2>&1)",
       "PowerShell(winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements)",
-      "Bash(Start-Sleep 8)"
+      "Bash(Start-Sleep 8)",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File .\\\\start-lite.ps1)",
+      "Bash(findstr \"motion\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\omar\\AppData\\Local\\Temp"
