@@ -456,15 +456,19 @@ async def seed_lab_vulnerabilities(
 
     if reset:
         # Wipe the previously-seeded demo findings AND the demo scan so the
-        # next ingest starts from a known baseline.
+        # next ingest starts from a known baseline. We delete vulnerabilities
+        # first so the FK from vulnerabilities->scans doesn't block the scan
+        # delete. Match the demo scan by its sentinel risk_score (62.0) +
+        # environment_type so we don't accidentally remove real lab scans.
         await db.execute(
             delete(Vulnerability).where(Vulnerability.host == "lab-demo-seed")
         )
         await db.execute(
-            delete(Scan).where(Scan.environment_type == "lab", Scan.scan_type == "full",
+            delete(Scan).where(Scan.environment_type == "lab",
+                              Scan.scan_type == "full",
                               Scan.risk_score == 62.0)
         )
-        await db.flush()
+        await db.commit()
     else:
         # Skip if demo vulns are already present (idempotent guard)
         existing = await db.execute(
@@ -491,10 +495,14 @@ async def seed_lab_vulnerabilities(
         db.add(demo_target)
         await db.flush()
 
-    # Create a completed demo scan
+    # Create a completed demo scan. We set target_url to a human-readable label
+    # so it surfaces clearly in the Reports list (the UI falls back to
+    # `Scan #<id>` when both target_url and target are absent, which makes the
+    # demo scan easy to miss next to real localhost/IP scans).
     demo_scan = Scan(
         id=str(uuid.uuid4()),
         target_id=demo_target.id,
+        target_url="[Lab] Demo Environment (sme-lab.local)",
         status=ScanStatus.COMPLETED,
         scan_type="full",
         risk_score=62.0,
