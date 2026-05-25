@@ -142,7 +142,6 @@ const LabControls = ({ flags, onUpdate }) => {
     });
 
     const running = status?.running ?? 0;
-    const total   = status?.total ?? 0;
 
     return (
         <div className="glass-card p-4">
@@ -150,7 +149,10 @@ const LabControls = ({ flags, onUpdate }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 <div className="p-3 rounded bg-black/20 border border-white/5">
                     <div className="text-xs text-gray-400 uppercase tracking-wider">Containers</div>
-                    <div className="text-2xl font-bold text-cyan-400">{running}/{total}</div>
+                    <div className="text-2xl font-bold text-cyan-400">
+                        {running}
+                        <span className="text-xs text-gray-500 ml-1.5 font-medium uppercase tracking-wider">Running</span>
+                    </div>
                 </div>
                 <div className="p-3 rounded bg-black/20 border border-white/5">
                     <div className="text-xs text-gray-400 uppercase tracking-wider">Overall</div>

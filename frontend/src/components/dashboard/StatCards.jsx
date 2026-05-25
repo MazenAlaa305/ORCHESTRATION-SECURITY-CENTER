@@ -13,7 +13,17 @@ const SEV_COLORS = {
     INFO:     '#888888',
 };
 
-const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse, badge }) => {
+// SLA windows for vulnerability remediation, in hours. Mirrors the
+// backend SLA policy in app/api/v1/endpoints/dashboard.py — kept here
+// so the SLA Overdue card can surface the policy in its hover tooltip.
+const SLA_WINDOWS_HOURS = {
+    CRITICAL: 24,
+    HIGH:     72,
+    MEDIUM:   168,
+    LOW:      336,
+};
+
+const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse, badge, footer, tooltip }) => {
     const animValue = useCountUp(typeof value === 'number' ? value : 0, { duration: 900 });
 
     return (
@@ -22,6 +32,7 @@ const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse, badg
             whileHover={{ y: -3, scale: 1.02, boxShadow: `0 8px 32px ${color}18, 0 0 24px ${color}14, inset 0 1px 0 rgba(255,255,255,0.04)` }}
             transition={{ type: 'spring', stiffness: 280, damping: 24 }}
             className="relative overflow-hidden rounded-lg p-4 flex flex-col gap-2 group cursor-default"
+            title={tooltip}
             style={{
                 background: 'linear-gradient(135deg, rgba(15,25,34,0.7), rgba(10,17,24,0.85))',
                 border:     `1px solid ${color}20`,
@@ -81,9 +92,16 @@ const KPICard = ({ title, value, sub, icon, color, bar, barSegments, pulse, badg
                     )}
                 </div>
             )}
+
+            {footer && (
+                <div className="relative z-10 mt-1">
+                    {footer}
+                </div>
+            )}
         </motion.div>
     );
 };
+
 
 /**
  * StatCards — 4-card KPI grid.
@@ -98,8 +116,10 @@ const StatCards = ({ latestScan, isScanning }) => {
     const healthScore = Math.round(realTime.kpi.health_score ?? (100 - riskScore));
 
     const counts = realTime.kpi.counts || {};
-    const { critical = 0, high = 0, medium = 0, low = 0, info = 0 } = counts;
-    const vulnCount = critical + high + medium + low; // INFO excluded — not actionable vulnerabilities
+    const { critical = 0, high = 0, medium = 0, low = 0 } = counts;
+    // Actionable vulnerability count — INFO findings are excluded since
+    // they're advisory noise, not exploitable vulnerabilities.
+    const vulnCount = critical + high + medium + low;
 
     // Assets — prefer live KPI
     const assetCount = realTime.kpi.total_assets ?? latestScan?.assets?.length ?? 0;
@@ -110,14 +130,13 @@ const StatCards = ({ latestScan, isScanning }) => {
     // In-progress vulnerabilities
     const inProgressCount = realTime.kpi.in_progress_count ?? 0;
 
-    // Severity bar segments (proportional)
+    // Severity bar segments (proportional) — mirrors vulnCount, INFO excluded.
     const sevSegments = vulnCount > 0
         ? [
             { pct: (critical / vulnCount) * 100, c: SEV_COLORS.CRITICAL },
             { pct: (high     / vulnCount) * 100, c: SEV_COLORS.HIGH     },
             { pct: (medium   / vulnCount) * 100, c: SEV_COLORS.MEDIUM   },
             { pct: (low      / vulnCount) * 100, c: SEV_COLORS.LOW      },
-            { pct: (info     / vulnCount) * 100, c: SEV_COLORS.INFO     },
           ]
         : undefined;
 
@@ -169,6 +188,7 @@ const StatCards = ({ latestScan, isScanning }) => {
                 color={slaColor}
                 bar={overdueCount > 0 ? 100 : 0}
                 pulse={overdueCount > 0}
+                tooltip={`SLA windows · Critical ${SLA_WINDOWS_HOURS.CRITICAL}h · High ${SLA_WINDOWS_HOURS.HIGH}h · Medium ${SLA_WINDOWS_HOURS.MEDIUM}h · Low ${SLA_WINDOWS_HOURS.LOW}h`}
             />
             <KPICard
                 title="Assets"

@@ -23,6 +23,7 @@ export default function SeverityDonut() {
         { name: 'HIGH',     value: counts.high     || 0 },
         { name: 'MEDIUM',   value: counts.medium   || 0 },
         { name: 'LOW',      value: counts.low      || 0 },
+        { name: 'INFO',     value: counts.info     || 0 },
     ].filter((d) => d.value > 0);
 
     if (data.length === 0) {

@@ -33,15 +33,16 @@ def _severity_str(value) -> str:
     return str(raw).lower()
 
 
-def _findings_for_scan(scan: Scan, db=None) -> list[dict]:
+def _findings_for_scan(scan: Scan, db=None, full_report: bool = False) -> list[dict]:
     """Build the canonical findings list used for hashing — same source as the PDF."""
     from app.models.scan import Vulnerability, VulnStatus
-    # Use all open vulns (matches the PDF content) so the hash is consistent
-    source = (
-        db.query(Vulnerability).filter(Vulnerability.status == VulnStatus.OPEN).all()
-        if db is not None
-        else (scan.vulnerabilities or [])
-    )
+    if db is not None:
+        q = db.query(Vulnerability).filter(Vulnerability.status == VulnStatus.OPEN)
+        if not full_report:
+            q = q.filter(Vulnerability.scan_id == scan.id)
+        source = q.all()
+    else:
+        source = scan.vulnerabilities or []
     return [
         {
             "id": str(getattr(v, "finding_id", None) or v.id),
@@ -79,8 +80,8 @@ def _vuln_to_dict(v) -> dict:
     }
 
 
-def _build_scan_data(scan: Scan, db=None) -> dict:
-    """Assemble report data from real-time DB state — same source as the dashboard KPI."""
+def _build_scan_data(scan: Scan, db=None, full_report: bool = False) -> dict:
+    """Assemble report data for the selected scan (or all scans when full_report=True)."""
     from app.models.scan import Vulnerability, VulnStatus, NetworkAsset, ActionItem
 
     # Resolve target name
@@ -90,15 +91,16 @@ def _build_scan_data(scan: Scan, db=None) -> dict:
     elif scan.target_url:
         target_name = scan.target_url
 
-    # ── Vulnerabilities — always ALL open vulns (same as dashboard KPI) ──────
+    # ── Vulnerabilities — scoped to this scan unless full_report=True ─────────
     if db is not None:
-        all_open = (
+        q = (
             db.query(Vulnerability)
             .filter(Vulnerability.status == VulnStatus.OPEN)
             .order_by(Vulnerability.severity)
-            .all()
         )
-        vulns = [_vuln_to_dict(v) for v in all_open]
+        if not full_report:
+            q = q.filter(Vulnerability.scan_id == scan.id)
+        vulns = [_vuln_to_dict(v) for v in q.all()]
     else:
         vulns = [_vuln_to_dict(v) for v in (scan.vulnerabilities or [])]
 
@@ -163,16 +165,16 @@ def _build_scan_data(scan: Scan, db=None) -> dict:
 
 @router.post("/{scan_id}/generate",
              dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
-def generate_report(scan_id: str, db: Session = Depends(get_db)):
-    """Generate a signed PDF report for a completed scan and store the metadata."""
+def generate_report(scan_id: str, full_report: bool = False, db: Session = Depends(get_db)):
+    """Generate a signed PDF report. Set full_report=true to include all scans' findings."""
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
 
     try:
-        findings = _findings_for_scan(scan, db=db)
+        findings = _findings_for_scan(scan, db=db, full_report=full_report)
         fhash = canonical_findings_hash(findings)
-        scan_data = _build_scan_data(scan, db=db)
+        scan_data = _build_scan_data(scan, db=db, full_report=full_report)
 
         from app.services.pdf_generator import PDFReportGenerator  # lazy — avoids loading reportlab at startup
         report_id = str(uuid.uuid4())

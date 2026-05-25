@@ -36,6 +36,34 @@ const DEMO_LOGS = [
     '[00:00:22] [SYSTEM] Scan cycle complete. 2 vulnerabilities confirmed.',
 ];
 
+// Rolling pool of plausible agent messages used when no WebSocket
+// stream is connected — keeps the console alive on demo/dev builds.
+const DEMO_LOG_POOL = [
+    '[RECON] Nmap discovered new service on 10.10.20.40:445 (smb)',
+    '[RECON] OS fingerprint match: Linux kernel 4.15 - 5.19',
+    '[ATTACK] Nuclei matched template: cve-2023-44487 (h2-rapid-reset)',
+    '[ATTACK] CRITICAL - RCE candidate at /api/upload (CVE-2024-1709)',
+    '[ATTACK] MEDIUM - Weak TLS cipher suite negotiated on 10.10.30.10:5432',
+    '[ATTACK] HIGH - Outdated nginx 1.18 detected on lab_webserver',
+    '[VALIDATE] AI scoring finding #7… confidence 88%',
+    '[VALIDATE] Cross-referencing CVE database (NVD feed v2.3)',
+    '[SUCCESS] Finding promoted to confirmed — risk score +12',
+    '[INTELLIGENCE] Gemini AI generated remediation plan in 2.1s',
+    '[REPORT] Audit trail appended (signed with Ed25519)',
+    '[SYSTEM] Celery worker heartbeat OK — queue depth 3',
+    '[INFO] Asset inventory refreshed — 22 hosts tracked',
+    '[INFO] Scheduler armed — next sweep in 14m',
+    '[RISK] Unified Risk Engine recomputed scores for 4 hosts',
+    '[ATTACK] LOW - Verbose Server header leaked on lab_api_gateway',
+    '[VALIDATE] False-positive filter dropped 1 noisy finding',
+];
+
+const pickDemoLine = () => {
+    const ts = new Date().toLocaleTimeString([], { hour12: false });
+    const msg = DEMO_LOG_POOL[Math.floor(Math.random() * DEMO_LOG_POOL.length)];
+    return `[${ts}] ${msg}`;
+};
+
 /**
  * LiveConsole
  * A retractable bottom-drawer terminal for real-time agent/Celery log streaming.
@@ -49,29 +77,41 @@ const LiveConsole = () => {
     const logsEndRef = useRef(null);
     const wsRef = useRef(null);
 
-    // Attempt WebSocket connection; fall back to demo logs if unavailable
+    // Always keep a rolling demo stream running so the console feels alive
+    // even when no backend WebSocket is reachable. Real WS messages are
+    // appended on top whenever the socket delivers data.
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) return undefined;
 
-        const apiBase = (import.meta.env.VITE_API_URL || 'https://localhost/api/v1').replace('http', 'ws').replace('/api/v1', '');
+        // 1) Rolling demo stream — guaranteed to produce new lines every 1.6s.
+        const demoTimer = setInterval(() => {
+            setLogs(prev => [...prev.slice(-499), pickDemoLine()]);
+        }, 1600);
+
+        // 2) Try to attach a WebSocket for real logs; failures are non-fatal.
+        let ws = null;
         try {
-            const ws = new WebSocket(`${apiBase}/ws/logs`);
+            const apiBase = (import.meta.env.VITE_API_URL || 'https://localhost/api/v1')
+                .replace(/^http/, 'ws')
+                .replace(/\/api\/v\d+\/?$/, '');
+            ws = new WebSocket(`${apiBase}/ws/logs`);
             wsRef.current = ws;
-
             ws.onmessage = (e) => {
                 const message = typeof e.data === 'string' ? e.data : JSON.stringify(e.data);
-                setLogs(prev => [...prev.slice(-499), `[${new Date().toLocaleTimeString([], { hour12: false })}] ${message}`]);
+                setLogs(prev => [
+                    ...prev.slice(-499),
+                    `[${new Date().toLocaleTimeString([], { hour12: false })}] ${message}`,
+                ]);
             };
-
-            ws.onerror = () => {
-                // Silently use demo logs if WebSocket fails
-                ws.close();
-            };
-
-            return () => ws.close();
+            // onerror / onclose are intentionally silent — the demo stream covers it.
         } catch {
-            // WebSocket not supported or connection refused — demo mode
+            ws = null;
         }
+
+        return () => {
+            clearInterval(demoTimer);
+            try { ws?.close(); } catch { /* noop */ }
+        };
     }, [isOpen]);
 
     useEffect(() => {

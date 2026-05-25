@@ -1,37 +1,40 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Server, ClipboardCheck, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Zap, BrainCircuit, ArrowRight } from 'lucide-react';
 import SectionContainer from './shared/SectionContainer';
 
 const CASES = [
     {
-        icon: Users,
-        title: 'IT admins at SMEs',
-        text: 'You wear ten hats. OSC gives you a security posture you can actually action — without becoming a SOC analyst.',
-        points: ['One dashboard for everything', 'Plain-language remediations', 'Alerts that matter'],
+        icon: ShieldCheck,
+        title: 'Continuous risk reduction',
+        text: 'Replace one-off pentests with always-on scanning. OSC fuses Nmap, Nuclei, and OpenVAS into a single deterministic pipeline so nothing slips through the cracks.',
+        points: ['Automated weekly sweeps', 'Drift detection on new assets', 'Prioritised remediation queue'],
     },
     {
-        icon: Server,
-        title: 'Managed service providers',
-        text: 'Run scans across multiple client networks with role-based isolation. Hand off a clean report at the end of every engagement.',
-        points: ['Multi-tenant ready', 'Branded PDF reports', 'API for automation'],
+        icon: Zap,
+        title: 'Faster incident response',
+        text: 'When something pops, OSC shows you exactly which host, which CVE, and which fix — in plain English. Cut mean-time-to-respond from days to minutes.',
+        points: ['Live WebSocket alerts', 'CVE-to-asset mapping', 'One-click remediation playbooks'],
     },
     {
-        icon: ClipboardCheck,
-        title: 'Compliance & audit teams',
-        text: 'Evidence trail, ticketing-friendly findings, and CVE references for every alert — ready for ISO 27001 and SOC 2 cycles.',
-        points: ['Full evidence trail', 'CVE-mapped findings', 'Exportable reports'],
+        icon: BrainCircuit,
+        title: 'Audit-ready evidence',
+        text: 'Every finding ships with timestamps, evidence, and CVE references. Export branded PDF reports the moment your ISO 27001 or SOC 2 cycle asks for them.',
+        points: ['Immutable audit trail', 'Signed PDF reports', 'Role-based access logs'],
     },
 ];
 
 export default function UseCases() {
     return (
-        <SectionContainer id="use-cases">
+        <SectionContainer id="solutions">
             <div className="text-center max-w-2xl mx-auto mb-14">
-                <p className="text-xs uppercase tracking-[0.2em] text-cyber-accent/80 mb-3">Use cases</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-cyber-accent/80 mb-3">Solutions</p>
                 <h2 className="font-display text-white text-3xl md:text-4xl font-bold leading-tight">
-                    Built for the teams that get paged.
+                    Security outcomes, not another dashboard.
                 </h2>
+                <p className="text-white/60 text-sm md:text-base mt-4">
+                    From continuous scanning to audit-ready reports, OSC delivers the security wins your team actually needs.
+                </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">

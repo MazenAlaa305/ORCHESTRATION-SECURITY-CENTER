@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Shield, Menu, X, LayoutDashboard } from 'lucide-react';
 import GradientButton from './shared/GradientButton';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,7 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 const NAV_LINKS = [
     { label: 'Features',    href: '#features' },
     { label: 'How it works',href: '#how-it-works' },
-    { label: 'Use cases',   href: '#use-cases' },
+    { label: 'Solutions',   href: '#solutions' },
     { label: 'FAQ',         href: '#faq' },
     { label: 'About us',    to: '/about' },
 ];
@@ -17,6 +17,22 @@ export default function LandingNavbar() {
     const [scrolled, setScrolled] = useState(false);
     const [open, setOpen] = useState(false);
     const { user } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Logo click: smooth-scroll to the top of the landing page if we're
+    // already there; otherwise route home. Closes the mobile menu either way.
+    const handleLogoClick = (e) => {
+        if (location.pathname === '/') {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setOpen(false);
+        } else {
+            // Let <Link> handle navigation, then ensure we land at the top.
+            navigate('/');
+            window.scrollTo({ top: 0 });
+        }
+    };
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 30);
@@ -34,7 +50,8 @@ export default function LandingNavbar() {
             }`}
         >
             <div className="mx-auto max-w-7xl px-6 md:px-10 h-16 flex items-center justify-between">
-                <Link to="/" className="flex items-center gap-2 group">
+                <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2 group" aria-label="OSC — scroll to top">
+
                     <div className="h-9 w-9 rounded-lg bg-cyber-accent/10 ring-1 ring-cyber-accent/40 flex items-center justify-center">
                         <Shield className="h-4.5 w-4.5 text-cyber-accent" />
                     </div>

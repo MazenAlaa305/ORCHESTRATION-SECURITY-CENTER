@@ -56,7 +56,7 @@ export const scanService = {
     getScans: (params = {}) => api.get('/scans/', { params }),
     getScanDetails: (id) => api.get(`/scans/${id}`),
     getReport: (id) => api.get(`/reports/${id}`),
-    generateReport: (scanId) => api.post(`/reports/${scanId}/generate`),
+    generateReport: (scanId, fullReport = false) => api.post(`/reports/${scanId}/generate`, null, { params: { full_report: fullReport } }),
     getReportMeta: (reportId) => api.get(`/reports/${reportId}/meta`),
     downloadReportPDF: (reportId) => api.get(`/reports/${reportId}/pdf`, { responseType: 'blob' }),
 };

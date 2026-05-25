@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { scanService, vulnerabilityService } from '../../services/api';
-import { FileText, Loader, Download, CheckCircle, AlertTriangle, RefreshCw, Shield, Hash } from 'lucide-react';
-import { useRealTime } from '../../context/RealTimeContext';
+import { FileText, Loader, Download, CheckCircle, AlertTriangle, RefreshCw, Shield, Hash, Layers } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -13,12 +12,12 @@ const SeverityBadge = ({ count, label, color }) => (
 );
 
 const Reports = ({ refresh }) => {
-    const { state: realTime } = useRealTime();
     const [scans, setScans] = useState([]);
     const [selectedScan, setSelectedScan] = useState(null);
     const [reportMeta, setReportMeta] = useState(null);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
+    const [generatingFull, setGeneratingFull] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -47,16 +46,15 @@ const Reports = ({ refresh }) => {
 
     const [scanVulns, setScanVulns] = useState([]);
 
-    // Fetch ALL open vulnerabilities (cumulative across all scans) so the
-    // summary is never empty just because the selected scan found nothing.
     useEffect(() => {
-        vulnerabilityService.list({ status: 'open', page_size: 500 })
+        if (!selectedScan) return;
+        vulnerabilityService.list({ status: 'open', scan_id: selectedScan.id, page_size: 500 })
             .then(res => {
                 const items = res.data?.items ?? res.data ?? [];
                 setScanVulns(Array.isArray(items) ? items : []);
             })
             .catch(() => setScanVulns([]));
-    }, [refresh]);
+    }, [selectedScan, refresh]);
 
     const selectScan = (scan) => {
         setSelectedScan(scan);
@@ -69,7 +67,7 @@ const Reports = ({ refresh }) => {
         try {
             setGenerating(true);
             setError(null);
-            const { data } = await scanService.generateReport(selectedScan.id);
+            const { data } = await scanService.generateReport(selectedScan.id, false);
             setReportMeta(data);
         } catch (err) {
             const msg = err?.response?.data?.detail || 'Report generation failed. Check backend logs.';
@@ -77,6 +75,22 @@ const Reports = ({ refresh }) => {
             console.error(err);
         } finally {
             setGenerating(false);
+        }
+    };
+
+    const generateFullReport = async () => {
+        if (!selectedScan) return;
+        try {
+            setGeneratingFull(true);
+            setError(null);
+            const { data } = await scanService.generateReport(selectedScan.id, true);
+            setReportMeta(data);
+        } catch (err) {
+            const msg = err?.response?.data?.detail || 'Full report generation failed.';
+            setError(msg);
+            console.error(err);
+        } finally {
+            setGeneratingFull(false);
         }
     };
 
@@ -126,11 +140,10 @@ const Reports = ({ refresh }) => {
     }
 
     const vulns = scanVulns;
-    // Use live KPI counts (cumulative open vulns) for the summary badges.
-    const critical = realTime.kpi.counts.critical ?? 0;
-    const high     = realTime.kpi.counts.high     ?? 0;
-    const medium   = realTime.kpi.counts.medium   ?? 0;
-    const low      = realTime.kpi.counts.low      ?? 0;
+    const critical = vulns.filter(v => String(v.severity).toLowerCase() === 'critical').length;
+    const high     = vulns.filter(v => String(v.severity).toLowerCase() === 'high').length;
+    const medium   = vulns.filter(v => String(v.severity).toLowerCase() === 'medium').length;
+    const low      = vulns.filter(v => String(v.severity).toLowerCase() === 'low').length;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
@@ -203,12 +216,22 @@ const Reports = ({ refresh }) => {
                                 )}
                                 <button
                                     onClick={generateReport}
-                                    disabled={generating}
+                                    disabled={generating || generatingFull}
                                     className="flex items-center gap-2 px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded font-bold text-sm transition-colors"
                                 >
                                     {generating
                                         ? <><Loader className="h-4 w-4 animate-spin" /> Generating…</>
                                         : <><Shield className="h-4 w-4" /> Generate Report</>}
+                                </button>
+                                <button
+                                    onClick={generateFullReport}
+                                    disabled={generating || generatingFull}
+                                    className="flex items-center gap-2 px-4 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white rounded font-bold text-sm transition-colors"
+                                    title="Generate a report combining findings from all scans"
+                                >
+                                    {generatingFull
+                                        ? <><Loader className="h-4 w-4 animate-spin" /> Generating…</>
+                                        : <><Layers className="h-4 w-4" /> Full Report</>}
                                 </button>
                             </div>
                         </div>
