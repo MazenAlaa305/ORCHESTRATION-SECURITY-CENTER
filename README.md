@@ -301,10 +301,10 @@ Eleven members across four sub-teams. Full responsibilities, file ownership, and
 | Sub-team | Members |
 |---|---|
 | **Leadership / DevOps** | Omar Kapil (Team Lead) |
-| **Backend & AI Core** | Reem Amin, Yousef Abdel Hady, Mohamed Shaban |
-| **Frontend & Visualization** | Marize Ehap, Omnia Helmy, Rahma Ebrahem |
-| **Security & Scanning** | Shahd Paher, Mariz Ehap |
-| **QA & Documentation** | Yosef Ali, Mazin Alla, Omar Tarek |
+| **Backend & AI Core** | Reem Ameen Mahmoud, Youssef Abdelhady, Mohamed Shaban |
+| **Frontend & Visualization** | Omnia Helmy, Rahma Ibrahim |
+| **Security & Scanning** | Shahd Baher Hussien, Mariz Ehab |
+| **QA & Documentation** | Youssef Ali, Mazen Alaa, Omar Elshafey |
 
 ---
 
