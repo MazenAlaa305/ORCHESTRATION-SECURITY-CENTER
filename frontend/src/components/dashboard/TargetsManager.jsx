@@ -4,8 +4,12 @@ import { targetService, pentesterService } from '../../services/api';
 import EnvironmentWizard from './EnvironmentWizard';
 import ScanConfigModal from './ScanConfigModal';
 import { useEnvStore } from '../../stores/envStore';
+import { useActionGuard } from '../../hooks/useActionGuard';
 
 const TargetsManager = ({ onScanStarted }) => {
+    const { guard, isAnalyst, isAdmin } = useActionGuard();
+    const readOnly = !isAnalyst;     // viewer: every action button disabled
+    const noDelete = !isAdmin;       // analyst: can scan + discover but not delete
     const [activeTab, setActiveTab] = useState('list'); // list, discover
     const [showWizard, setShowWizard] = useState(false);
     const [targets, setTargets] = useState([]);
@@ -39,6 +43,7 @@ const TargetsManager = ({ onScanStarted }) => {
 
     const handleDiscover = async (e) => {
         e.preventDefault();
+        if (!guard({ action: 'run target discovery' })) return;
         setDiscovering(true);
         try {
             const response = await targetService.discover(discoveryDomain);
@@ -52,6 +57,7 @@ const TargetsManager = ({ onScanStarted }) => {
     };
 
     const handleDeleteTarget = async (id) => {
+        if (!guard({ action: 'delete a target', level: 'admin' })) return;
         if (!window.confirm('Delete this target and all associated data?')) return;
         try {
             await targetService.delete(id);
@@ -62,6 +68,7 @@ const TargetsManager = ({ onScanStarted }) => {
     };
 
     const handleStartAIScan = async (targetId) => {
+        if (!guard({ action: 'start an AI scan' })) return;
         setScanning(targetId);
         setScanError(null);
         try {
@@ -133,14 +140,16 @@ const TargetsManager = ({ onScanStarted }) => {
                             type="text"
                             value={discoveryDomain}
                             onChange={(e) => setDiscoveryDomain(e.target.value)}
-                            placeholder="example.com"
-                            className="flex-1 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
-                            required
+                            placeholder={readOnly ? 'Read-only — admin / analyst only' : 'example.com'}
+                            disabled={readOnly}
+                            className="flex-1 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            required={!readOnly}
                         />
                         <button
                             type="submit"
-                            disabled={discovering}
-                            className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg disabled:opacity-50 flex items-center gap-2 min-w-[140px] justify-center"
+                            disabled={discovering || readOnly}
+                            title={readOnly ? 'admin / analyst only' : undefined}
+                            className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 min-w-[140px] justify-center"
                         >
                             {discovering ? (
                                 <Loader2 className="h-5 w-5 animate-spin text-white" />
@@ -152,6 +161,11 @@ const TargetsManager = ({ onScanStarted }) => {
                             )}
                         </button>
                     </form>
+                    {readOnly && (
+                        <p className="text-[9px] font-mono text-amber-400/70 uppercase tracking-widest mt-2">
+                            admin / analyst only
+                        </p>
+                    )}
 
                     {discoveryResult && (
                         <div className="mt-6 bg-gray-900 rounded-lg p-4 border border-gray-800">
@@ -202,7 +216,9 @@ const TargetsManager = ({ onScanStarted }) => {
                             <h4 className="text-lg font-semibold text-white">{target.name}</h4>
                             <button
                                 onClick={() => handleDeleteTarget(target.id)}
-                                className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                                disabled={noDelete}
+                                title={noDelete ? 'admin only' : 'Delete target'}
+                                className="p-1 text-gray-500 hover:text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-gray-500"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </button>
@@ -257,18 +273,19 @@ const TargetsManager = ({ onScanStarted }) => {
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <button
-                                    onClick={() => setScanConfigTarget(target)}
-                                    className="flex items-center gap-1 px-3 py-1 bg-cyan-400 hover:bg-sky-300 text-gray-900 rounded-lg text-sm font-bold min-w-[88px] justify-center transition-colors"
-                                    title="Configure and launch a scan against this target"
+                                    onClick={() => { if (!readOnly) setScanConfigTarget(target); }}
+                                    disabled={readOnly}
+                                    title={readOnly ? 'admin / analyst only' : 'Configure and launch a scan against this target'}
+                                    className="flex items-center gap-1 px-3 py-1 bg-cyan-400 hover:bg-sky-300 text-gray-900 rounded-lg text-sm font-bold min-w-[88px] justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-cyan-400"
                                 >
                                     <Zap className="h-4 w-4" />
                                     <span>Scan…</span>
                                 </button>
                                 <button
                                     onClick={() => handleStartAIScan(target.id)}
-                                    disabled={scanning === target.id}
-                                    className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-purple-500/80 to-cyan-500/80 hover:from-purple-600 hover:to-cyan-600 text-white rounded-lg text-xs disabled:opacity-50 justify-center"
-                                    title="One-click AI-validated scan with default settings"
+                                    disabled={scanning === target.id || readOnly}
+                                    title={readOnly ? 'admin / analyst only' : 'One-click AI-validated scan with default settings'}
+                                    className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-purple-500/80 to-cyan-500/80 hover:from-purple-600 hover:to-cyan-600 text-white rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed justify-center"
                                 >
                                     {scanning === target.id ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -280,6 +297,11 @@ const TargetsManager = ({ onScanStarted }) => {
                                     )}
                                 </button>
                             </div>
+                            {readOnly && (
+                                <p className="text-[9px] font-mono text-amber-400/70 uppercase tracking-widest mt-2 text-right">
+                                    admin / analyst only
+                                </p>
+                            )}
                         </div>
                     </div>
                 ))}

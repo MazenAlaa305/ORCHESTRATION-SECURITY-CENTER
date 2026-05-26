@@ -6,6 +6,7 @@ import IncidentDetailDrawer from './IncidentDetailDrawer';
 import { useSavedViews } from '../../hooks/useSavedViews';
 import { useToast } from '../ToastProvider';
 import { useEnvStore } from '../../stores/envStore';
+import { useActionGuard } from '../../hooks/useActionGuard';
 
 const SEV_BORDER = {
     critical: 'border-l-red-500 shadow-[inset_3px_0_0_rgba(239,68,68,0.5)]',
@@ -48,6 +49,9 @@ const DEFAULT_MIN_SEVERITY = 'info';
 const LAST_SEEN_KEY = 'vulns.lastSeenAt';
 
 const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
+    const { guard, isAnalyst, isAdmin } = useActionGuard();
+    const readOnly = !isAnalyst;     // viewer: status changes disabled
+    const adminOnly = !isAdmin;      // analyst: "Accepted (Risk)" option disabled
     const [vulnerabilities, setVulnerabilities] = useState([]);
     const [loading, setLoading] = useState(true);
     // Selection is tracked by id so that filter / sort changes don't break the
@@ -152,6 +156,10 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
 
     const bulkUpdate = async (status) => {
         if (!status || selectedIds.size === 0) return;
+        if (!guard({ action: 'bulk-update vulnerability status' })) return;
+        // "Accepted (Risk)" is a governance decision (formal risk acceptance),
+        // not a triage state. Only admins can mark a vuln this way.
+        if (status === 'accepted' && !guard({ action: 'accept risk on a vulnerability', level: 'admin' })) return;
         const ids = [...selectedIds];
         setBulkLoading(true);
         try {
@@ -627,16 +635,20 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
 
                     {/* Status change */}
                     <select
-                        disabled={bulkLoading}
+                        disabled={bulkLoading || readOnly}
                         defaultValue=""
+                        title={readOnly ? 'admin / analyst only' : undefined}
                         onChange={(e) => { if (e.target.value) { bulkUpdate(e.target.value); e.target.value = ''; } }}
-                        className="px-2 py-1 bg-black/40 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-cyan-400/40 disabled:opacity-50"
+                        className="px-2 py-1 bg-black/40 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-cyan-400/40 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                        <option value="" disabled>Change status…</option>
+                        <option value="" disabled>{readOnly ? 'admin / analyst only' : 'Change status…'}</option>
                         <option value="open">Open</option>
                         <option value="in_progress">In Progress</option>
                         <option value="fixed">Fixed</option>
                         <option value="false_positive">False Positive</option>
+                        <option value="accepted" disabled={adminOnly}>
+                            Accepted (Risk){adminOnly ? ' — admin only' : ''}
+                        </option>
                     </select>
 
                     {bulkLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400 shrink-0" />}
@@ -807,8 +819,13 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                             <div className="flex flex-col gap-2 border-l border-gray-700 pl-4 ml-4 min-w-[140px]" onClick={e => e.stopPropagation()}>
                                 <select
                                     value={vuln.status}
+                                    disabled={readOnly}
+                                    title={readOnly ? 'admin / analyst only' : undefined}
                                     onChange={async (e) => {
                                         const newStatus = e.target.value;
+                                        if (!guard({ action: 'change a vulnerability status' })) return;
+                                        // Accept Risk is a governance decision — admin only.
+                                        if (newStatus === 'accepted' && !guard({ action: 'accept risk on a vulnerability', level: 'admin' })) return;
                                         try {
                                             await vulnerabilityService.updateWorkflow(vuln.id, { status: newStatus });
                                             fetchVulnerabilities();
@@ -824,7 +841,15 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                     <option value="in_progress">In Progress</option>
                                     <option value="fixed">Fixed</option>
                                     <option value="false_positive">False Positive</option>
+                                    <option value="accepted" disabled={adminOnly}>
+                                        Accepted (Risk){adminOnly ? ' — admin only' : ''}
+                                    </option>
                                 </select>
+                                {readOnly && (
+                                    <p className="text-[9px] font-mono text-amber-400/70 uppercase tracking-widest">
+                                        admin / analyst only
+                                    </p>
+                                )}
                                 <button
                                     onClick={() => handleOpenDrawer(vuln)}
                                     className="flex items-center gap-2 justify-center p-2 text-xs bg-cyber-accent/10 border border-cyber-accent/25 hover:bg-cyber-accent/20 rounded-lg text-cyber-accent font-bold transition-all"

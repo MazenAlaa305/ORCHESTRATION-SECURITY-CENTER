@@ -10,12 +10,14 @@ celery_app = Celery(
 )
 
 celery_app.conf.beat_schedule = {
-    # Periodic infrastructure scan (existing)
-    "hourly-network-scan": {
-        "task": "app.services.scan_tasks.trigger_periodic_scan",
-        "schedule": crontab(minute=0),
-        "args": ("localhost",),
-    },
+    # NOTE: the hourly localhost auto-scan was disabled because it adds
+    # noise to the curated 8/15/12/10 demo distribution. Re-enable by
+    # uncommenting the entry below if you need the periodic baseline.
+    # "hourly-network-scan": {
+    #     "task": "app.services.scan_tasks.trigger_periodic_scan",
+    #     "schedule": crontab(minute=0),
+    #     "args": ("localhost",),
+    # },
     # Phase 4.3 — SLA breach detection runs every hour
     "hourly-sla-breach-check": {
         "task": "app.services.scan_tasks.check_sla_breaches",

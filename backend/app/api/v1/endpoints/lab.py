@@ -32,7 +32,23 @@ _TARGETS_BY_SEVERITY = {
     "CRITICAL": 8,
     "HIGH":     15,
     "MEDIUM":   12,
-    "LOW":      33,
+    "LOW":      10,
+}
+
+# Maps the symbolic host_label used in each template to the real Docker IP
+# of the lab container. The Vulnerability.host column is what
+# /api/v1/network/assets/{id} joins on to surface a host's findings, so it
+# must match a real network_assets.ip_address row — using the symbolic
+# label "lab-demo-seed" leaves every node's detail panel empty.
+_LAB_HOST_IP = {
+    "lab_webserver":   "10.10.10.10",
+    "lab_api_gateway": "10.10.10.20",
+    "lab_dns_server":  "10.10.10.30",
+    "lab_fileserver":  "10.10.20.10",
+    "lab_mailserver":  "10.10.20.20",
+    "lab_workstation": "10.10.20.40",
+    "lab_database":    "10.10.30.10",
+    "lab_redis_cache": "10.10.30.20",
 }
 
 # Realistic vulnerability templates per severity, anchored to the lab targets.
@@ -339,9 +355,11 @@ _LOW_TEMPLATES = [
 
 def _build_demo_vuln_distribution():
     """
-    Build a deterministic 8/15/12/33 finding distribution by round-robining
-    over the per-severity templates above. The `host` column always stays
-    "lab-demo-seed" so the idempotent guard and reset path keep working.
+    Build a deterministic 8/15/12/10 finding distribution by round-robining
+    over the per-severity templates above. Each finding's `host` column is
+    set to the real Docker IP of the lab container it belongs to (via
+    _LAB_HOST_IP) so the topology can render per-host detail when a node
+    is clicked.
     """
     from app.models.scan import SeverityLevel
 
@@ -360,8 +378,9 @@ def _build_demo_vuln_distribution():
             # Suffix the title with a per-tier index so duplicates don't
             # collapse in the UI (the table dedupes on title + host).
             title = f"{tpl['title']} (#{instance:02d})"
+            host_ip = _LAB_HOST_IP.get(tpl.get("host_label"), "lab-demo-seed")
             out.append(dict(
-                host="lab-demo-seed",
+                host=host_ip,
                 port=tpl.get("port"),
                 service=tpl.get("service"),
                 type=tpl["type"],
@@ -454,28 +473,35 @@ async def seed_lab_vulnerabilities(
         Scan, ScanStatus, Vulnerability, SeverityLevel, VulnStatus, Target,
     )
 
+    # Identify demo scan(s) by the sentinel risk_score (62.0) +
+    # environment_type combo we set at creation. Used by both the reset
+    # path (to nuke them) and the idempotent guard.
+    demo_scan_ids_res = await db.execute(
+        select(Scan.id).where(
+            Scan.environment_type == "lab",
+            Scan.scan_type == "full",
+            Scan.risk_score == 62.0,
+        )
+    )
+    demo_scan_ids = [row[0] for row in demo_scan_ids_res.all()]
+
     if reset:
-        # Wipe the previously-seeded demo findings AND the demo scan so the
-        # next ingest starts from a known baseline. We delete vulnerabilities
-        # first so the FK from vulnerabilities->scans doesn't block the scan
-        # delete. Match the demo scan by its sentinel risk_score (62.0) +
-        # environment_type so we don't accidentally remove real lab scans.
+        # Wipe vulns first (FK is non-cascading) then the demo scans.
+        if demo_scan_ids:
+            await db.execute(
+                delete(Vulnerability).where(Vulnerability.scan_id.in_(demo_scan_ids))
+            )
+            await db.execute(
+                delete(Scan).where(Scan.id.in_(demo_scan_ids))
+            )
+        # Cleanup any orphaned legacy rows that used the old placeholder.
         await db.execute(
             delete(Vulnerability).where(Vulnerability.host == "lab-demo-seed")
         )
-        await db.execute(
-            delete(Scan).where(Scan.environment_type == "lab",
-                              Scan.scan_type == "full",
-                              Scan.risk_score == 62.0)
-        )
         await db.commit()
-    else:
-        # Skip if demo vulns are already present (idempotent guard)
-        existing = await db.execute(
-            select(Vulnerability).where(Vulnerability.host == "lab-demo-seed").limit(1)
-        )
-        if existing.scalars().first():
-            return {"status": "already_seeded", "created": 0}
+    elif demo_scan_ids:
+        # Demo scan already present → idempotent no-op.
+        return {"status": "already_seeded", "created": 0}
 
     # Find or create a demo target to attach the scan to
     target_res = await db.execute(
@@ -542,4 +568,94 @@ async def seed_lab_vulnerabilities(
         created += 1
 
     await db.commit()
-    return {"status": "seeded", "created": created, "scan_id": demo_scan.id}
+
+    # After seeding the findings, rebuild the network inventory so every
+    # vulnerability has a dedicated host on the topology canvas (1:1 mapping)
+    # plus a small main-stack tier. This keeps "X red devices on the canvas"
+    # in sync with "X critical findings in the legend".
+    inventory_summary = await _rebuild_inventory_from_vulns(db, demo_scan.id)
+    return {
+        "status": "seeded",
+        "created": created,
+        "scan_id": demo_scan.id,
+        "inventory": inventory_summary,
+    }
+
+
+# Inventory rebuild — extracted from scripts/rebuild_topology_assets.py so
+# /lab/seed-vulns can re-issue assets in the same transaction. Returns a
+# small summary dict for the API response.
+async def _rebuild_inventory_from_vulns(db, demo_scan_id):
+    import random
+    from sqlalchemy import delete as _delete
+    from app.models.scan import NetworkAsset, Vulnerability
+
+    TAG_INFO = {
+        ("http", 3000):       ("10.10.10", "web",    "Linux (Node.js)"),
+        ("http", 8081):       ("10.10.10", "api-gw", "Linux (nginx)"),
+        ("dns",  53):         ("10.10.10", "dns",    "Linux (CoreDNS)"),
+        ("smb",  445):        ("10.10.20", "fs",     "Linux (Samba)"),
+        ("smtp", 3025):       ("10.10.20", "mail",   "Linux (GreenMail)"),
+        ("ssh",  22):         ("10.10.20", "ws",     "Linux (Ubuntu)"),
+        ("postgresql", 5432): ("10.10.30", "db",     "Linux (Alpine)"),
+        ("redis", 6380):      ("10.10.30", "redis",  "Linux (Alpine)"),
+    }
+    SEV_RISK = {"CRITICAL": (88, 95), "HIGH": (60, 74), "MEDIUM": (30, 49), "LOW": (10, 19)}
+    ZONE_SUFFIX = {"10.10.10": "dmz", "10.10.20": "corp", "10.10.30": "data", "10.10.40": "mgmt"}
+    MAIN_STACK = [
+        ("10.10.40.50", "firewall-01",    "firewall", "BSD (pfSense)"),
+        ("10.10.40.51", "edge-router-01", "router",   "Cisco IOS"),
+        ("10.10.40.52", "core-switch-01", "router",   "Cisco NX-OS"),
+        ("10.10.40.53", "ad-dc-01",       "server",   "Windows Server"),
+        ("10.10.40.54", "dhcp-01",        "server",   "Linux"),
+        ("10.10.40.55", "ntp-01",         "server",   "Linux"),
+        ("10.10.40.56", "monitoring-01",  "server",   "Linux"),
+        ("10.10.40.57", "jumphost-01",    "server",   "Linux"),
+        ("10.10.40.58", "backup-01",      "server",   "Linux"),
+        ("10.10.40.59", "proxy-01",       "server",   "Linux"),
+        ("10.10.40.60", "lb-01",          "router",   "Linux (HAProxy)"),
+        ("10.10.40.61", "vault-01",       "server",   "Linux"),
+    ]
+
+    random.seed(42)
+    await db.execute(_delete(NetworkAsset))
+
+    vulns_res = await db.execute(
+        select(Vulnerability)
+        .where(Vulnerability.scan_id == demo_scan_id)
+        .order_by(Vulnerability.severity, Vulnerability.id)
+    )
+    vulns = vulns_res.scalars().all()
+    next_ip = {"10.10.10": 10, "10.10.20": 10, "10.10.30": 10, "10.10.40": 10}
+    role_no = {}
+
+    for v in vulns:
+        zone_pref, role, os_name = TAG_INFO.get((v.service, v.port), ("10.10.10", "host", "Linux"))
+        host_octet = next_ip[zone_pref]; next_ip[zone_pref] += 1
+        ip = f"{zone_pref}.{host_octet}"
+        role_no[role] = role_no.get(role, 0) + 1
+        sev_str = (v.severity.value if hasattr(v.severity, "value") else v.severity).upper()
+        lo, hi = SEV_RISK[sev_str]
+        db.add(NetworkAsset(
+            ip_address=ip,
+            hostname=f"{role}-{role_no[role]:02d}.sme-lab.{ZONE_SUFFIX[zone_pref]}",
+            device_type="server",
+            status="active",
+            os_name=os_name,
+            criticality=sev_str,
+            risk_score=float(random.randint(lo, hi)),
+            open_ports=str(v.port) if v.port else None,
+            first_seen=datetime.utcnow(),
+            last_seen=datetime.utcnow(),
+        ))
+        v.host = ip
+
+    for ip, hn, dtype, os_name in MAIN_STACK:
+        db.add(NetworkAsset(
+            ip_address=ip, hostname=hn, device_type=dtype, status="active",
+            os_name=os_name, criticality="LOW", risk_score=5.0,
+            first_seen=datetime.utcnow(), last_seen=datetime.utcnow(),
+        ))
+
+    await db.commit()
+    return {"vuln_assets": len(vulns), "main_stack_assets": len(MAIN_STACK), "total": len(vulns) + len(MAIN_STACK)}

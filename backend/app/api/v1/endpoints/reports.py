@@ -10,14 +10,14 @@ GET  /reports/{report_id}/verify  — re-sign and compare stored signature
 import uuid
 import logging
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_role
+from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.scan import Scan, Report
-from app.models.user import UserRole
+from app.models.user import User, UserRole
 from app.services.report_signer import canonical_findings_hash, sign_pdf, verify_signature
 
 router = APIRouter()
@@ -163,10 +163,28 @@ def _build_scan_data(scan: Scan, db=None, full_report: bool = False) -> dict:
     }
 
 
-@router.post("/{scan_id}/generate",
-             dependencies=[Depends(require_role(UserRole.ANALYST, UserRole.ADMIN))])
-def generate_report(scan_id: str, full_report: bool = False, db: Session = Depends(get_db)):
-    """Generate a signed PDF report. Set full_report=true to include all scans' findings."""
+@router.post("/{scan_id}/generate")
+def generate_report(
+    scan_id: str,
+    full_report: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generate a signed PDF report.
+
+    Role gate:
+      * full_report=true  → any authenticated user (incl. viewer). Viewers
+                            are allowed exactly one mutating action — exporting
+                            the cross-scan audit trail — and this is it.
+      * full_report=false → analyst or admin only.
+    """
+    if not full_report and current_user.role not in (UserRole.ANALYST, UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Per-scan reports require analyst or admin role. Viewers can only export the Full Report (full_report=true).",
+        )
+
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")

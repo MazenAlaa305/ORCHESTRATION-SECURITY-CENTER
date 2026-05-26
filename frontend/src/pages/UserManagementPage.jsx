@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Users, Plus, Shield, ShieldOff, Trash2, KeyRound, RefreshCw, AlertCircle, X, Mail, Phone, Clock, Calendar } from 'lucide-react';
+import { Users, Plus, Shield, ShieldOff, Trash2, KeyRound, RefreshCw, AlertCircle, X, Mail, Phone, Clock, Calendar, UserCog, Check } from 'lucide-react';
 import RoleBadge from '../components/ui/RoleBadge';
 import { useAuth } from '../context/AuthContext';
 import api, { resolveAvatarUrl } from '../services/api';
@@ -255,9 +256,55 @@ function ProfileField({ icon, label, children }) {
 function UserRow({ u, currentUserId, onRefresh, onError, onOpenProfile }) {
     const [changingRole, setChangingRole] = useState(false);
     const [showReset, setShowReset] = useState(false);
+    // Role menu is rendered through a portal so it isn't clipped by the
+    // table wrapper's `overflow-hidden`. We track the anchor button's
+    // screen-space rect to position the menu under it.
+    const [roleMenuPos, setRoleMenuPos] = useState(null);
+    const roleBtnRef = useRef(null);
+    const roleMenuRef = useRef(null);
     const isSelf = u.id === currentUserId;
     const avatarUrl = resolveAvatarUrl(u.avatar_url);
     const initial = (u.full_name || u.email || '?')[0].toUpperCase();
+
+    const showRoleMenu = roleMenuPos !== null;
+
+    const openRoleMenu = () => {
+        const r = roleBtnRef.current?.getBoundingClientRect();
+        if (!r) return;
+        // Estimate the menu's height — header + 3 role rows. Used to flip
+        // the menu above the button when the user is scrolled near the
+        // bottom of the viewport and there isn't enough room to open down.
+        const ESTIMATED_HEIGHT = 36 + 3 * 36 + 8;
+        const spaceBelow = window.innerHeight - r.bottom;
+        const openUp = spaceBelow < ESTIMATED_HEIGHT;
+        const top = openUp
+            ? Math.max(8, r.top - ESTIMATED_HEIGHT - 6)
+            : r.bottom + 6;
+        setRoleMenuPos({
+            top,
+            right: window.innerWidth - r.right,
+        });
+    };
+
+    // Close on outside click + on scroll/resize (otherwise the portal-rendered
+    // menu would float in stale screen coordinates after the page moves).
+    useEffect(() => {
+        if (!showRoleMenu) return;
+        const onDocClick = (e) => {
+            if (roleMenuRef.current?.contains(e.target)) return;
+            if (roleBtnRef.current?.contains(e.target)) return;
+            setRoleMenuPos(null);
+        };
+        const onReflow = () => setRoleMenuPos(null);
+        document.addEventListener('mousedown', onDocClick);
+        window.addEventListener('scroll', onReflow, true);
+        window.addEventListener('resize', onReflow);
+        return () => {
+            document.removeEventListener('mousedown', onDocClick);
+            window.removeEventListener('scroll', onReflow, true);
+            window.removeEventListener('resize', onReflow);
+        };
+    }, [showRoleMenu]);
 
     const act = async (fn) => {
         try { await fn(); onRefresh(); }
@@ -339,6 +386,60 @@ function UserRow({ u, currentUserId, onRefresh, onError, onOpenProfile }) {
                 <td className="px-4 py-3">
                     {!isSelf && (
                         <div className="flex items-center gap-3">
+                            {/* Change role — opens a portal-rendered dropdown
+                                so the menu can't be clipped by the table's
+                                overflow:hidden. Picking a different role
+                                fires rbac.changeRole and refreshes. */}
+                            <button
+                                ref={roleBtnRef}
+                                onClick={() => (showRoleMenu ? setRoleMenuPos(null) : openRoleMenu())}
+                                title="Change privilege / role"
+                                className="text-cyan-400 hover:text-cyan-200 transition-colors"
+                            >
+                                <UserCog className="h-3.5 w-3.5" />
+                            </button>
+                            {showRoleMenu && createPortal(
+                                <div
+                                    ref={roleMenuRef}
+                                    className="rounded-lg overflow-hidden shadow-2xl"
+                                    style={{
+                                        position: 'fixed',
+                                        top: roleMenuPos.top,
+                                        right: roleMenuPos.right,
+                                        zIndex: 9999,
+                                        background: 'rgba(10,24,32,0.98)',
+                                        border: '1px solid rgba(0,255,255,0.25)',
+                                        minWidth: 160,
+                                        backdropFilter: 'blur(8px)',
+                                    }}
+                                >
+                                    <p className="px-3 py-1.5 text-[9px] uppercase tracking-widest text-gray-500 font-black border-b border-white/5">
+                                        Change Role — {u.email}
+                                    </p>
+                                    {ROLES.map(r => {
+                                        const isCurrent = r === u.role;
+                                        return (
+                                            <button
+                                                key={r}
+                                                onClick={async () => {
+                                                    setRoleMenuPos(null);
+                                                    if (!isCurrent) await act(() => rbac.changeRole(u.id, r));
+                                                }}
+                                                disabled={isCurrent}
+                                                className={`flex items-center justify-between w-full text-left px-3 py-2 text-xs font-bold transition-colors ${
+                                                    isCurrent
+                                                        ? 'text-cyan-300 bg-cyan-500/10 cursor-default'
+                                                        : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
+                                                }`}
+                                            >
+                                                <span>{r}</span>
+                                                {isCurrent && <Check className="h-3 w-3" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>,
+                                document.body
+                            )}
                             {u.disabled ? (
                                 <button
                                     onClick={() => act(() => rbac.enableUser(u.id))}

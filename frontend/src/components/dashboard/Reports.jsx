@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { scanService, vulnerabilityService } from '../../services/api';
-import { FileText, Loader, Download, CheckCircle, AlertTriangle, RefreshCw, Shield, Hash, Layers } from 'lucide-react';
+import { FileText, Loader, Download, CheckCircle, AlertTriangle, RefreshCw, Shield, Hash, Layers, FileCheck } from 'lucide-react';
+import { usePermission } from '../../hooks/usePermission';
+import { useToast } from '../ToastProvider';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -19,6 +21,11 @@ const Reports = ({ refresh }) => {
     const [generating, setGenerating] = useState(false);
     const [generatingFull, setGeneratingFull] = useState(false);
     const [error, setError] = useState(null);
+    // 'scan' = summary shows the selected scan's vulns;
+    // 'full' = summary shows every scan's open vulns (after Full Report click).
+    const [summaryScope, setSummaryScope] = useState('scan');
+    const { isAnalyst, role } = usePermission();
+    const { addToast } = useToast();
 
     useEffect(() => {
         fetchScans();
@@ -46,27 +53,47 @@ const Reports = ({ refresh }) => {
 
     const [scanVulns, setScanVulns] = useState([]);
 
+    // Load vulnerabilities. Scope follows summaryScope:
+    //   'scan' → filter by selected scan.id
+    //   'full' → no scan filter (every scan's open findings combined,
+    //             matches what the Full Report PDF includes).
     useEffect(() => {
         if (!selectedScan) return;
-        vulnerabilityService.list({ status: 'open', scan_id: selectedScan.id, page_size: 500 })
+        const params = summaryScope === 'full'
+            ? { status: 'open', page_size: 500 }
+            : { status: 'open', scan_id: selectedScan.id, page_size: 500 };
+        vulnerabilityService.list(params)
             .then(res => {
                 const items = res.data?.items ?? res.data ?? [];
                 setScanVulns(Array.isArray(items) ? items : []);
             })
             .catch(() => setScanVulns([]));
-    }, [selectedScan, refresh]);
+    }, [selectedScan, refresh, summaryScope]);
+
+    // Viewer policy: viewers are strictly read-only EXCEPT they may export
+    // the cross-scan Full Report (an audit-trail download is the one
+    // mutating action they're trusted with). The per-scan "Generate Report"
+    // button requires analyst+.
+    const blockedToast = (action, hint = 'requires analyst or admin role') =>
+        addToast(
+            `Read-only access — you're signed in as ${role}. ${action} ${hint}.`,
+            { type: 'error', duration: 4500 }
+        );
 
     const selectScan = (scan) => {
         setSelectedScan(scan);
         setReportMeta(null);
         setError(null);
+        setSummaryScope('scan');
     };
 
     const generateReport = async () => {
         if (!selectedScan) return;
+        if (!isAnalyst) { blockedToast('Generating a per-scan report', 'is analyst+; viewers can only export the Full Report'); return; }
         try {
             setGenerating(true);
             setError(null);
+            setSummaryScope('scan');
             const { data } = await scanService.generateReport(selectedScan.id, false);
             setReportMeta(data);
         } catch (err) {
@@ -80,9 +107,14 @@ const Reports = ({ refresh }) => {
 
     const generateFullReport = async () => {
         if (!selectedScan) return;
+        // Full Report is the one mutating action viewers are allowed to
+        // perform — it's a signed audit-trail export, not a configuration
+        // change. No role gate here.
         try {
             setGeneratingFull(true);
             setError(null);
+            // Switch summary scope so the on-screen counts match the PDF.
+            setSummaryScope('full');
             const { data } = await scanService.generateReport(selectedScan.id, true);
             setReportMeta(data);
         } catch (err) {
@@ -216,18 +248,21 @@ const Reports = ({ refresh }) => {
                                 )}
                                 <button
                                     onClick={generateReport}
-                                    disabled={generating || generatingFull}
-                                    className="flex items-center gap-2 px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded font-bold text-sm transition-colors"
+                                    disabled={generating || generatingFull || !isAnalyst}
+                                    className="flex items-center gap-2 px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-purple-600 text-white rounded font-bold text-sm transition-colors"
+                                    title={!isAnalyst
+                                        ? 'admin / analyst only — viewers may only export the Full Report'
+                                        : 'Generate a signed PDF report for the currently selected scan'}
                                 >
                                     {generating
                                         ? <><Loader className="h-4 w-4 animate-spin" /> Generating…</>
-                                        : <><Shield className="h-4 w-4" /> Generate Report</>}
+                                        : <><FileCheck className="h-4 w-4" /> Generate Report</>}
                                 </button>
                                 <button
                                     onClick={generateFullReport}
                                     disabled={generating || generatingFull}
                                     className="flex items-center gap-2 px-4 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white rounded font-bold text-sm transition-colors"
-                                    title="Generate a report combining findings from all scans"
+                                    title="Generate a report combining findings from all scans (available to all roles)"
                                 >
                                     {generatingFull
                                         ? <><Loader className="h-4 w-4 animate-spin" /> Generating…</>
@@ -235,6 +270,11 @@ const Reports = ({ refresh }) => {
                                 </button>
                             </div>
                         </div>
+                        {!isAnalyst && (
+                            <p className="px-6 pt-2 text-[9px] font-mono text-amber-400/70 uppercase tracking-widest">
+                                Generate Report is admin / analyst only — viewers can use Full Report.
+                            </p>
+                        )}
 
                         {/* Body */}
                         <div className="p-6 overflow-y-auto flex-1 space-y-6">
@@ -247,7 +287,16 @@ const Reports = ({ refresh }) => {
 
                             {/* Vulnerability summary */}
                             <div>
-                                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Vulnerability Summary</h3>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Vulnerability Summary</h3>
+                                    <span className={`text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded ${
+                                        summaryScope === 'full'
+                                            ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-700'
+                                            : 'bg-gray-800 text-gray-500 border border-gray-700'
+                                    }`}>
+                                        {summaryScope === 'full' ? 'Full Report scope · all scans' : 'Selected scan only'}
+                                    </span>
+                                </div>
                                 <div className="grid grid-cols-4 gap-3">
                                     <SeverityBadge count={critical} label="Critical" color="border-red-700 text-red-400 bg-red-900/20" />
                                     <SeverityBadge count={high}     label="High"     color="border-orange-700 text-orange-400 bg-orange-900/20" />

@@ -22,7 +22,8 @@
       "Bash(ls infra/)",
       "Bash(ls lab/scenarios/ lab/wazuh/ lab/kibana/dashboards/)",
       "Bash(ls tests/e2e/)",
-      "PowerShell(.\\\\start-lite.ps1)"
+      "PowerShell(.\\\\start-lite.ps1)",
+      "Bash(curl -s -o /dev/null -w \"Backend: %{http_code}\\\\n\" http://localhost:8000/health)"
     ]
   }
 }

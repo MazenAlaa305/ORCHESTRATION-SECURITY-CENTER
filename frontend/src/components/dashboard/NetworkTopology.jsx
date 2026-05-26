@@ -4,6 +4,7 @@ import { ZoomIn, ZoomOut, Maximize2, Minimize2, RefreshCw, Move, Crosshair } fro
 import AssetDetailPanel from './AssetDetailPanel';
 import TopologyLegend from './TopologyLegend';
 import { networkService, labService } from '../../services/api';
+import { useRealTime } from '../../context/RealTimeContext';
 
 // ─── Severity palette ─────────────────────────────────────
 // Single source of truth for tier → color/label. Every other surface
@@ -51,14 +52,12 @@ const stableHash = (s) => {
     return Math.abs(h);
 };
 
-// Demo severity buckets for unknown/unscanned nodes. Distribution is
-// weighted so the topology shows a realistic mix rather than every box
-// flipping critical.
-const DEMO_TIER_WHEEL = ['critical', 'medium', 'high', 'medium', 'low', 'critical', 'medium'];
-const demoTierFor = (node) => {
-    const key = node?.id || node?.ip || node?.name || 'host';
-    return DEMO_TIER_WHEEL[stableHash(key) % DEMO_TIER_WHEEL.length];
-};
+// Unscanned/unknown nodes now resolve to the muted 'unknown' tier instead
+// of being painted a random severity. The previous DEMO_TIER_WHEEL produced
+// nice-looking demos but caused real-world contradictions — e.g. a 0-vuln
+// internal traffic generator would render as Critical-red on the canvas
+// while the detail panel correctly reported "Secure". Real scan data alone
+// drives node colour now; the legend and the topology can never disagree.
 
 // ─── Severity classifier ─────────────────────────────────
 // Returns { tier, color, label, pulse } for any node. This is the only
@@ -84,12 +83,10 @@ const classifySeverity = (node) => {
     const crit  = (node.criticality || '').toUpperCase();
     const scanned = hasScanEvidence(node);
 
-    // Only mark a host as Offline-grey when there is no other severity
-    // signal — otherwise an offline host that has known CVEs would
-    // disappear from the risk view, which is exactly the wrong outcome.
+    // Offline hosts with no scan evidence and no known vulns render as
+    // muted Offline-grey so they don't compete visually with real risks.
     if (isOffline && !scanned && risk === 0 && vulns === 0 && !crit) {
-        const demoTier = demoTierFor(node);
-        return { tier: demoTier, ...SEVERITY[demoTier], dashed: true };
+        return { tier: 'offline', ...SEVERITY.offline };
     }
 
     if (risk >= 75) return { tier: 'critical', ...SEVERITY.critical };
@@ -117,10 +114,10 @@ const classifySeverity = (node) => {
         return { tier: 'secure', ...SEVERITY.secure };
     }
 
-    // No scan evidence — assign a deterministic demo severity so the
-    // topology never shows a sea of gray boxes on a fresh install.
-    const demoTier = demoTierFor(node);
-    return { tier: demoTier, ...SEVERITY[demoTier] };
+    // No scan evidence → 'unknown' (gray). We deliberately do NOT invent
+    // a severity here; the legend, the canvas, and the detail panel all
+    // need to agree, and only real scan output can produce a real tier.
+    return { tier: 'unknown', ...SEVERITY.unknown };
 };
 
 const getNodeColor = (node) => classifySeverity(node).color;
@@ -685,6 +682,13 @@ const SubnetDetailPanel = ({ node, graphData, onClose }) => {
 
 // ─── Component ────────────────────────────────────────────
 const NetworkTopology = ({ refresh, compact = false }) => {
+    // Pull the same live KPI counts that the Vulnerability Severity
+    // Distribution widget reads, so the topology legend's
+    // critical/high/medium/low chips always match what the rest of the
+    // dashboard reports. Without this, the legend was counting *nodes*
+    // grouped by demo-tier classification, which diverged from real
+    // vulnerability counts.
+    const { state: realTimeState } = useRealTime();
     // Start empty — real data loads fast; DEMO_GRAPH caused a 1-second
     // flash of fake data that confused users when real data overwrote it.
     const [graphData, setGraphData]       = useState({ nodes: [], links: [] });
@@ -1260,19 +1264,33 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         ctx.fillText(label, node.x, labelY);
     }, [selectedNode]);
 
-    // Severity tier counts for the legend chip. Recomputed only when the
-    // node set actually changes (incremental field mutations reuse the same
-    // array reference, so the count is intentionally not re-derived for
-    // pure recolours — that's fine, the chip is for at-a-glance summary).
+    // Severity tier counts for the legend chip.
+    //
+    // critical/high/medium/low come from the global KPI snapshot — the same
+    // source the Vulnerability Severity Distribution widget reads — so the
+    // legend agrees with the rest of the dashboard. secure/offline/unknown
+    // are still derived from the graph because they describe *node state*,
+    // not vulnerabilities, and have no equivalent KPI counter.
+    const kpiCounts = realTimeState?.kpi?.counts || {};
     const severityCounts = useMemo(() => {
-        const acc = { critical: 0, high: 0, medium: 0, low: 0, secure: 0, offline: 0, unknown: 0 };
+        const acc = {
+            critical: kpiCounts.critical || 0,
+            high:     kpiCounts.high     || 0,
+            medium:   kpiCounts.medium   || 0,
+            low:      kpiCounts.low      || 0,
+            secure:   0,
+            offline:  0,
+            unknown:  0,
+        };
         graphData.nodes.forEach(n => {
             if (n.id === 'hub' || n.isSubnet) return;
             const tier = classifySeverity(n).tier;
-            if (acc[tier] != null) acc[tier] += 1;
+            if (tier === 'secure' || tier === 'offline' || tier === 'unknown') {
+                acc[tier] += 1;
+            }
         });
         return acc;
-    }, [graphData.nodes]);
+    }, [graphData.nodes, kpiCounts.critical, kpiCounts.high, kpiCounts.medium, kpiCounts.low]);
 
     const graphContainerStyle = isFullscreen
         ? { position: 'fixed', top: '48px', right: 0, bottom: 0, left: 'var(--sidebar-width, 208px)', zIndex: 9999, background: '#0c1c25' }

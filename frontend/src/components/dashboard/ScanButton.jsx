@@ -3,6 +3,7 @@ import { scanService } from '../../services/api';
 import { useRealTime } from '../../context/RealTimeContext';
 import { PlayCircle, Loader2, CheckCircle, Clock, Cpu, Network, BarChart2, Brain, StopCircle, Settings2 } from 'lucide-react';
 import ScanConfigModal from './ScanConfigModal';
+import { useActionGuard } from '../../hooks/useActionGuard';
 
 // ── Pipeline step definitions ─────────────────────────────────────────────────
 const STEPS = [
@@ -37,6 +38,8 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
     const [error,     setError]     = useState('');
     const [stepIndex, setStepIndex] = useState(-1);  // -1 = idle
     const [modalOpen, setModalOpen] = useState(false);
+    const { guard, isAnalyst } = useActionGuard();
+    const readOnly = !isAnalyst;  // viewer can't trigger scans
 
     const isRunning = loading || realTime.scanStatus === 'RUNNING' || parentIsScanning;
 
@@ -72,6 +75,8 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
 
     const handleScan = async () => {
         setError('');
+        // Viewer role gate — emits a toast and aborts before any backend call.
+        if (!guard({ action: 'start a scan' })) return;
         const trimmed = target.trim();
 
         if (!trimmed) { setError('Enter an IP or domain.'); return; }
@@ -104,10 +109,13 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
                 <h3 className="text-gray-400 text-[10px] uppercase tracking-[0.25em] font-black">Quick Scan</h3>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setModalOpen(true)}
-                        disabled={isRunning}
-                        className="text-[9px] font-mono text-cyan-300 hover:text-cyan-200 uppercase tracking-widest flex items-center gap-1 disabled:opacity-50"
-                        title="Configure tools, schedule, SIEM, and auto-report"
+                        onClick={() => {
+                            if (!guard({ action: 'open advanced scan configuration' })) return;
+                            setModalOpen(true);
+                        }}
+                        disabled={isRunning || readOnly}
+                        className="text-[9px] font-mono text-cyan-300 hover:text-cyan-200 uppercase tracking-widest flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-cyan-300"
+                        title={readOnly ? 'admin / analyst only' : 'Configure tools, schedule, SIEM, and auto-report'}
                     >
                         <Settings2 className="h-3 w-3" />
                         Advanced
@@ -132,17 +140,18 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
                     type="text"
                     value={target}
                     onChange={e => { setTarget(e.target.value); setError(''); }}
-                    disabled={isRunning}
+                    disabled={isRunning || readOnly}
                     className="min-w-0 flex-grow bg-black/40 text-white px-3 py-2 rounded-md border border-white/10
                                focus:outline-none focus:border-cyan-400/50 text-[11px] font-mono
                                placeholder-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="IP or Domain..."
-                    onKeyDown={e => e.key === 'Enter' && !isRunning && handleScan()}
+                    placeholder={readOnly ? 'Read-only — admin / analyst only' : 'IP or Domain...'}
+                    onKeyDown={e => e.key === 'Enter' && !isRunning && !readOnly && handleScan()}
                 />
                 <button
                     onClick={handleScan}
-                    disabled={isRunning}
+                    disabled={isRunning || readOnly}
                     id="scan-launch-btn"
+                    title={readOnly ? 'admin / analyst only' : undefined}
                     className="shrink-0 bg-cyan-400 hover:bg-sky-400 text-gray-900 font-black px-4 py-2 rounded-md
                                flex items-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed
                                shadow-[0_0_12px_rgba(0,255,255,0.3)] hover:shadow-[0_0_20px_rgba(0,255,255,0.5)]
@@ -155,6 +164,11 @@ const ScanButton = ({ onScanStarted, isScanning: parentIsScanning }) => {
                     {isRunning ? 'Running' : 'Scan'}
                 </button>
             </div>
+            {readOnly && (
+                <p className="text-[9px] font-mono text-amber-400/70 uppercase tracking-widest -mt-2 relative z-10">
+                    admin / analyst only
+                </p>
+            )}
 
             {/* Validation error */}
             {error && (
