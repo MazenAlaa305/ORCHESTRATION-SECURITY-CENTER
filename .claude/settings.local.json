@@ -79,7 +79,8 @@
       "PowerShell(winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements)",
       "Bash(Start-Sleep 8)",
       "PowerShell(powershell -ExecutionPolicy Bypass -File .\\\\start-lite.ps1)",
-      "Bash(findstr \"motion\")"
+      "Bash(findstr \"motion\")",
+      "Bash(git show *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\omar\\AppData\\Local\\Temp"

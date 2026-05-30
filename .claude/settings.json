@@ -29,10 +29,16 @@
       "PowerShell(docker compose ps)",
       "Bash(curl -s -m 5 http://localhost:8000/health)",
       "Bash(curl -s -X POST -m 15 http://localhost:8000/api/v1/lab/seed)",
-      "Bash(curl -sk https://localhost/ -m 5)"
+      "Bash(curl -sk https://localhost/ -m 5)",
+      "Bash(curl -sk -m 5 https://localhost/api/v1/config/public)",
+      "Bash(curl -sk -m 5 https://localhost/api/v1/auth/me)",
+      "Bash(curl -skI -m 5 https://localhost/screenshots/dashboard.png)",
+      "PowerShell(docker compose up -d --build frontend)",
+      "Bash(cat \"C:\\\\Users\\\\omar\\\\AppData\\\\Local\\\\Temp\\\\fyp_ch3.md\" >> \"d:\\\\FINAL PROJECT\\\\the-dashboard-project-\\\\FYP_Documentation.md\" && wc -l \"d:\\\\FINAL PROJECT\\\\the-dashboard-project-\\\\FYP_Documentation.md\")"
     ],
     "additionalDirectories": [
-      "d:\\FINAL PROJECT\\the-dashboard-project-\\backend"
+      "d:\\FINAL PROJECT\\the-dashboard-project-\\backend",
+      "d:\\FINAL PROJECT\\the-dashboard-project-"
     ]
   }
 }
