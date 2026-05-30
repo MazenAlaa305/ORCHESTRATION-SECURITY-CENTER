@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
-const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
+// INFO findings are informational, not vulnerabilities, so we exclude them
+// from this widget. Keeping them in changes the denominator and makes the
+// per-row percentages diverge from the "Vulnerabilities Found" KPI card
+// (which already sums C+H+M+L only).
+const SEV_ORDER = ['critical', 'high', 'medium', 'low'];
 
+// Colors kept in lockstep with TopologyLegend.LEGEND_ITEMS and
+// NetworkTopology.SEVERITY so the two widgets on the same screen never
+// disagree about what "Medium" or "Low" looks like.
+//   critical → magenta-red   #ff0055
+//   high     → orange        #ff6a00
+//   medium   → amber/yellow  #ffaa00
+//   low      → cyan          #00ccff
 const SEV_META = {
     critical: {
         label: 'Critical',
@@ -14,27 +25,27 @@ const SEV_META = {
     },
     high: {
         label: 'High',
-        color: '#ff9900',
-        glow:  'rgba(255,153,0,0.25)',
-        bg:    'rgba(255,153,0,0.08)',
-        border:'rgba(255,153,0,0.25)',
-        text:  '#ffbb44',
+        color: '#ff6a00',
+        glow:  'rgba(255,106,0,0.25)',
+        bg:    'rgba(255,106,0,0.08)',
+        border:'rgba(255,106,0,0.25)',
+        text:  '#ff9544',
     },
     medium: {
         label: 'Medium',
-        color: '#00ccff',
-        glow:  'rgba(0,204,255,0.2)',
-        bg:    'rgba(0,204,255,0.07)',
-        border:'rgba(0,204,255,0.2)',
-        text:  '#44ddff',
+        color: '#ffaa00',
+        glow:  'rgba(255,170,0,0.25)',
+        bg:    'rgba(255,170,0,0.08)',
+        border:'rgba(255,170,0,0.25)',
+        text:  '#ffcc44',
     },
     low: {
         label: 'Low',
-        color: '#00ff88',
-        glow:  'rgba(0,255,136,0.2)',
-        bg:    'rgba(0,255,136,0.06)',
-        border:'rgba(0,255,136,0.2)',
-        text:  '#44ffaa',
+        color: '#00ccff',
+        glow:  'rgba(0,204,255,0.20)',
+        bg:    'rgba(0,204,255,0.07)',
+        border:'rgba(0,204,255,0.25)',
+        text:  '#44ddff',
     },
     info: {
         label: 'Info',

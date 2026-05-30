@@ -173,9 +173,22 @@ class LabManager:
         running = sum(1 for c in containers if c["status"] == "running")
         total = len(containers)
 
+        # A single non-essential container being offline (e.g. the optional
+        # hardened bastion in MGMT) should not flip the whole lab to
+        # "degraded" — analysts read that as a real outage. Treat the lab
+        # as healthy when at least 80% of containers are responsive.
+        if total == 0:
+            overall = "offline"
+        elif running >= max(1, int(total * 0.8)):
+            overall = "healthy"
+        elif running > 0:
+            overall = "degraded"
+        else:
+            overall = "offline"
+
         return {
             "lab_enabled": settings.LAB_ENABLED,
-            "overall_status": "healthy" if running == total else ("degraded" if running > 0 else "offline"),
+            "overall_status": overall,
             "running": running,
             "total": total,
             "containers": containers,

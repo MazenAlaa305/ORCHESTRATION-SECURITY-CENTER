@@ -5,6 +5,7 @@ import { Zap, Settings, Loader2, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { scanService, targetService } from '../services/api';
 import ScanConfigModal from './dashboard/ScanConfigModal';
+import { useActionGuard } from '../hooks/useActionGuard';
 
 const BG       = '#0b1623';
 const BORDER   = '#1e2d3d';
@@ -17,6 +18,8 @@ export default function QuickScanPopover({ isScanning, onScanStarted }) {
     const [error, setError] = useState(null);
     const [showConfig, setShowConfig] = useState(false);
     const [pos, setPos] = useState({ top: 56, right: 16 });
+    const { guard, isAnalyst } = useActionGuard();
+    const readOnly = !isAnalyst;
 
     const triggerRef = useRef(null);
     const popoverRef = useRef(null);
@@ -78,6 +81,7 @@ export default function QuickScanPopover({ isScanning, onScanStarted }) {
 
     const handleRun = async () => {
         if (!primaryTarget || submitting) return;
+        if (!guard({ action: 'launch a quick scan' })) return;
         setSubmitting(true);
         setError(null);
         try {
@@ -91,7 +95,11 @@ export default function QuickScanPopover({ isScanning, onScanStarted }) {
         }
     };
 
-    const handleConfigure = () => { setOpen(false); setShowConfig(true); };
+    const handleConfigure = () => {
+        if (!guard({ action: 'open advanced scan configuration' })) return;
+        setOpen(false);
+        setShowConfig(true);
+    };
 
     const PANEL = {
         position: 'fixed',
@@ -198,20 +206,26 @@ export default function QuickScanPopover({ isScanning, onScanStarted }) {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <button
                                         onClick={handleRun}
-                                        disabled={submitting}
-                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: '#00e5e5', color: '#0a1520', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.5 : 1 }}
+                                        disabled={submitting || readOnly}
+                                        title={readOnly ? 'admin / analyst only' : undefined}
+                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: '#00e5e5', color: '#0a1520', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', cursor: (submitting || readOnly) ? 'not-allowed' : 'pointer', opacity: (submitting || readOnly) ? 0.4 : 1 }}
                                     >
                                         {submitting ? <Loader2 size={13} className="animate-spin" /> : <><Zap size={13} /> Run</>}
                                     </button>
                                     <button
                                         onClick={handleConfigure}
-                                        disabled={submitting}
-                                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: '#0d2535', color: '#66ddee', border: `1px solid #1a4055`, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
-                                        title="Open the full scan configuration modal (C)"
+                                        disabled={submitting || readOnly}
+                                        title={readOnly ? 'admin / analyst only' : 'Open the full scan configuration modal (C)'}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: '#0d2535', color: '#66ddee', border: `1px solid #1a4055`, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: (submitting || readOnly) ? 'not-allowed' : 'pointer', opacity: (submitting || readOnly) ? 0.4 : 1 }}
                                     >
                                         <Settings size={12} /> Configure
                                     </button>
                                 </div>
+                                {readOnly && (
+                                    <p style={{ fontSize: 9, color: '#ffaa00', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 8, textAlign: 'center', fontWeight: 700 }}>
+                                        admin / analyst only
+                                    </p>
+                                )}
                                 <p style={{ fontSize: 8, color: TEXT_DIM, marginTop: 8, textAlign: 'right' }}>
                                     <kbd style={kbdStyle}>Enter</kbd> to run · <kbd style={kbdStyle}>C</kbd> to configure · <kbd style={kbdStyle}>Esc</kbd> to cancel
                                 </p>

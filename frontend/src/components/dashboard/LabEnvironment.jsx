@@ -60,8 +60,8 @@ const LabStatusHeader = ({ status, onRefresh, isRefreshing }) => {
             </div>
             <div className="grid grid-cols-4 gap-3 text-sm">
                 <div className="text-center">
-                    <div className="text-2xl font-bold text-cyan-400">{status.running}/{status.total}</div>
-                    <div className="text-gray-500">Containers</div>
+                    <div className="text-2xl font-bold text-cyan-400">{status.running}</div>
+                    <div className="text-gray-500">Containers Running</div>
                 </div>
                 <div className="text-center">
                     <div className="text-2xl font-bold text-green-400">{status.telemetry?.events || 0}</div>

@@ -11,6 +11,8 @@ import {
 
 import api, { targetService } from '../../services/api';
 import { useConfig } from '../../context/ConfigContext';
+import { usePermission } from '../../hooks/usePermission';
+import { useToast } from '../ToastProvider';
 
 // ── Step definitions ──────────────────────────────────────────────────────────
 const STEPS = [
@@ -46,6 +48,17 @@ const SCHEDULE_PRESETS = [
     { id: 'weekly',  label: 'Every Monday 02:00',  cron: '0 2 * * 1' },
     { id: 'hourly',  label: 'Every hour',          cron: '0 * * * *' },
     { id: 'custom',  label: 'Custom cron…',        cron: null },
+];
+
+// Lab demo environment — selecting this mode fans the scan out to one
+// scan per subnet (4 separate POSTs to /scans/) so the History tab
+// records "DMZ scan", "CORP scan", etc. as distinct rows instead of
+// hiding everything inside a single multi-CIDR job.
+const LAB_SUBNETS = [
+    { id: 'dmz',  label: 'DMZ',  cidr: '10.10.10.0/24', zone: 'Internet-facing services'  },
+    { id: 'corp', label: 'CORP', cidr: '10.10.20.0/24', zone: 'Corporate office tier'     },
+    { id: 'data', label: 'DATA', cidr: '10.10.30.0/24', zone: 'Database & cache tier'     },
+    { id: 'mgmt', label: 'MGMT', cidr: '10.10.40.0/24', zone: 'Management & monitoring'   },
 ];
 
 // RFC-1123 hostname / IPv4 / URL — lenient but catches pure typos
@@ -116,15 +129,19 @@ const FieldHint = ({ children, tone = 'muted' }) => (
 // ── Main component ───────────────────────────────────────────────────────────
 const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
     const cfg = useConfig();
+    const { isAdmin, role } = usePermission();
+    const { addToast } = useToast();
 
     // Flow state
     const [activeStep, setActiveStep]   = useState('target');
     const [visitedSteps, setVisitedSteps] = useState(() => new Set(['target']));
 
-    // Target
+    // Target — three modes: 'existing' | 'url' | 'lab'
+    // 'lab' fans the scan out across every selected lab subnet.
     const [targetMode, setTargetMode]           = useState(prefilledTarget ? 'existing' : 'url');
     const [selectedTargetId, setSelectedTargetId] = useState(prefilledTarget?.id || '');
     const [targetUrl, setTargetUrl]             = useState(prefilledTarget?.base_url || '');
+    const [labSubnets, setLabSubnets]           = useState(() => LAB_SUBNETS.map(s => s.id));
 
     // Profile + advanced
     const [scanType, setScanType]       = useState('standard');
@@ -164,12 +181,16 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
 
     const resolvedTargetDisplay = targetMode === 'existing'
         ? (selectedTarget ? `${selectedTarget.name} — ${selectedTarget.base_url}` : '')
-        : targetUrl.trim();
+        : targetMode === 'lab'
+            ? `[Lab] ${labSubnets.length} subnet${labSubnets.length === 1 ? '' : 's'} (${labSubnets.map(s => LAB_SUBNETS.find(x => x.id === s)?.cidr).join(', ')})`
+            : targetUrl.trim();
 
     // ── Validation ───────────────────────────────────────────────────────────
     const targetValid = targetMode === 'existing'
         ? !!selectedTargetId
-        : targetUrl.trim().length > 0 && TARGET_PATTERN.test(targetUrl.trim());
+        : targetMode === 'lab'
+            ? labSubnets.length > 0
+            : targetUrl.trim().length > 0 && TARGET_PATTERN.test(targetUrl.trim());
 
     const profileValid = scanType !== 'custom' || customTools.length > 0;
 
@@ -219,10 +240,16 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
             siem_forward: siemForward,
         };
         if (targetMode === 'existing') p.target_id = selectedTargetId;
+        else if (targetMode === 'lab') {
+            // Placeholder — the actual lab fan-out fills target_url per
+            // subnet inside submit(). The Review step still shows a single
+            // payload so the user can sanity-check tools / schedule.
+            p.target_url = labSubnets.map(s => LAB_SUBNETS.find(x => x.id === s)?.cidr).join(', ');
+        }
         else p.target_url = targetUrl.trim();
         if (effectiveCron) p.schedule = effectiveCron;
         return p;
-    }, [scanType, customTools, autoReport, siemForward, targetMode, selectedTargetId, targetUrl, effectiveCron]);
+    }, [scanType, customTools, autoReport, siemForward, targetMode, selectedTargetId, targetUrl, labSubnets, effectiveCron]);
 
     // Early return AFTER all hooks — required by React rules of hooks
     if (!open) return null;
@@ -255,6 +282,65 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
         setError(null);
         try {
             const endpoint = effectiveCron ? '/scans/schedule' : '/scans/';
+
+            // Recurring schedule — admin only. A one-off scan can be
+            // launched by an analyst, but committing infrastructure to a
+            // recurring cron job is a longer-term governance decision.
+            if (effectiveCron && !isAdmin) {
+                addToast(
+                    `Recurring schedules are admin-only — you're signed in as ${role}. Pick "Run once (now)" or ask an admin to schedule it.`,
+                    { type: 'error', duration: 4500 }
+                );
+                setSubmitting(false);
+                return;
+            }
+
+            if (targetMode === 'lab') {
+                // Defence in depth — the UI already disables the Lab pill
+                // for non-admins, but if the mode got set anyway (stale
+                // state, role downgrade mid-session) reject before firing
+                // four scans the user shouldn't be authorised to start.
+                if (!isAdmin) {
+                    addToast(
+                        `Lab Environment fan-out is admin-only — you're signed in as ${role}.`,
+                        { type: 'error', duration: 4500 }
+                    );
+                    setSubmitting(false);
+                    return;
+                }
+                // Fan out: one scan per selected subnet so each shows up as
+                // its own History row with its own findings. Fire in
+                // parallel; if any single one fails we surface the first
+                // error but let the others land.
+                const sharedPayload = {
+                    scan_type: scanType,
+                    tools: scanType === 'custom' ? customTools : null,
+                    auto_report: autoReport,
+                    siem_forward: siemForward,
+                    ...(effectiveCron ? { schedule: effectiveCron } : {}),
+                };
+                const results = await Promise.allSettled(
+                    labSubnets.map(sid => {
+                        const subnet = LAB_SUBNETS.find(s => s.id === sid);
+                        return api.post(endpoint, { ...sharedPayload, target_url: subnet.cidr });
+                    })
+                );
+                const firstFail = results.find(r => r.status === 'rejected');
+                if (firstFail) {
+                    const err = firstFail.reason;
+                    throw new Error(err?.response?.data?.detail || err?.message || 'One or more subnet scans failed.');
+                }
+                results.forEach(r => {
+                    if (r.status === 'fulfilled') {
+                        window.dispatchEvent(new CustomEvent('dashboard:scan-started', { detail: r.value?.data }));
+                    }
+                });
+                const last = results[results.length - 1];
+                if (onStarted && last?.status === 'fulfilled') onStarted(last.value?.data);
+                onClose();
+                return;
+            }
+
             const res = await api.post(endpoint, payload);
             // Notify ScanHistory (and any other listeners) so the new scan row
             // appears immediately without waiting for the 30-second auto-refresh.
@@ -273,7 +359,7 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
         <div className="space-y-3">
             <StepHeader stepId="target" />
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
                 <button
                     type="button"
                     onClick={() => setTargetMode('existing')}
@@ -292,9 +378,89 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
                 >
                     Manual URL / IP
                 </button>
+                <button
+                    type="button"
+                    disabled={!isAdmin}
+                    onClick={() => {
+                        if (!isAdmin) {
+                            addToast(
+                                `Lab Environment fan-out is admin-only — you're signed in as ${role}. Use Existing target or Manual URL / IP instead.`,
+                                { type: 'error', duration: 4500 }
+                            );
+                            return;
+                        }
+                        setTargetMode('lab');
+                    }}
+                    title={isAdmin
+                        ? 'Fan out across every selected lab subnet'
+                        : 'Admin only — analysts and viewers may not launch the whole-lab scan'}
+                    className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 ${
+                        !isAdmin
+                            ? 'bg-white/5 text-gray-600 border border-white/5 cursor-not-allowed opacity-60'
+                            : targetMode === 'lab'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                : 'bg-white/5 text-gray-400 border border-white/10 hover:border-white/20'
+                    }`}
+                >
+                    <Network className="h-3 w-3" />
+                    Lab Environment
+                    {!isAdmin && <span className="text-[8px] uppercase tracking-widest text-gray-600 ml-1">admin</span>}
+                </button>
             </div>
 
-            {targetMode === 'existing' ? (
+            {targetMode === 'lab' ? (
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <FieldHint>One scan per subnet — every selected zone becomes its own History row.</FieldHint>
+                        <button
+                            type="button"
+                            onClick={() => setLabSubnets(
+                                labSubnets.length === LAB_SUBNETS.length ? [] : LAB_SUBNETS.map(s => s.id)
+                            )}
+                            className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 hover:text-cyan-200"
+                        >
+                            {labSubnets.length === LAB_SUBNETS.length ? 'Deselect all' : 'Select all'}
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        {LAB_SUBNETS.map(s => {
+                            const checked = labSubnets.includes(s.id);
+                            return (
+                                <label
+                                    key={s.id}
+                                    className={`flex items-start gap-2 p-2.5 rounded border cursor-pointer transition-colors ${checked
+                                        ? 'bg-emerald-500/10 border-emerald-500/40'
+                                        : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => setLabSubnets(prev =>
+                                            prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id]
+                                        )}
+                                        className="mt-0.5 accent-emerald-400"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white">{s.label}</span>
+                                            <span className="text-[10px] font-mono text-emerald-300">{s.cidr}</span>
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 mt-0.5">{s.zone}</p>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                    {labSubnets.length === 0 && (
+                        <FieldHint tone="error">Select at least one subnet.</FieldHint>
+                    )}
+                    {labSubnets.length > 0 && (
+                        <FieldHint tone="ok">
+                            Launches {labSubnets.length} parallel scan{labSubnets.length === 1 ? '' : 's'} — one per subnet.
+                        </FieldHint>
+                    )}
+                </div>
+            ) : targetMode === 'existing' ? (
                 <div>
                     <select
                         value={selectedTargetId}
@@ -452,26 +618,48 @@ const ScanConfigModal = ({ open, onClose, onStarted, prefilledTarget }) => {
             <StepHeader stepId="schedule" />
 
             <div className="space-y-1">
-                {SCHEDULE_PRESETS.map(p => (
-                    <label
-                        key={p.id}
-                        className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${
-                            schedulePreset === p.id
-                                ? 'bg-cyan-500/10 border-cyan-500/40'
-                                : 'bg-black/20 border-white/10 hover:border-white/20'
-                        }`}
-                    >
-                        <input
-                            type="radio"
-                            name="schedule-preset"
-                            checked={schedulePreset === p.id}
-                            onChange={() => setSchedulePreset(p.id)}
-                            className="accent-cyan-400"
-                        />
-                        <span className="text-white text-xs">{p.label}</span>
-                        {p.cron && <span className="text-gray-500 text-[10px] font-mono ml-auto">{p.cron}</span>}
-                    </label>
-                ))}
+                {SCHEDULE_PRESETS.map(p => {
+                    // Recurring presets (anything except "Run once") are
+                    // admin-only — analysts can launch a one-off scan but
+                    // committing a recurring cron job is a longer-term
+                    // governance decision.
+                    const isRecurring = p.id !== 'oneoff';
+                    const isLocked = isRecurring && !isAdmin;
+                    return (
+                        <label
+                            key={p.id}
+                            className={`flex items-center gap-2 p-2 rounded border transition-colors ${
+                                isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                            } ${
+                                schedulePreset === p.id
+                                    ? 'bg-cyan-500/10 border-cyan-500/40'
+                                    : 'bg-black/20 border-white/10 hover:border-white/20'
+                            }`}
+                            title={isLocked ? 'Recurring schedules require admin role' : undefined}
+                            onClick={(e) => {
+                                if (isLocked) {
+                                    e.preventDefault();
+                                    addToast(
+                                        `Recurring schedules are admin-only — you're signed in as ${role}.`,
+                                        { type: 'error', duration: 4500 }
+                                    );
+                                }
+                            }}
+                        >
+                            <input
+                                type="radio"
+                                name="schedule-preset"
+                                checked={schedulePreset === p.id}
+                                disabled={isLocked}
+                                onChange={() => !isLocked && setSchedulePreset(p.id)}
+                                className="accent-cyan-400"
+                            />
+                            <span className={`text-xs ${isLocked ? 'text-gray-500' : 'text-white'}`}>{p.label}</span>
+                            {isLocked && <span className="text-[9px] uppercase tracking-widest text-gray-600 ml-2">admin</span>}
+                            {p.cron && <span className="text-gray-500 text-[10px] font-mono ml-auto">{p.cron}</span>}
+                        </label>
+                    );
+                })}
             </div>
 
             {schedulePreset === 'custom' && (

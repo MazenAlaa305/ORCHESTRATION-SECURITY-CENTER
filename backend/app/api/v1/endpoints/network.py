@@ -130,6 +130,15 @@ def get_asset_detail(asset_id: int, db: Session = Depends(get_db)):
             for r in rows
         ]
 
+    # Synthetic-asset fallback: lab/demo assets have no AssetService rows
+    # because they weren't created by a real Nmap scan. Derive a usable
+    # services list from any Vulnerability rows that already carry
+    # service+port+protocol — that's enough for the UI's Open Ports table.
+    # _SERVICE_LOOKUP maps (service, port) → (product, version, cpe) so the
+    # Service and Version columns aren't blank for the demo inventory.
+    if not services:
+        services = _services_from_vulns_and_ports(db, asset)
+
     # Vulnerabilities linked to this IP — exclude INFO (not actionable)
     vulns = (
         db.query(Vulnerability)
@@ -222,3 +231,116 @@ def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
         }
         for e in events
     ]
+
+
+# ─── Open-ports/services derivation for synthetic lab assets ─────────────────
+# Maps (service_name, port) → (product, version, cpe) for the demo lab
+# containers. Used when there's no AssetService row (i.e. the asset wasn't
+# created by a real Nmap pass) so the UI's Open Ports table still shows
+# meaningful Service/Version columns instead of blank dashes.
+_SERVICE_LOOKUP = {
+    ("http", 3000):       ("OWASP Juice Shop",     "Node.js / Express 4.17", "cpe:2.3:a:owasp:juice_shop:14.3.1"),
+    ("http", 8081):       ("Corporate API Gateway","nginx 1.25.3",            "cpe:2.3:a:nginx:nginx:1.25.3"),
+    ("http", 80):         ("HTTP Service",         "Apache httpd 2.4",        "cpe:2.3:a:apache:http_server:2.4"),
+    ("http", 443):        ("HTTPS Service",        "nginx 1.25.3",            "cpe:2.3:a:nginx:nginx:1.25.3"),
+    ("dns",  53):         ("CoreDNS",              "1.11.1",                  "cpe:2.3:a:coredns:coredns:1.11.1"),
+    ("smb",  445):        ("Samba",                "4.18.0-Ubuntu",           "cpe:2.3:a:samba:samba:4.18.0"),
+    ("netbios-ssn", 139): ("NetBIOS Session",      "Samba 4.18.0",            ""),
+    ("smtp", 3025):       ("GreenMail SMTP",       "2.0.1",                   "cpe:2.3:a:greenmail:greenmail:2.0.1"),
+    ("smtp", 25):         ("Postfix",              "3.7.10",                  "cpe:2.3:a:postfix:postfix:3.7.10"),
+    ("pop3", 3110):       ("GreenMail POP3",       "2.0.1",                   ""),
+    ("imap", 3143):       ("GreenMail IMAP",       "2.0.1",                   ""),
+    ("ssh",  22):         ("OpenSSH",              "OpenSSH 9.3p1 Ubuntu",    "cpe:2.3:a:openbsd:openssh:9.3p1"),
+    ("postgresql", 5432): ("PostgreSQL",           "13.13 (Alpine)",          "cpe:2.3:a:postgresql:postgresql:13.13"),
+    ("mysql", 3306):      ("MySQL",                "8.0.35",                  "cpe:2.3:a:mysql:mysql:8.0.35"),
+    ("redis", 6380):      ("Redis",                "6.0.20",                  "cpe:2.3:a:redis:redis:6.0.20"),
+    ("redis", 6379):      ("Redis",                "6.0.20",                  "cpe:2.3:a:redis:redis:6.0.20"),
+    ("ntp",   123):       ("chrony",               "4.3",                     "cpe:2.3:a:tuxfamily:chrony:4.3"),
+    ("ldap",  389):       ("OpenLDAP",             "2.6.5",                   "cpe:2.3:a:openldap:openldap:2.6.5"),
+    ("ldaps", 636):       ("OpenLDAP (TLS)",       "2.6.5",                   "cpe:2.3:a:openldap:openldap:2.6.5"),
+    ("kerberos", 88):     ("MIT Kerberos KDC",     "1.20.1",                  ""),
+    ("dhcp",  67):        ("ISC Kea DHCP",         "2.4.1",                   ""),
+    ("snmp",  161):       ("net-snmp",             "5.9.4",                   "cpe:2.3:a:net-snmp:net-snmp:5.9.4"),
+    ("bgp",   179):       ("FRRouting",            "9.1",                     ""),
+    ("syslog", 514):      ("rsyslog",              "8.2306.0",                ""),
+}
+
+# Default ports advertised by each main-stack device class. The 12 main-stack
+# hosts (firewall, AD-DC, jumphost, vault, …) carry no vulnerabilities, so
+# without these defaults the Open Ports table would render empty. Keyed by
+# hostname *prefix* (matches "firewall-01", "ad-dc-01", etc.).
+_MAIN_STACK_PORTS = {
+    "firewall":    [("https", 443, "tcp"), ("ssh", 22, "tcp")],
+    "edge-router": [("ssh", 22, "tcp"), ("bgp", 179, "tcp"), ("snmp", 161, "udp")],
+    "core-switch": [("ssh", 22, "tcp"), ("snmp", 161, "udp")],
+    "ad-dc":       [("ldap", 389, "tcp"), ("ldaps", 636, "tcp"), ("kerberos", 88, "tcp"), ("dns", 53, "udp")],
+    "dhcp":        [("dhcp", 67, "udp")],
+    "ntp":         [("ntp", 123, "udp")],
+    "monitoring":  [("https", 443, "tcp"), ("ssh", 22, "tcp")],
+    "jumphost":    [("ssh", 22, "tcp")],
+    "backup":      [("https", 443, "tcp"), ("ssh", 22, "tcp")],
+    "proxy":       [("http", 8080, "tcp"), ("ssh", 22, "tcp")],
+    "lb":          [("http", 80, "tcp"), ("https", 443, "tcp")],
+    "vault":       [("https", 443, "tcp")],
+}
+
+
+def _services_from_vulns_and_ports(db: Session, asset: NetworkAsset) -> list[dict]:
+    """
+    Build an Open Ports table for an asset that has no AssetService rows.
+
+    Two sources, merged:
+      1. Vulnerability rows for this IP — they already carry the service +
+         port + protocol the finding was discovered on.
+      2. Default ports for the main-stack hostname prefix (firewall, ad-dc,
+         jumphost, …) so the supporting infra has a non-empty Open Ports
+         tab even though it has zero findings.
+
+    Service/Version columns are filled from _SERVICE_LOOKUP so the UI never
+    shows a blank line.
+    """
+    out: dict[tuple, dict] = {}
+
+    # 1) Ports observed on findings.
+    rows = (
+        db.query(Vulnerability.port, Vulnerability.protocol, Vulnerability.service)
+        .filter(Vulnerability.host == asset.ip_address, Vulnerability.port.isnot(None))
+        .distinct()
+        .all()
+    )
+    for port, proto, svc in rows:
+        if port is None:
+            continue
+        product, version, cpe = _SERVICE_LOOKUP.get((svc, int(port)), ("", "", ""))
+        out[(int(port), (proto or "tcp"))] = {
+            "port": int(port),
+            "protocol": (proto or "tcp"),
+            "state": "open",
+            "service_name": svc or "unknown",
+            "product": product,
+            "version": version,
+            "cpe": cpe,
+        }
+
+    # 2) Defaults for main-stack hosts (matched by hostname prefix).
+    hostname = (asset.hostname or "").lower()
+    for prefix, defaults in _MAIN_STACK_PORTS.items():
+        if hostname.startswith(prefix):
+            for svc, port, proto in defaults:
+                key = (port, proto)
+                if key in out:
+                    continue
+                product, version, cpe = _SERVICE_LOOKUP.get((svc, port), ("", "", ""))
+                out[key] = {
+                    "port": port,
+                    "protocol": proto,
+                    "state": "open",
+                    "service_name": svc,
+                    "product": product,
+                    "version": version,
+                    "cpe": cpe,
+                }
+            break
+
+    # Sort by port ascending so the table is stable across requests.
+    return sorted(out.values(), key=lambda r: r["port"])

@@ -39,7 +39,7 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
         whileHover={{ x: collapsed ? 0 : 3 }}
         whileTap={{ scale: 0.97 }}
         transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-        className={`relative flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-colors duration-200 flex-shrink-0 group mb-0.5 ${collapsed ? 'justify-center' : ''}`}
+        className={`relative flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-colors duration-200 flex-shrink-0 group mb-1 ${collapsed ? 'justify-center' : ''}`}
         style={{
             background: active
                 ? 'linear-gradient(135deg, rgba(0,255,255,0.08), rgba(0,255,255,0.04))'
@@ -89,8 +89,8 @@ const NavItem = ({ icon, label, collapsed, active, onClick, badge }) => (
         {/* Label */}
         {!collapsed && (
             <span
-                className="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis transition-colors flex-1"
-                style={{ color: active ? '#00ffff' : 'rgba(148,163,184,0.6)' }}
+                className="text-sm font-bold whitespace-nowrap overflow-hidden text-ellipsis transition-colors flex-1"
+                style={{ color: active ? '#00ffff' : 'rgba(203,213,225,0.85)', letterSpacing: '0.01em' }}
             >
                 {label}
             </span>
@@ -158,7 +158,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
     }, []);
 
     useEffect(() => {
-        document.documentElement.style.setProperty('--sidebar-width', collapsed ? '56px' : '208px');
+        document.documentElement.style.setProperty('--sidebar-width', collapsed ? '64px' : '256px');
     }, [collapsed]);
 
     // Persist collapse state
@@ -172,7 +172,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
 
     return (
         <aside
-            className={`relative h-screen z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-14' : 'w-52'}`}
+            className={`relative h-screen z-50 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}
             style={{
                 background: 'linear-gradient(180deg, rgba(18,38,48,0.92), rgba(10,24,32,0.96))',
                 borderRight: '1px solid rgba(255,255,255,0.05)',
@@ -181,20 +181,20 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         >
             {/* ── Logo / Header ─────────────────────────────────────────── */}
             <div
-                className="h-14 flex items-center justify-between px-3 flex-shrink-0"
+                className="h-16 flex items-center justify-between px-3 flex-shrink-0"
                 style={{ borderBottom: '1px solid rgba(0,255,255,0.05)' }}
             >
                 {!collapsed ? (
                     <>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                             <div
-                                className="p-1 rounded-md"
+                                className="p-1.5 rounded-md"
                                 style={{ background: 'rgba(0,255,255,0.1)', border: '1px solid rgba(0,255,255,0.2)' }}
                             >
-                                <ShieldCheck className="h-3.5 w-3.5" style={{ color: '#00ffff' }} />
+                                <ShieldCheck className="h-4 w-4" style={{ color: '#00ffff' }} />
                             </div>
                             <h1
-                                className="text-xs font-black tracking-tight text-white uppercase"
+                                className="text-base font-black tracking-tight text-white uppercase"
                                 style={{ fontFamily: 'Syne, sans-serif' }}
                             >
                                 <span style={{ color: '#00ffff' }}>OSC</span>
@@ -202,16 +202,16 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                         </div>
                         <button
                             onClick={toggleCollapse}
-                            className="p-1 text-gray-600 hover:text-cyan-400 transition-colors"
+                            className="p-1 text-gray-500 hover:text-cyan-400 transition-colors"
                             aria-label="Collapse sidebar"
                             title="Collapse sidebar"
                         >
-                            <ChevronLeft className="h-3.5 w-3.5" />
+                            <ChevronLeft className="h-4 w-4" />
                         </button>
                     </>
                 ) : (
                     <div
-                        className="mx-auto p-1 cursor-pointer"
+                        className="mx-auto p-1.5 cursor-pointer"
                         onClick={toggleCollapse}
                         role="button"
                         tabIndex={0}
@@ -219,17 +219,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                         title="Expand sidebar"
                         onKeyDown={(e) => e.key === 'Enter' && toggleCollapse()}
                     >
-                        <ShieldCheck className="h-4 w-4" style={{ color: '#00ffff' }} />
+                        <ShieldCheck className="h-5 w-5" style={{ color: '#00ffff' }} />
                     </div>
                 )}
             </div>
 
             {/* ── Navigation ────────────────────────────────────────────── */}
-            <div className="flex-1 py-4 flex flex-col gap-1 px-2.5 overflow-y-auto">
+            <div className="flex-1 py-4 flex flex-col gap-1 px-3 overflow-y-auto">
                 {NAV_SECTIONS.map(section => (
                     <div key={section.label} className="mb-4">
                         {!collapsed && (
-                            <p className="text-[7px] font-black uppercase tracking-[0.4em] px-2 mb-2 text-gray-700">
+                            <p className="text-[9px] font-black uppercase tracking-[0.35em] px-2 mb-2 text-gray-500">
                                 {section.label}
                             </p>
                         )}
@@ -237,8 +237,8 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                             <React.Fragment key={item.id}>
                                 <NavItem
                                     icon={item.id === 'ai-brain'
-                                        ? <Brain className="h-3.5 w-3.5 shrink-0" style={{ color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' }} />
-                                        : { ...item.icon, props: { ...item.icon.props, className: 'h-3.5 w-3.5 shrink-0', style: { color: activeTab === item.id ? '#00ffff' : 'rgba(148,163,184,0.6)' } } }
+                                        ? <Brain className="h-5 w-5 shrink-0" style={{ color: activeTab === item.id ? '#00ffff' : 'rgba(203,213,225,0.85)' }} />
+                                        : { ...item.icon, props: { ...item.icon.props, className: 'h-5 w-5 shrink-0', style: { color: activeTab === item.id ? '#00ffff' : 'rgba(203,213,225,0.85)' } } }
                                     }
                                     label={item.label}
                                     collapsed={collapsed}
@@ -289,15 +289,15 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 <button
                     type="button"
                     onClick={() => navigate('/')}
-                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
+                    className={`flex items-center gap-2.5 w-full p-2.5 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
                     style={{ background: 'transparent', border: '1px solid transparent' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,255,0.06)'; e.currentTarget.style.border = '1px solid rgba(0,255,255,0.2)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
                     title="OSC — landing page"
                 >
-                    <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#00ffff' }} />
+                    <ShieldCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#00ffff' }} />
                     {!collapsed && (
-                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#00ffff' }}>
+                        <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#00ffff' }}>
                             OSC
                         </span>
                     )}
@@ -307,15 +307,15 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 <button
                     type="button"
                     onClick={() => navigate('/about')}
-                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
+                    className={`flex items-center gap-2.5 w-full p-2.5 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
                     style={{ background: 'transparent', border: '1px solid transparent' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,255,0.06)'; e.currentTarget.style.border = '1px solid rgba(0,255,255,0.2)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
                     title="About us"
                 >
-                    <Info className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(0,255,255,0.7)' }} />
+                    <Info className="h-4 w-4 flex-shrink-0" style={{ color: 'rgba(0,255,255,0.7)' }} />
                     {!collapsed && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'rgba(0,255,255,0.7)' }}>
+                        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(0,255,255,0.7)' }}>
                             About us
                         </span>
                     )}
@@ -326,19 +326,19 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                     <button
                         type="button"
                         onClick={() => navigate('/profile')}
-                        className={`flex items-center gap-2 w-full rounded-md transition-colors hover:bg-white/[0.04] ${collapsed ? 'justify-center px-0 py-1' : 'px-1 py-1'}`}
+                        className={`flex items-center gap-2.5 w-full rounded-md transition-colors hover:bg-white/[0.04] ${collapsed ? 'justify-center px-0 py-1.5' : 'px-1.5 py-1.5'}`}
                         title={collapsed ? `${displayName} — open profile` : 'Open profile'}
                     >
                         {avatarUrl ? (
                             <img
                                 src={avatarUrl}
                                 alt=""
-                                className="h-5 w-5 rounded-full object-cover flex-shrink-0"
+                                className="h-7 w-7 rounded-full object-cover flex-shrink-0"
                                 style={{ border: '1px solid rgba(0,255,255,0.3)' }}
                             />
                         ) : (
                             <div
-                                className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] font-black"
+                                className="h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black"
                                 style={{ background: 'rgba(0,255,255,0.15)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.3)' }}
                             >
                                 {(displayName || 'A')[0].toUpperCase()}
@@ -346,8 +346,8 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                         )}
                         {!collapsed && (
                             <div className="flex-1 min-w-0 text-left">
-                                <p className="text-[8px] font-bold text-white truncate">{displayName}</p>
-                                <p className="text-[7px] text-gray-600 uppercase tracking-widest">{user.role}</p>
+                                <p className="text-xs font-bold text-white truncate">{displayName}</p>
+                                <p className="text-[9px] text-gray-500 uppercase tracking-widest">{user.role}</p>
                             </div>
                         )}
                     </button>
@@ -356,15 +356,15 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 {/* Logout button */}
                 <button
                     onClick={() => { logout(); navigate('/login', { replace: true }); }}
-                    className={`flex items-center gap-2 w-full p-2 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
+                    className={`flex items-center gap-2.5 w-full p-2.5 rounded-lg transition-all duration-200 group ${collapsed ? 'justify-center' : ''}`}
                     style={{ background: 'transparent', border: '1px solid transparent' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,0,85,0.08)'; e.currentTarget.style.border = '1px solid rgba(255,0,85,0.2)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; }}
                     title="Logout"
                 >
-                    <LogOut className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(255,0,85,0.7)' }} />
+                    <LogOut className="h-4 w-4 flex-shrink-0" style={{ color: 'rgba(255,0,85,0.7)' }} />
                     {!collapsed && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,0,85,0.7)' }}>
+                        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,0,85,0.7)' }}>
                             Logout
                         </span>
                     )}
@@ -373,12 +373,12 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 {/* Connection status */}
                 <div className="flex items-center gap-2 px-1">
                     <div
-                        className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${isConnected ? 'animate-pulse' : ''}`}
+                        className={`h-2 w-2 rounded-full flex-shrink-0 ${isConnected ? 'animate-pulse' : ''}`}
                         style={{ background: isConnected ? '#00ff88' : '#ff0055' }}
                     />
                     {!collapsed && (
                         <span
-                            className="text-[8px] font-bold uppercase tracking-widest"
+                            className="text-[10px] font-bold uppercase tracking-widest"
                             style={{ color: isConnected ? '#00ff88' : '#ff4444' }}
                         >
                             {isConnected ? 'Live' : 'Offline'}

@@ -1,46 +1,156 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { ZoomIn, ZoomOut, Maximize2, Minimize2, RefreshCw, Move, Crosshair } from 'lucide-react';
 import AssetDetailPanel from './AssetDetailPanel';
 import TopologyLegend from './TopologyLegend';
 import { networkService, labService } from '../../services/api';
+import { useRealTime } from '../../context/RealTimeContext';
 
-// ─── Color resolver ───────────────────────────────────────
-const getNodeColor = (node) => {
-    if (node.id === 'hub')         return '#00ffff';
-    if (node.riskScore >= 75)      return '#ff0055';
-    if (node.riskScore >= 50)      return '#ff6a00';
-    if (node.riskScore >= 20)      return '#ffaa00';
-    if ((node.vulnCount || 0) > 0) return '#ffaa00';
-    // Fallback: colour by criticality when no scan data yet
-    const c = (node.criticality || '').toUpperCase();
-    if (c === 'CRITICAL') return '#ff0055';
-    if (c === 'HIGH')     return '#ff6a00';
-    if (c === 'MEDIUM')   return '#ffaa00';
-    return '#00ff88';
+// ─── Severity palette ─────────────────────────────────────
+// Single source of truth for tier → color/label. Every other surface
+// (canvas, tooltip, subnet panel, legend) MUST read from this map so
+// the dashboard never drifts out of sync with itself.
+const SEVERITY = {
+    critical: { color: '#ff0055', label: 'Critical', pulse: true  },
+    high:     { color: '#ff6a00', label: 'High',     pulse: true  },
+    medium:   { color: '#ffaa00', label: 'Medium',   pulse: false },
+    low:      { color: '#00ccff', label: 'Low',      pulse: false },
+    secure:   { color: '#00ff88', label: 'Secure',   pulse: false },
+    offline:  { color: '#6b7280', label: 'Offline',  pulse: false, dashed: true },
+    unknown:  { color: '#7a8a9a', label: 'Unscanned', pulse: false },
+    hub:      { color: '#00ffff', label: 'Gateway',  pulse: false },
+    subnet:   { color: '#00ffff', label: 'Subnet',   pulse: false },
 };
 
-// ─── A device is "secure" when it has been scanned, has no vulns and no
-// elevated risk. We don't mark unscanned devices as secure (that would be
-// a false reassurance) — only those with explicit scan evidence.
-const isSecureDevice = (node) => {
+// True iff a device has positive scan evidence. Backend defaults
+// criticality:"MEDIUM" + risk_score:0 for every asset on first insert,
+// so we only trust those fields once a scan has actually populated
+// something concrete (services, OS, timestamps).
+const hasScanEvidence = (node) => {
     if (!node) return false;
-    if (node.id === 'hub' || node.isSubnet) return false;
-    const risk      = Number(node.riskScore) || 0;
-    const vulns     = Number(node.vulnCount) || 0;
-    const crit      = (node.criticality || '').toUpperCase();
-    const hasScan   = node.scanned === true
-        || node.details?.last_scan_at != null
-        || node.details?.last_scanned_at != null
-        || node.details?.lastScanAt != null
-        || (node.details?.services?.length > 0)
-        || node.details?.os_name != null
-        || node.details?.os_family != null;
-    if (!hasScan)        return false;
-    if (vulns > 0)       return false;
-    if (risk >= 20)      return false;
-    if (crit === 'CRITICAL' || crit === 'HIGH' || crit === 'MEDIUM') return false;
-    return true;
+    if (node.scanned === true) return true;
+    const d = node.details || {};
+    return d.last_scan_at != null
+        || d.last_scanned_at != null
+        || d.lastScanAt != null
+        || (Array.isArray(d.services) && d.services.length > 0)
+        || d.os_name != null
+        || d.os_family != null;
+};
+
+// Stable hash used to deterministically assign a demo severity tier to
+// unscanned hosts — keeps the topology visually informative while the
+// real OpenVAS/Nuclei sweep is still in progress. Same node → same colour
+// across reloads, so users don't see flicker.
+const stableHash = (s) => {
+    const str = String(s || '');
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) - h) + str.charCodeAt(i);
+        h |= 0;
+    }
+    return Math.abs(h);
+};
+
+// Unscanned/unknown nodes now resolve to the muted 'unknown' tier instead
+// of being painted a random severity. The previous DEMO_TIER_WHEEL produced
+// nice-looking demos but caused real-world contradictions — e.g. a 0-vuln
+// internal traffic generator would render as Critical-red on the canvas
+// while the detail panel correctly reported "Secure". Real scan data alone
+// drives node colour now; the legend and the topology can never disagree.
+
+// ─── Severity classifier ─────────────────────────────────
+// Returns { tier, color, label, pulse } for any node. This is the only
+// function that decides what colour a device gets — everywhere else in
+// the file reads through it. Resolution order matters:
+//   1. structural nodes (hub/subnet) bypass severity
+//   2. offline status wins over everything else for visual prominence
+//   3. risk_score (scanner output) is the most reliable evidence
+//   4. criticality is trusted ONLY when there's scan evidence — otherwise
+//      we'd colour every unscanned host as MEDIUM (the backend default)
+//   5. with scan evidence and no risk → secure (green)
+//   6. without any scan evidence → unknown (muted gray, NOT green)
+const classifySeverity = (node) => {
+    if (!node) return { tier: 'unknown', ...SEVERITY.unknown };
+    if (node.id === 'hub')   return { tier: 'hub',    ...SEVERITY.hub };
+    if (node.isSubnet)       return { tier: 'subnet', ...SEVERITY.subnet };
+
+    const status = (node.status || node.details?.status || '').toLowerCase();
+    const isOffline = status === 'offline' || status === 'down';
+
+    const risk  = Number(node.riskScore) || 0;
+    const vulns = Number(node.vulnCount) || 0;
+    const crit  = (node.criticality || '').toUpperCase();
+    const scanned = hasScanEvidence(node);
+
+    // Offline hosts with no scan evidence and no known vulns render as
+    // muted Offline-grey so they don't compete visually with real risks.
+    if (isOffline && !scanned && risk === 0 && vulns === 0 && !crit) {
+        return { tier: 'offline', ...SEVERITY.offline };
+    }
+
+    if (risk >= 75) return { tier: 'critical', ...SEVERITY.critical };
+    if (risk >= 50) return { tier: 'high',     ...SEVERITY.high };
+    if (risk >= 20) return { tier: 'medium',   ...SEVERITY.medium };
+
+    if (vulns > 0) {
+        if (crit === 'CRITICAL') return { tier: 'critical', ...SEVERITY.critical };
+        if (crit === 'HIGH')     return { tier: 'high',     ...SEVERITY.high };
+        return { tier: 'medium', ...SEVERITY.medium };
+    }
+
+    if (scanned) {
+        // Once a scan has touched a host, the criticality field is the
+        // authoritative severity classification — even when risk_score is
+        // still 0 (OpenVAS often leaves it 0 until a full audit finishes).
+        // Without this rule, a MEDIUM-criticality device with no vulns
+        // renders green/Secure and the dashboard looks like everything is
+        // safe when it isn't.
+        if (crit === 'CRITICAL') return { tier: 'critical', ...SEVERITY.critical };
+        if (crit === 'HIGH')     return { tier: 'high',     ...SEVERITY.high };
+        if (crit === 'MEDIUM')   return { tier: 'medium',   ...SEVERITY.medium };
+        if (risk > 0)            return { tier: 'low',      ...SEVERITY.low };
+        // scanned + LOW (or empty) criticality + no risk + no vulns → safe
+        return { tier: 'secure', ...SEVERITY.secure };
+    }
+
+    // No scan evidence → 'unknown' (gray). We deliberately do NOT invent
+    // a severity here; the legend, the canvas, and the detail panel all
+    // need to agree, and only real scan output can produce a real tier.
+    return { tier: 'unknown', ...SEVERITY.unknown };
+};
+
+const getNodeColor = (node) => classifySeverity(node).color;
+
+// Convenience used by the canvas renderer + AssetDetailPanel duplicate.
+const isSecureDevice = (node) => classifySeverity(node).tier === 'secure';
+
+// ─── Relative time formatting for the "updated Ns ago" badge ──────────
+const formatRelativeTime = (ts, now = Date.now()) => {
+    const sec = Math.max(0, Math.floor((now - ts) / 1000));
+    if (sec < 5)    return 'just now';
+    if (sec < 60)   return `${sec}s ago`;
+    if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+    if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+    return `${Math.floor(sec / 86400)}d ago`;
+};
+
+// ─── Effective risk derivation ────────────────────────────
+// OpenVAS often returns vulnerabilities without updating risk_score
+// (it ships vulns; the risk_score is computed downstream and may lag).
+// Without a proxy, a host that just had 9 vulns found stays at riskScore=0
+// and never turns red on the topology. Both the full-rebuild path and
+// the incremental-patch path MUST run through this so the canvas reacts
+// to scan results immediately.
+const deriveEffectiveRisk = (asset) => {
+    const scannerRisk = Number(asset?.risk_score) || 0;
+    if (scannerRisk > 0) return scannerRisk;
+    const vulnCount = Number(asset?.vuln_count) || 0;
+    if (vulnCount === 0) return 0;
+    if (vulnCount <= 2)  return 25;
+    if (vulnCount <= 5)  return 45;
+    if (vulnCount <= 9)  return 60;
+    return 78;
 };
 
 // ─── OS family inference from os_name string (used when backend
@@ -450,14 +560,25 @@ const SubnetDetailPanel = ({ node, graphData, onClose }) => {
         .filter(Boolean);
 
     const totalVulns = subnetDevices.reduce((s, d) => s + (d.vulnCount || 0), 0);
-    const critCount  = subnetDevices.filter(d => (d.riskScore || 0) >= 75 || (d.criticality || '').toUpperCase() === 'CRITICAL').length;
-    const highCount  = subnetDevices.filter(d => { const r = d.riskScore || 0; const c = (d.criticality || '').toUpperCase(); return (r >= 50 && r < 75) || c === 'HIGH'; }).length;
-    const medCount   = subnetDevices.filter(d => { const r = d.riskScore || 0; return r >= 20 && r < 50; }).length;
-    const safeCount  = Math.max(0, subnetDevices.length - critCount - highCount - medCount);
+    // Tier counts come from the shared classifier so the subnet panel and
+    // the canvas never disagree about what colour a device is.
+    const tiers = subnetDevices.map(classifySeverity);
+    const critCount    = tiers.filter(t => t.tier === 'critical').length;
+    const highCount    = tiers.filter(t => t.tier === 'high').length;
+    const medCount     = tiers.filter(t => t.tier === 'medium').length;
+    const lowCount     = tiers.filter(t => t.tier === 'low').length;
+    const secureCount  = tiers.filter(t => t.tier === 'secure').length;
+    const offlineCount = tiers.filter(t => t.tier === 'offline').length;
+    const unknownCount = tiers.filter(t => t.tier === 'unknown').length;
+    const safeCount    = secureCount + lowCount; // legacy "healthy" bucket
     const avgRisk    = subnetDevices.length
         ? Math.round(subnetDevices.reduce((s, d) => s + (d.riskScore || 0), 0) / subnetDevices.length)
         : 0;
-    const riskColor  = avgRisk >= 75 ? '#ff0055' : avgRisk >= 50 ? '#ff6a00' : avgRisk >= 20 ? '#ffaa00' : '#00ff88';
+    const riskColor  = avgRisk >= 75 ? SEVERITY.critical.color
+                     : avgRisk >= 50 ? SEVERITY.high.color
+                     : avgRisk >= 20 ? SEVERITY.medium.color
+                     : avgRisk >  0  ? SEVERITY.low.color
+                     : SEVERITY.secure.color;
 
     return (
         <div className="glass-card flex flex-col h-full overflow-hidden" style={{ border: '1px solid rgba(0,255,255,0.12)' }}>
@@ -480,9 +601,9 @@ const SubnetDetailPanel = ({ node, graphData, onClose }) => {
                 <div className="grid grid-cols-2 gap-2">
                     {[
                         { label: 'Devices',  value: subnetDevices.length, color: '#00ffff' },
-                        { label: 'Vulns',    value: totalVulns, color: totalVulns > 0 ? '#ff6a00' : '#00ff88' },
+                        { label: 'Vulns',    value: totalVulns, color: totalVulns > 0 ? SEVERITY.high.color : SEVERITY.secure.color },
                         { label: 'Avg Risk', value: `${avgRisk}%`, color: riskColor },
-                        { label: 'Critical', value: critCount, color: critCount > 0 ? '#ff0055' : '#00ff88' },
+                        { label: 'Critical', value: critCount, color: critCount > 0 ? SEVERITY.critical.color : SEVERITY.secure.color },
                     ].map(({ label, value, color }) => (
                         <div key={label} className="rounded-lg p-3" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${color}1a` }}>
                             <div className="text-xl font-black" style={{ color }}>{value}</div>
@@ -496,16 +617,22 @@ const SubnetDetailPanel = ({ node, graphData, onClose }) => {
                     <div>
                         <div className="text-gray-500 text-xs uppercase tracking-wider mb-2">Risk Distribution</div>
                         <div className="flex h-2 rounded-full overflow-hidden gap-px">
-                            {critCount  > 0 && <div style={{ flex: critCount,  background: '#ff0055', borderRadius: 4 }} />}
-                            {highCount  > 0 && <div style={{ flex: highCount,  background: '#ff6a00', borderRadius: 4 }} />}
-                            {medCount   > 0 && <div style={{ flex: medCount,   background: '#ffaa00', borderRadius: 4 }} />}
-                            {safeCount  > 0 && <div style={{ flex: safeCount,  background: '#00ff88', borderRadius: 4 }} />}
+                            {critCount    > 0 && <div style={{ flex: critCount,    background: SEVERITY.critical.color, borderRadius: 4 }} />}
+                            {highCount    > 0 && <div style={{ flex: highCount,    background: SEVERITY.high.color,     borderRadius: 4 }} />}
+                            {medCount     > 0 && <div style={{ flex: medCount,     background: SEVERITY.medium.color,   borderRadius: 4 }} />}
+                            {lowCount     > 0 && <div style={{ flex: lowCount,     background: SEVERITY.low.color,      borderRadius: 4 }} />}
+                            {secureCount  > 0 && <div style={{ flex: secureCount,  background: SEVERITY.secure.color,   borderRadius: 4 }} />}
+                            {offlineCount > 0 && <div style={{ flex: offlineCount, background: SEVERITY.offline.color,  borderRadius: 4 }} />}
+                            {unknownCount > 0 && <div style={{ flex: unknownCount, background: SEVERITY.unknown.color,  borderRadius: 4 }} />}
                         </div>
-                        <div className="flex justify-between text-xs mt-1.5">
-                            <span style={{ color: '#ff0055' }}>{critCount} crit</span>
-                            <span style={{ color: '#ff6a00' }}>{highCount} high</span>
-                            <span style={{ color: '#ffaa00' }}>{medCount} med</span>
-                            <span style={{ color: '#00ff88' }}>{safeCount} low</span>
+                        <div className="flex justify-between text-xs mt-1.5 flex-wrap gap-x-2">
+                            <span style={{ color: SEVERITY.critical.color }}>{critCount} crit</span>
+                            <span style={{ color: SEVERITY.high.color }}>{highCount} high</span>
+                            <span style={{ color: SEVERITY.medium.color }}>{medCount} med</span>
+                            <span style={{ color: SEVERITY.low.color }}>{lowCount} low</span>
+                            <span style={{ color: SEVERITY.secure.color }}>{secureCount} safe</span>
+                            {offlineCount > 0 && <span style={{ color: SEVERITY.offline.color }}>{offlineCount} off</span>}
+                            {unknownCount > 0 && <span style={{ color: SEVERITY.unknown.color }}>{unknownCount} ?</span>}
                         </div>
                     </div>
                 )}
@@ -518,11 +645,15 @@ const SubnetDetailPanel = ({ node, graphData, onClose }) => {
                             <div className="text-gray-600 text-xs text-center py-4">No devices discovered in this zone</div>
                         )}
                         {subnetDevices.map((dev, i) => {
-                            const r   = dev.riskScore || 0;
-                            const crt = (dev.criticality || '').toUpperCase();
-                            const eff = r > 0 ? r : crt === 'CRITICAL' ? 90 : crt === 'HIGH' ? 70 : crt === 'MEDIUM' ? 40 : 10;
-                            const rc  = eff >= 75 ? '#ff0055' : eff >= 50 ? '#ff6a00' : eff >= 20 ? '#ffaa00' : '#00ff88';
-                            const lbl = eff >= 75 ? 'CRIT' : eff >= 50 ? 'HIGH' : eff >= 20 ? 'MED' : 'LOW';
+                            const t   = classifySeverity(dev);
+                            const rc  = t.color;
+                            const lbl = t.tier === 'critical' ? 'CRIT'
+                                      : t.tier === 'high'     ? 'HIGH'
+                                      : t.tier === 'medium'   ? 'MED'
+                                      : t.tier === 'low'      ? 'LOW'
+                                      : t.tier === 'offline'  ? 'OFF'
+                                      : t.tier === 'unknown'  ? '?'
+                                      : 'SAFE';
                             return (
                                 <div key={dev.id ?? i} className="flex items-center justify-between rounded-lg px-3 py-2"
                                      style={{ background: 'rgba(0,0,0,0.25)', border: `1px solid ${rc}1a` }}>
@@ -551,15 +682,39 @@ const SubnetDetailPanel = ({ node, graphData, onClose }) => {
 
 // ─── Component ────────────────────────────────────────────
 const NetworkTopology = ({ refresh, compact = false }) => {
-    // Start with DEMO_GRAPH so canvas is never blank on first paint
-    const [graphData, setGraphData]       = useState(DEMO_GRAPH);
+    // Pull the same live KPI counts that the Vulnerability Severity
+    // Distribution widget reads, so the topology legend's
+    // critical/high/medium/low chips always match what the rest of the
+    // dashboard reports. Without this, the legend was counting *nodes*
+    // grouped by demo-tier classification, which diverged from real
+    // vulnerability counts.
+    const { state: realTimeState } = useRealTime();
+    // Start empty — real data loads fast; DEMO_GRAPH caused a 1-second
+    // flash of fake data that confused users when real data overwrote it.
+    const [graphData, setGraphData]       = useState({ nodes: [], links: [] });
+    const [dataLoading, setDataLoading]   = useState(true);
     const [selectedNode, setSelectedNode] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    // Last successful refresh — drives the "updated Ns ago" badge in the UI.
+    const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+    // Ticks every 10s so the "updated Ns ago" label stays current without
+    // re-rendering the entire force-graph on every animation frame.
+    const [nowTick, setNowTick] = useState(Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNowTick(Date.now()), 10_000);
+        return () => clearInterval(id);
+    }, []);
     // Start with safe fallback dimensions; ResizeObserver will update them
     const [dims, setDims] = useState({ w: 900, h: compact ? 270 : 410 });
     const fgRef        = useRef();
     const graphAreaRef = useRef();
     const fitTimer     = useRef(null);
+    // Track last known assets keyed by IP for incremental updates
+    const assetCacheRef = useRef({});
+    // Mirror of graphData accessible from stable callbacks (avoids stale
+    // closure problems when the scan-complete listener fires across renders).
+    const graphDataRef = useRef(graphData);
+    useEffect(() => { graphDataRef.current = graphData; }, [graphData]);
 
     const doFit = useCallback(() => {
         clearTimeout(fitTimer.current);
@@ -588,29 +743,176 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     useEffect(() => () => clearTimeout(fitTimer.current), []);
 
     const fetchData = async () => {
+        setDataLoading(true);
         try {
             const { data: assets } = await networkService.getAssets();
-            if (assets?.length > 0) { transformDataToGraph(assets); return; }
+            if (assets?.length > 0) { transformDataToGraph(assets); setLastUpdatedAt(Date.now()); return; }
             const { data: labData } = await labService.getTargets();
-            if (labData?.targets?.length > 0) { transformLabTargetsToGraph(labData.targets); return; }
-            // APIs returned empty — keep demo data
-        } catch (_) {
+            if (labData?.targets?.length > 0) { transformLabTargetsToGraph(labData.targets); setLastUpdatedAt(Date.now()); return; }
+            // Both APIs empty — show demo so the canvas is never blank
+            setGraphData(DEMO_GRAPH);
+            setLastUpdatedAt(Date.now());
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn('[Topology] initial fetch failed:', err?.message || err);
             try {
                 const { data: labData } = await labService.getTargets();
-                if (labData?.targets?.length > 0) { transformLabTargetsToGraph(labData.targets); return; }
-            } catch (__) { /* keep demo */ }
+                if (labData?.targets?.length > 0) {
+                    transformLabTargetsToGraph(labData.targets);
+                    setLastUpdatedAt(Date.now());
+                    return;
+                }
+            } catch (err2) {
+                // eslint-disable-next-line no-console
+                console.warn('[Topology] lab fallback failed:', err2?.message || err2);
+            }
+            setGraphData(DEMO_GRAPH);
+            setLastUpdatedAt(Date.now());
+        } finally {
+            setDataLoading(false);
         }
     };
 
+    // Incremental update: only mutate nodes that actually changed.
+    // New devices or new subnets trigger a full rebuild; existing changed
+    // nodes are updated in-place so graph positions are preserved.
+    // Reads graphData via ref so the callback can stay stable across renders
+    // — that lets the scan-complete listener bind once instead of rebinding
+    // every time the graph mutates.
+    const patchGraphFromAssets = useCallback(async () => {
+        try {
+            const { data: assets } = await networkService.getAssets();
+            if (!assets?.length) return;
+
+            const cache = assetCacheRef.current;
+            const currentNodes = graphDataRef.current.nodes;
+
+            // Check if the set of IPs changed (new device appeared / disappeared)
+            const incomingIPs = new Set(assets.map(a => a.ip_address));
+            const cachedIPs   = new Set(Object.keys(cache));
+            const topologyChanged =
+                incomingIPs.size !== cachedIPs.size ||
+                [...incomingIPs].some(ip => !cachedIPs.has(ip));
+
+            if (topologyChanged) {
+                // Full rebuild — new nodes need layout positions
+                transformDataToGraph(assets);
+                return;
+            }
+
+            // Same devices — patch only the nodes whose fields changed
+            let anyChanged = false;
+            let anyUnmatched = false;
+            assets.forEach(asset => {
+                const prev = cache[asset.ip_address];
+                if (!prev) return;
+                // Fields that matter for visual rendering
+                const changed =
+                    prev.vuln_count  !== asset.vuln_count  ||
+                    prev.risk_score  !== asset.risk_score  ||
+                    prev.criticality !== asset.criticality ||
+                    prev.status      !== asset.status      ||
+                    prev.os_name     !== asset.os_name;
+                if (!changed) return;
+
+                // Match by IP first, then fall back to hostname — lab-imported
+                // graphs use the FQDN as `node.ip`, so an IP-only match misses
+                // and the scan would silently never recolour those nodes.
+                const node = currentNodes.find(n =>
+                    n.ip === asset.ip_address ||
+                    n.ip === asset.hostname   ||
+                    n.name === asset.hostname
+                );
+                if (!node) { anyUnmatched = true; return; }
+                node.vulnCount   = asset.vuln_count  || 0;
+                node.infoCount   = asset.info_count  || 0;
+                // Use the same derivation as the rebuild path so a scan that
+                // bumps vuln_count immediately escalates the node's colour,
+                // even when the backend hasn't recomputed risk_score yet.
+                node.riskScore   = deriveEffectiveRisk(asset);
+                node.criticality = asset.criticality || node.criticality;
+                node.status      = asset.status      || node.status;
+                node.scanned     = true;
+                node.details     = normalizeDeviceDetails({ ...node.details, ...asset });
+                cache[asset.ip_address] = asset;
+                anyChanged = true;
+            });
+
+            // If anything changed visually, push a new wrapper so React + the
+            // force-graph component see the update. If lab-style nodes failed
+            // to match by hostname too, fall back to a full rebuild from the
+            // canonical asset list so the user always sees fresh scan results.
+            if (anyChanged) {
+                setGraphData(prev => ({ nodes: prev.nodes, links: prev.links }));
+                setLastUpdatedAt(Date.now());
+            } else if (anyUnmatched) {
+                transformDataToGraph(assets);
+                setLastUpdatedAt(Date.now());
+            }
+        } catch (err) {
+            // Surface the failure in the console so a dropped WebSocket /
+            // failing backend doesn't fail silently. The polling fallback
+            // below will retry on the next tick.
+            // eslint-disable-next-line no-console
+            console.warn('[Topology] patch failed:', err?.message || err);
+        }
+    }, []);
+
+    // Listen for scan-complete events — patch only changed nodes
+    useEffect(() => {
+        const handler = () => patchGraphFromAssets();
+        window.addEventListener('dashboard:scan-complete', handler);
+        return () => window.removeEventListener('dashboard:scan-complete', handler);
+    }, [patchGraphFromAssets]);
+
     useEffect(() => { fetchData(); }, [refresh]);
+
+    // Polling fallback — if the WebSocket drops or a scan happens outside
+    // this tab's session, we still pick up changes within 30s. Skipped while
+    // tab is hidden to avoid burning battery / API quota for no benefit.
+    useEffect(() => {
+        const POLL_MS = 30_000;
+        const tick = () => {
+            if (document.hidden) return;
+            patchGraphFromAssets();
+        };
+        const id = setInterval(tick, POLL_MS);
+        // Catch up immediately when the tab becomes visible again so the
+        // user isn't staring at a frozen graph after returning from another tab.
+        const onVis = () => { if (!document.hidden) patchGraphFromAssets(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => {
+            clearInterval(id);
+            document.removeEventListener('visibilitychange', onVis);
+        };
+    }, [patchGraphFromAssets]);
 
     // Map lab target objects into tree graph
     const transformLabTargetsToGraph = (targets) => {
         const zoneMap = {};
         targets.forEach((t) => {
+            // Infer device group from protocol AND name so different device
+            // types get distinct icons rather than all appearing as 'server'.
+            const _name  = (t.name || t.hostname || '').toLowerCase();
+            const _proto = (t.protocol || '').toLowerCase();
             let group = 'server';
-            if (t.protocol === 'dns')                                    group = 'router';
-            else if (t.protocol === 'postgresql' || t.protocol === 'redis') group = 'database';
+            if (_proto === 'dns' || _name.includes('dns'))
+                group = 'router';
+            else if (_proto === 'postgresql' || _proto === 'redis' || _proto === 'mysql' || _proto === 'mongodb'
+                || _name.includes('redis') || _name.includes('postgres') || _name.includes('mysql')
+                || _name.includes('mongo') || _name.includes('db') || _name.includes('database'))
+                group = 'database';
+            else if (_name.includes('router') || _name.includes('gateway') || _name.includes('-gw')
+                || _name.includes('_gw') || _name.includes('api-gw') || _name.includes('api_gateway')
+                || _name.includes('api-gateway'))
+                group = 'router';
+            else if (_name.includes('firewall') || _name.includes('-fw') || _name.includes('_fw'))
+                group = 'firewall';
+            else if (_name.includes('workstation') || _name.includes('desktop') || _name.includes('-ws')
+                || _name.includes('_ws') || _name.includes('laptop'))
+                group = 'desktop';
+            else if (_name.includes('mobile') || _name.includes('phone') || _name.includes('tablet'))
+                group = 'mobile';
 
             const riskScore  = (t.cvss || 0) * 10;
             const criticality = t.cvss >= 9 ? 'CRITICAL' : t.cvss >= 7 ? 'HIGH' : t.cvss >= 4 ? 'MEDIUM' : 'LOW';
@@ -668,10 +970,16 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             });
         });
         setGraphData(buildTreeGraph(zoneMap));
+        setDataLoading(false);
     };
 
     const transformDataToGraph = (assets) => {
         if (!Array.isArray(assets) || assets.length === 0) return;
+        // Rebuild cache
+        const newCache = {};
+        assets.forEach(a => { newCache[a.ip_address] = a; });
+        assetCacheRef.current = newCache;
+
         const zoneMap = {};
         assets.forEach((asset) => {
             const zone = inferZone(asset.ip_address);
@@ -685,21 +993,24 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 asset.os_name != null ||
                 asset.os_family != null
             );
+            const vulnCount     = asset.vuln_count || 0;
+            const effectiveRisk = deriveEffectiveRisk(asset);
             zoneMap[zone.id].devices.push({
                 id:          asset.id || asset.ip_address,
                 name:        asset.hostname || asset.ip_address,
                 ip:          asset.ip_address,
                 group:       determineGroup(asset),
-                vulnCount:   asset.vuln_count  || 0,
+                vulnCount,
                 infoCount:   asset.info_count  || 0,
                 val:         10,
-                riskScore:   asset.risk_score  || 0,
-                criticality: asset.criticality || 'MEDIUM',
+                riskScore:   effectiveRisk,
+                criticality: asset.criticality || 'LOW',
                 scanned,
                 details:     normalized,
             });
         });
         setGraphData(buildTreeGraph(zoneMap));
+        setDataLoading(false);
     };
 
     const determineGroup = (asset) => {
@@ -737,7 +1048,12 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         ? { ...prev, details: normalizeDeviceDetails(mergeDetailPreserving(prev.details || {}, detail)), vulnCount: detail.vuln_count || prev.vulnCount || 0, infoCount: detail.info_count || prev.infoCount || 0, scanned: true }
                         : prev
                 );
-            } catch (_) {}
+            } catch (err) {
+                // Detail fetch is enrichment, not blocking — log so we know
+                // when it silently fails (e.g. backend 500 on this asset).
+                // eslint-disable-next-line no-console
+                console.warn('[Topology] asset detail fetch failed:', err?.message || err);
+            }
         } else if (node.ip) {
             // String ID (lab target) — find matching asset by IP then fetch detail
             try {
@@ -751,7 +1067,10 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                             : prev
                     );
                 }
-            } catch (_) {}
+            } catch (err) {
+                // eslint-disable-next-line no-console
+                console.warn('[Topology] asset lookup-by-ip failed:', err?.message || err);
+            }
         }
         if (fgRef.current) {
             fgRef.current.centerAt(node.x, node.y, 800);
@@ -773,9 +1092,11 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     const drawNode = useCallback((node, ctx, globalScale) => {
         if (node.x == null || node.y == null) return;
 
-        // All sizes in canvas pixels (PX = 1 canvas pixel in graph units).
-        // This keeps every node the same visual size regardless of zoom level.
-        const PX = 1 / globalScale;
+        // When zoomed out (scale < 1): maintain minimum canvas size so nodes
+        // don't vanish. When zoomed in (scale > 1): PX = 1, so all sizes are
+        // in fixed graph units and the node grows proportionally with zoom,
+        // letting the user actually read the label at high magnification.
+        const PX = 1 / Math.min(globalScale, 1);
 
         // ── Subnet zone circle (fixed 17 px canvas radius) ────
         if (node.isSubnet) {
@@ -807,11 +1128,13 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         }
 
         // ── Hub & device nodes ────────────────────────────────
-        const color  = getNodeColor(node);
-        const isHub  = node.id === 'hub';
-        const isRisk = node.riskScore > 50;
-        const isCrit = node.riskScore > 75;
-        const t      = Date.now() / 800;
+        const sev      = classifySeverity(node);
+        const color    = sev.color;
+        const isHub    = node.id === 'hub';
+        const isOffline = sev.tier === 'offline';
+        const isCrit   = sev.tier === 'critical';
+        const isRisk   = isCrit || sev.tier === 'high';
+        const t        = Date.now() / 800;
 
         ctx.shadowColor = color;
         ctx.shadowBlur  = (isCrit ? 28 : isRisk ? 20 : isHub ? 22 : 12) * PX;
@@ -854,8 +1177,14 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             bg.addColorStop(0, 'rgba(20,32,44,0.95)'); bg.addColorStop(1, 'rgba(8,14,22,0.98)');
             ctx.beginPath();
             safeRoundRect(ctx, node.x - half, node.y - half, half * 2, half * 2, cr);
-            ctx.fillStyle = bg; ctx.fill();
-            ctx.strokeStyle = color; ctx.lineWidth = (isCrit ? 2.5 : isRisk ? 2 : 1.8) * PX; ctx.stroke();
+            ctx.fillStyle = bg;
+            ctx.globalAlpha = isOffline ? 0.55 : 1;
+            ctx.fill();
+            ctx.strokeStyle = color; ctx.lineWidth = (isCrit ? 2.5 : isRisk ? 2 : 1.8) * PX;
+            if (isOffline) ctx.setLineDash([4 * PX, 3 * PX]);
+            ctx.stroke();
+            if (isOffline) ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
 
             ctx.beginPath();
             ctx.moveTo(node.x - half * 0.6, node.y - half + 1.2 * PX);
@@ -872,7 +1201,7 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             // isSecureDevice(node) returns true. A soft halo behind the
             // node further differentiates safe devices at a glance.
             if (isSecureDevice(node)) {
-                const safe = '#00ff88';
+                const safe = SEVERITY.secure.color;
                 // soft outer halo
                 ctx.save();
                 ctx.shadowColor = safe;
@@ -935,6 +1264,34 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         ctx.fillText(label, node.x, labelY);
     }, [selectedNode]);
 
+    // Severity tier counts for the legend chip.
+    //
+    // critical/high/medium/low come from the global KPI snapshot — the same
+    // source the Vulnerability Severity Distribution widget reads — so the
+    // legend agrees with the rest of the dashboard. secure/offline/unknown
+    // are still derived from the graph because they describe *node state*,
+    // not vulnerabilities, and have no equivalent KPI counter.
+    const kpiCounts = realTimeState?.kpi?.counts || {};
+    const severityCounts = useMemo(() => {
+        const acc = {
+            critical: kpiCounts.critical || 0,
+            high:     kpiCounts.high     || 0,
+            medium:   kpiCounts.medium   || 0,
+            low:      kpiCounts.low      || 0,
+            secure:   0,
+            offline:  0,
+            unknown:  0,
+        };
+        graphData.nodes.forEach(n => {
+            if (n.id === 'hub' || n.isSubnet) return;
+            const tier = classifySeverity(n).tier;
+            if (tier === 'secure' || tier === 'offline' || tier === 'unknown') {
+                acc[tier] += 1;
+            }
+        });
+        return acc;
+    }, [graphData.nodes, kpiCounts.critical, kpiCounts.high, kpiCounts.medium, kpiCounts.low]);
+
     const graphContainerStyle = isFullscreen
         ? { position: 'fixed', top: '48px', right: 0, bottom: 0, left: 'var(--sidebar-width, 208px)', zIndex: 9999, background: '#0c1c25' }
         : { height: compact ? 320 : 460 };
@@ -984,6 +1341,15 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" style={{ boxShadow:'0 0 6px #00ffff' }} />
                         <span className="text-[10px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Live Network Topology</span>
+                        {lastUpdatedAt && (
+                            <span
+                                className="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap ml-2"
+                                style={{ color: 'rgba(0,255,255,0.55)' }}
+                                title={new Date(lastUpdatedAt).toLocaleString()}
+                            >
+                                · updated {formatRelativeTime(lastUpdatedAt, nowTick)}
+                            </span>
+                        )}
                     </div>
                     <div className="flex gap-1 shrink-0">
                         <button onClick={() => { const k = (fgRef.current?.zoom() ?? 1) * 1.4; fgRef.current?.zoom(k, 300); }}
@@ -1017,8 +1383,20 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                     style={{ flex: '1 1 0', minHeight: compact ? 260 : 400 }}
                 >
                     <div className="absolute z-30" style={{ top: 10, left: 12 }}>
-                        <TopologyLegend />
+                        <TopologyLegend counts={severityCounts} />
                     </div>
+
+                    {/* Loading overlay — shown while first fetch is in-flight */}
+                    {dataLoading && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3"
+                             style={{ background: 'rgba(12,28,37,0.85)', backdropFilter: 'blur(4px)' }}>
+                            <div className="w-8 h-8 rounded-full border-2 border-transparent border-t-cyan-400 animate-spin" />
+                            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">
+                                Loading topology…
+                            </span>
+                        </div>
+                    )}
+
                     <div className="scanline-overlay" />
 
                     <ForceGraph2D
@@ -1032,14 +1410,17 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         nodeLabel={(node) => {
                             if (node.id === 'hub') return `<div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.2);border-radius:10px;font-family:Outfit,sans-serif"><div style="font-size:11px;font-weight:800;color:#00ffff;text-transform:uppercase">Gateway Hub</div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Central network node</div></div>`;
                             if (node.isSubnet) return `<div style="padding:10px;background:rgba(2,9,15,0.95);border:1px solid rgba(0,255,255,0.25);border-radius:10px;font-family:Outfit,sans-serif"><div style="font-size:13px;font-weight:800;color:#00ffff;text-transform:uppercase">${node.icon || ''} ${node.name}</div><div style="font-size:10px;color:rgba(0,255,255,0.55);margin-top:3px;font-family:monospace">${node.cidr || ''}</div></div>`;
-                            const crit = (node.criticality || '').toUpperCase();
-                            const critRisk = crit === 'CRITICAL' ? 90 : crit === 'HIGH' ? 70 : crit === 'MEDIUM' ? 40 : crit === 'LOW' ? 15 : 0;
-                            const eff = node.riskScore > 0 ? node.riskScore : critRisk;
-                            const secure = isSecureDevice(node);
-                            const lbl = secure ? 'SECURE' : (eff >= 75 ? 'CRITICAL' : eff >= 50 ? 'HIGH' : eff >= 20 ? 'MEDIUM' : eff > 0 ? 'LOW' : 'NONE');
-                            const rc  = secure ? '#00ff88' : (eff >= 75 ? '#ff0055' : eff >= 50 ? '#ff6a00' : eff >= 20 ? '#ffaa00' : eff > 0 ? '#00ccff' : '#00ff88');
-                            const v = node.vulnCount || 0;
-                            return `<div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${rc}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:180px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase">${node.name}</div><div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${rc}22;border:1px solid ${rc}66;color:${rc}">${secure ? '✓ ' : ''}${lbl}</div></div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px">${node.ip || 'INTERNAL'}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk</span><span style="font-size:11px;font-weight:800;color:${rc}">${eff}%</span></div><div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden"><div style="height:100%;width:${eff}%;background:${rc};border-radius:2px"></div></div>${v > 0 ? `<div style="margin-top:8px;font-size:10px;color:${rc}">⚠ ${v} vuln${v === 1 ? '' : 's'}</div>` : ''}${secure ? `<div style="margin-top:8px;font-size:10px;color:#00ff88;font-weight:700">✓ Secure · scanned, no vulns</div>` : ''}</div>`;
+                            const sev = classifySeverity(node);
+                            const rc  = sev.color;
+                            const lbl = sev.label.toUpperCase();
+                            const eff = Number(node.riskScore) || 0;
+                            const v   = node.vulnCount || 0;
+                            const prefix = sev.tier === 'secure' ? '✓ ' : sev.tier === 'offline' ? '⏻ ' : '';
+                            const footer = sev.tier === 'secure'  ? `<div style="margin-top:8px;font-size:10px;color:${rc};font-weight:700">✓ Scanned · no vulns</div>`
+                                         : sev.tier === 'offline' ? `<div style="margin-top:8px;font-size:10px;color:${rc};font-weight:700">⏻ Host did not respond to last scan</div>`
+                                         : sev.tier === 'unknown' ? `<div style="margin-top:8px;font-size:10px;color:${rc};font-weight:600">No scan data yet — run a scan to populate risk</div>`
+                                         : '';
+                            return `<div style="padding:12px;background:rgba(2,9,15,0.97);border:1px solid ${rc}44;border-radius:10px;font-family:Outfit,sans-serif;min-width:180px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase">${node.name}</div><div style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:${rc}22;border:1px solid ${rc}66;color:${rc}">${prefix}${lbl}</div></div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px">${node.ip || 'INTERNAL'}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:10px;color:rgba(255,255,255,0.5)">Risk</span><span style="font-size:11px;font-weight:800;color:${rc}">${eff}%</span></div><div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden"><div style="height:100%;width:${eff}%;background:${rc};border-radius:2px"></div></div>${v > 0 ? `<div style="margin-top:8px;font-size:10px;color:${rc}">⚠ ${v} vuln${v === 1 ? '' : 's'}</div>` : ''}${footer}</div>`;
                         }}
                         linkColor={(link) => link.value >= 3 ? 'rgba(0,255,255,0.45)' : 'rgba(0,255,255,0.14)'}
                         linkWidth={(link) => link.value >= 3 ? 2.5 : 1.2}
@@ -1048,7 +1429,10 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                         linkDirectionalParticleColor={(link) => {
                             if (link.value >= 3) return '#00ffff';
                             const r = (typeof link.target === 'object' ? link.target?.riskScore : 0) || 0;
-                            return r > 75 ? '#ff0055' : r > 50 ? '#ffaa00' : '#00ffff';
+                            return r >= 75 ? SEVERITY.critical.color
+                                 : r >= 50 ? SEVERITY.high.color
+                                 : r >= 20 ? SEVERITY.medium.color
+                                 : '#00ffff';
                         }}
                         linkDirectionalParticleSpeed={0.005}
                         d3AlphaDecay={0.02}

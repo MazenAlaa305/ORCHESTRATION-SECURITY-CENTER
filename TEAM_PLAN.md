@@ -10,17 +10,17 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 1. [Sub-team Map](#sub-team-map)
 2. [Omar Kapil — Team Lead & DevOps](#1-omar-kapil--team-lead--devops)
-3. [Reem Amin — Backend Lead (Auth, RBAC, Models)](#2-reem-amin--backend-lead-auth-rbac-models)
-4. [Yousef Abdel Hady — AI Agent Pipeline & Risk Engine](#3-yousef-abdel-hady--ai-agent-pipeline--risk-engine)
+3. [Reem Ameen Mahmoud — Backend Lead (Auth, RBAC, Models)](#2-reem-ameen-mahmoud--backend-lead-auth-rbac-models)
+4. [Youssef Abdelhady — AI Agent Pipeline & Risk Engine](#3-youssef-abdelhady--ai-agent-pipeline--risk-engine)
 5. [Mohamed Shaban — Task Queue & Docker Orchestration](#4-mohamed-shaban--task-queue--docker-orchestration)
-6. [Marize Ehap — Frontend Lead](#5-marize-ehap--frontend-lead)
+6. [Mariz Ehab — Frontend Lead](#5-mariz-ehab--frontend-lead)
 7. [Omnia Helmy — Data Visualization](#6-omnia-helmy--data-visualization)
-8. [Rahma Ebrahem — Dashboard UI / UX](#7-rahma-ebrahem--dashboard-ui--ux)
-9. [Shahd Paher — Security Scanning Lead](#8-shahd-paher--security-scanning-lead)
-10. [Mariz Ehap — SIEM & Log Analytics](#9-mariz-ehap--siem--log-analytics)
-11. [Yosef Ali — QA: API & Integration](#10-yosef-ali--qa-api--integration)
-12. [Mazin Alla — QA: E2E & Frontend](#11-mazin-alla--qa-e2e--frontend)
-13. [Omar Tarek — Documentation & Presentation](#12-omar-tarek--documentation--presentation)
+8. [Rahma Ibrahim — Dashboard UI / UX](#7-rahma-ibrahim--dashboard-ui--ux)
+9. [Shahd Baher Hussien — Security Scanning Lead](#8-shahd-baher-hussien--security-scanning-lead)
+10. [Mariz Ehab — SIEM & Log Analytics](#9-mariz-ehab--siem--log-analytics)
+11. [Youssef Ali — QA: API & Integration](#10-youssef-ali--qa-api--integration)
+12. [Mazen Alaa — QA: E2E & Frontend](#11-mazen-alaa--qa-e2e--frontend)
+13. [Omar Elshafey — Documentation & Presentation](#12-omar-elshafey--documentation--presentation)
 14. [Shared Working Agreements](#shared-working-agreements)
 
 ---
@@ -30,10 +30,10 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 | Sub-team | Lead | Members |
 |---|---|---|
 | Leadership / DevOps | Omar Kapil | — |
-| Backend & AI Core | Reem Amin | Yousef Abdel Hady, Mohamed Shaban |
-| Frontend & Visualization | Omnia Helmy, Rahma Ebrahem |
-| Security & Scanning | Shahd Paher | Mariz Ehap |
-| QA & Documentation | (shared) | Yosef Ali, Mazin Alaa, Omar Tarek |
+| Backend & AI Core | Reem Ameen Mahmoud | Youssef Abdelhady, Mohamed Shaban |
+| Frontend & Visualization | Mariz Ehab | Omnia Helmy, Rahma Ibrahim |
+| Security & Scanning | Shahd Baher Hussien | Mariz Ehab |
+| QA & Documentation | (shared) | Youssef Ali, Mazen Alaa, Omar Elshafey |
 
 ---
 
@@ -82,11 +82,11 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 5. *Q: A new firewall rule is needed for the lab — where does it go?*
    A: Add to both `infra/isolation/lab_isolation.sh` (Linux iptables) **and** `infra/isolation/lab_isolation.ps1` (Windows netsh). They must stay in sync.
 6. *Q: How do I roll back a broken deploy?*
-   A: `docker compose down` then `git checkout <previous-tag>` and `docker compose up -d --build`. There are no DB migration rollbacks past a release tag — coordinate with Reem Amin first.
+   A: `docker compose down` then `git checkout <previous-tag>` and `docker compose up -d --build`. There are no DB migration rollbacks past a release tag — coordinate with Reem Ameen Mahmoud first.
 
 ---
 
-## 2. Reem Amin — Backend Lead (Auth, RBAC, Models)
+## 2. Reem Ameen Mahmoud — Backend Lead (Auth, RBAC, Models)
 
 **Role summary.** Owns the backend foundation: FastAPI application bootstrap, database layer, authentication, role-based access control, and shared dependencies used by all other endpoint authors.
 
@@ -134,7 +134,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 3. Yousef Abdel Hady — AI Agent Pipeline & Risk Engine
+## 3. Youssef Abdelhady — AI Agent Pipeline & Risk Engine
 
 **Role summary.** Owns the deterministic 4-stage orchestrator and the unified risk/health engine — the most architecturally distinctive parts of the system.
 
@@ -290,7 +290,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 **Critical points**
 
 - **D3 lives inside React responsibly.** Mount D3 in a `useEffect`, clean up the SVG on unmount, never let D3 manage React-owned DOM.
-- **Topology data shape is locked** — the backend emits a `{nodes, links}` JSON via `/network/topology`. Coordinate with Yousef before changing it.
+- **Topology data shape is locked** — the backend emits a `{nodes, links}` JSON via `/network/topology`. Coordinate with Youssef Abdelhady before changing it.
 - **Performance ceiling: 500 nodes.** Beyond that, switch to clustered rendering.
 - **Color = severity, not aesthetics.** Use the agreed palette (critical→red, high→orange, medium→yellow, low→blue, info→gray).
 - **Accessibility.** Provide a textual summary alongside every chart.
@@ -315,7 +315,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 7. Rahma Ebrahem — Dashboard UI / UX
+## 7. Rahma Ibrahim — Dashboard UI / UX
 
 **Role summary.** Owns the look-and-feel: tokens, theming, layout polish, responsive behavior, and accessibility across the dashboard.
 
@@ -357,7 +357,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 8. Shahd Paher — Security Scanning Lead
+## 8. Shahd Baher Hussien — Security Scanning Lead
 
 **Role summary.** Owns the actual security tooling integration: how Nmap, Nuclei and OpenVAS are called, tuned, and converted into normalized findings. Also owns the lab's intentional vulnerabilities.
 
@@ -406,7 +406,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 9. Mariz Ehap — SIEM & Log Analytics
+## 9. Mariz Ehab — SIEM & Log Analytics
 
 **Role summary.** Owns the SIEM side: Wazuh integration, Elasticsearch query layer, alert correlation with scan findings, and the SIEM-facing dashboards.
 
@@ -448,7 +448,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 10. Yosef Ali — QA: API & Integration
+## 10. Youssef Ali — QA: API & Integration
 
 **Role summary.** Owns API correctness: unit tests, contract tests, integration tests, and the Postman collection used by the team for manual verification.
 
@@ -489,7 +489,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 11. Mazin Alaa — QA: E2E & Frontend
+## 11. Mazen Alaa — QA: E2E & Frontend
 
 **Role summary.** Owns end-to-end flows: real browser automation against the full stack, plus frontend unit/component tests.
 
@@ -532,7 +532,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 
 ---
 
-## 12. Omar Tarek — Documentation, Presentation & Report Generation
+## 12. Omar Elshafey — Documentation, Presentation & Report Generation
 
 **Role summary.** Owns external-facing artifacts: repo documentation, the FYP write-up, presentation decks, demo narrative — **and the end-to-end PDF report generation pipeline** that produces audit-ready security reports for each completed scan.
 
@@ -634,7 +634,7 @@ Project codename: **Found 404** · Helwan Institute of Technology · 11-member t
 11. *Q: How long does a report take to generate?*
     A: Typically 1–3 seconds for a scan with < 200 findings. The `reportlab` build dominates; signing is sub-millisecond.
 12. *Q: Are reports purged?*
-    A: No automatic purge today. Reports accumulate in the DB. Coordinate with Reem Amin on a future retention policy if size becomes an issue.
+    A: No automatic purge today. Reports accumulate in the DB. Coordinate with Reem Ameen Mahmoud on a future retention policy if size becomes an issue.
 
 ---
 

@@ -225,7 +225,7 @@ const KPIS = [
     { label: 'In Progress',      value: '1',    sub: 'Being Fixed',   icon: Clock,          color: 'text-cyber-accent' },
     { label: 'SLA Overdue',      value: '19',   sub: 'Needs Action',  icon: AlertTriangle,  color: 'text-cyber-medium' },
     { label: 'Assets',           value: '18',   sub: 'Hosts',         icon: Monitor,        color: 'text-cyber-accent' },
-    { label: 'Status',           value: 'FAIL', sub: 'System',        icon: Sparkles,       color: 'text-cyber-critical' },
+    { label: 'Status',           value: 'OK',   sub: 'System',        icon: Sparkles,       color: 'text-cyber-success' },
 ];
 
 function MockKPIs() {

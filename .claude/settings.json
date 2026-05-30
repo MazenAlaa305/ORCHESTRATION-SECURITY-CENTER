@@ -23,6 +23,7 @@
       "Bash(ls lab/scenarios/ lab/wazuh/ lab/kibana/dashboards/)",
       "Bash(ls tests/e2e/)",
       "PowerShell(.\\\\start-lite.ps1)",
+      "Bash(curl -s -o /dev/null -w \"Backend: %{http_code}\\\\n\" http://localhost:8000/health)",
       "PowerShell(powershell -ExecutionPolicy Bypass -File .\\\\start-lite.ps1)",
       "Bash(sed -i 's/\\\\r$//' \"d:/FINAL PROJECT/the-dashboard-project-/backend/docker-entrypoint.sh\" && file \"d:/FINAL PROJECT/the-dashboard-project-/backend/docker-entrypoint.sh\")",
       "PowerShell(docker compose up -d --build backend celery_worker)",

@@ -193,13 +193,15 @@ const Dashboard = () => {
         refetchInterval: 60_000,
     });
 
-    // Heatmap data sourced directly from live KPI counts
+    // Heatmap data sourced directly from live KPI counts (no demo floor)
+    // so the per-severity totals always match the "Vulnerabilities Found"
+    // KPI card on top of the dashboard.
     const heatmapData = [
-        { name: 'Critical', value: realTime.kpi.counts.critical, severity: 'critical' },
-        { name: 'High',     value: realTime.kpi.counts.high,     severity: 'high'     },
-        { name: 'Medium',   value: realTime.kpi.counts.medium,   severity: 'medium'   },
-        { name: 'Low',      value: realTime.kpi.counts.low,      severity: 'low'      },
-        { name: 'Info',     value: realTime.kpi.counts.info,     severity: 'info'     },
+        { name: 'Critical', value: realTime.kpi.counts.critical || 0, severity: 'critical' },
+        { name: 'High',     value: realTime.kpi.counts.high     || 0, severity: 'high'     },
+        { name: 'Medium',   value: realTime.kpi.counts.medium   || 0, severity: 'medium'   },
+        { name: 'Low',      value: realTime.kpi.counts.low      || 0, severity: 'low'      },
+        { name: 'Info',     value: realTime.kpi.counts.info     || 0, severity: 'info'     },
     ];
 
     return (
@@ -248,7 +250,7 @@ const Dashboard = () => {
                 Animated tab content — keyed by activeTab so AnimatePresence
                 cross-fades panels on tab switch.
             ════════════════════════════════════════════════════════════════ */}
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="sync">
             <motion.div
                 key={activeTab}
                 variants={fadeInUp}
@@ -326,7 +328,7 @@ const Dashboard = () => {
                                     }} />
                                     <VulnerabilitiesList
                                         taskId={latestOpenVASScan?.configuration?.openvas_task_id}
-                                        scanId={latestOpenVASScan?.id}
+                                        scanId={latestOpenVASScan?.id || latestScan?.id}
                                     />
                                 </div>
                             </div>
@@ -356,9 +358,9 @@ const Dashboard = () => {
                         onChange={handleSubTabChange}
                     />
                     <Suspense fallback={<PanelLoader />}>
-                        {activeSubTab === 'siem'            && <UnifiedInbox />}
-                        {activeSubTab === 'vulnerabilities' && <VulnerabilitiesPanel refresh={refreshKey} />}
-                        {activeSubTab === 'network'         && <NetworkTopology refresh={refreshKey} />}
+                        {activeSubTab === 'siem'             && <UnifiedInbox />}
+                        {activeSubTab === 'vulnerabilities'  && <VulnerabilitiesPanel refresh={refreshKey} />}
+                        {activeSubTab === 'network'          && <NetworkTopology refresh={refreshKey} />}
                     </Suspense>
                 </div>
             )}

@@ -4,6 +4,8 @@ import {
     AlertCircle, ArrowRight, ArrowLeft, Plus, Trash2,
 } from 'lucide-react';
 import { targetService } from '../../services/api';
+import { usePermission } from '../../hooks/usePermission';
+import { useToast } from '../ToastProvider';
 
 const STEPS = [
     { id: 'identity',    label: 'Identity',    icon: TargetIcon },
@@ -38,6 +40,8 @@ const COMPLIANCE_FRAMEWORKS = [
 ];
 
 const EnvironmentWizard = ({ open, onClose, onCreated }) => {
+    const { isAdmin, role } = usePermission();
+    const { addToast } = useToast();
     const [step, setStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -67,16 +71,31 @@ const EnvironmentWizard = ({ open, onClose, onCreated }) => {
     const toggleTag = (id) =>
         setComplianceTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
 
+    // Scope allowlist is a safety boundary — it widens what the scanner is
+    // allowed to touch. Editing it (add or remove) is admin-only so an
+    // analyst can't quietly authorise a host into scope.
+    const guardAllowlist = () => {
+        if (isAdmin) return true;
+        addToast(
+            `Scope allowlist edits are admin-only — you're signed in as ${role}. The allowlist controls what the scanner is permitted to touch.`,
+            { type: 'error', duration: 4500 }
+        );
+        return false;
+    };
+
     const addScopeEntry = () => {
         const v = newScopeEntry.trim();
         if (!v) return;
         if (scopeAllowlist.includes(v)) return;
+        if (!guardAllowlist()) return;
         setScopeAllowlist([...scopeAllowlist, v]);
         setNewScopeEntry('');
     };
 
-    const removeScopeEntry = (v) =>
+    const removeScopeEntry = (v) => {
+        if (!guardAllowlist()) return;
         setScopeAllowlist(scopeAllowlist.filter(x => x !== v));
+    };
 
     const canAdvance = () => {
         if (step === 0) return name.trim() && baseUrl.trim();
@@ -294,20 +313,30 @@ const EnvironmentWizard = ({ open, onClose, onCreated }) => {
                                 </span>
                             </label>
                             <div>
-                                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
-                                    Scope Allowlist (hosts/CIDRs the scanner may touch)
-                                </p>
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs text-gray-400 uppercase tracking-wider">
+                                        Scope Allowlist (hosts/CIDRs the scanner may touch)
+                                    </p>
+                                    {!isAdmin && (
+                                        <span className="text-[9px] font-mono text-amber-400/70 uppercase tracking-widest">
+                                            admin only
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex gap-2 mb-2">
                                     <input
                                         value={newScopeEntry}
                                         onChange={e => setNewScopeEntry(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addScopeEntry())}
-                                        placeholder="example.com or 10.0.0.0/24"
-                                        className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-white text-xs font-mono focus:border-cyan-400 outline-none"
+                                        onKeyDown={e => e.key === 'Enter' && !(!isAdmin) && (e.preventDefault(), addScopeEntry())}
+                                        placeholder={isAdmin ? 'example.com or 10.0.0.0/24' : 'admin only — analysts cannot edit the allowlist'}
+                                        disabled={!isAdmin}
+                                        className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-white text-xs font-mono focus:border-cyan-400 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                     <button
                                         onClick={addScopeEntry}
-                                        className="px-3 py-2 rounded bg-cyan-400 text-gray-900 text-xs font-bold hover:bg-sky-400 flex items-center gap-1"
+                                        disabled={!isAdmin}
+                                        title={!isAdmin ? 'admin only' : undefined}
+                                        className="px-3 py-2 rounded bg-cyan-400 text-gray-900 text-xs font-bold hover:bg-sky-400 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-cyan-400"
                                     >
                                         <Plus size={12} /> Add
                                     </button>
@@ -321,7 +350,12 @@ const EnvironmentWizard = ({ open, onClose, onCreated }) => {
                                         {scopeAllowlist.map(s => (
                                             <span key={s} className="flex items-center gap-1 px-2 py-1 rounded bg-cyan-500/10 text-cyan-300 text-[10px] font-mono border border-cyan-500/30">
                                                 {s}
-                                                <button onClick={() => removeScopeEntry(s)} className="text-red-400 hover:text-red-300">
+                                                <button
+                                                    onClick={() => removeScopeEntry(s)}
+                                                    disabled={!isAdmin}
+                                                    title={!isAdmin ? 'admin only' : 'Remove'}
+                                                    className="text-red-400 hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-red-400"
+                                                >
                                                     <Trash2 size={10} />
                                                 </button>
                                             </span>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Lock, User, Loader2, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, User, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { stagger, staggerItem } from '../lib/motion';
 
@@ -44,6 +44,23 @@ export default function LoginPage() {
     return (
         <div className="relative min-h-screen flex items-center justify-center overflow-hidden"
              style={{ background: 'radial-gradient(ellipse at 60% 20%, #0d2e3a 0%, #10222b 45%, #0a1a22 100%)' }}>
+
+            {/* Back-to-landing — small floating link in the top-left */}
+            <Link
+                to="/"
+                className="absolute top-6 left-6 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-[0.18em] transition-colors"
+                style={{
+                    color: '#4dbdb1',
+                    background: 'rgba(77,189,177,0.06)',
+                    border: '1px solid rgba(77,189,177,0.22)',
+                    backdropFilter: 'blur(8px)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(77,189,177,0.14)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(77,189,177,0.06)'; }}
+            >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to home
+            </Link>
 
             {/* Ambient glows */}
             <div className="pointer-events-none absolute inset-0">

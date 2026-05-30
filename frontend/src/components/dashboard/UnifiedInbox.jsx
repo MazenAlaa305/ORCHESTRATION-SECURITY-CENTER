@@ -1,7 +1,41 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShieldOff, X, ShieldAlert, Globe, Lock, Activity, Terminal, AlertTriangle, Info, Search } from 'lucide-react';
-import api from '../../services/api';
+import api, { vulnerabilityService } from '../../services/api';
 import { useConfig } from '../../context/ConfigContext';
+
+// Severity → Wazuh-style rule level so synthesised vulnerability "alerts"
+// land in the correct band of the SIEM inbox (CRITICAL: ≥12, HIGH: ≥8, …).
+const SEVERITY_LEVEL = { CRITICAL: 13, HIGH: 10, MEDIUM: 6, LOW: 3, INFO: 1 };
+
+// Convert a Vulnerability row into the Wazuh-shaped alert envelope that
+// the inbox already knows how to render — keeps the rest of the component
+// blissfully unaware that two data sources are merged together.
+const vulnToAlert = (v) => {
+    const sev = (v.severity || 'LOW').toString().toUpperCase();
+    const level = SEVERITY_LEVEL[sev] ?? 5;
+    return {
+        _id: `vuln-${v.id}`,
+        '@timestamp': v.created_at || v.discovered_at || new Date().toISOString(),
+        rule: {
+            id: v.cve_id || `OSC-${v.id}`,
+            level,
+            description: v.title || v.name || v.cve_id || 'Vulnerability finding',
+            groups: ['vulnerability', sev.toLowerCase(), ...(v.tags || [])],
+            mitre: v.mitre || {},
+        },
+        agent: {
+            name: v.asset_hostname || v.host || v.target || 'scanner',
+            ip: v.asset_ip || v.host_ip || null,
+        },
+        data: {
+            srcip: v.asset_ip || v.host_ip || null,
+            cve: v.cve_id || null,
+            cvss: v.cvss_score || v.cvss || null,
+        },
+        full_log: v.description || v.evidence || '',
+        __source: 'vulnerability',
+    };
+};
 
 const POLL_INTERVAL_MS = 5_000;
 
@@ -122,8 +156,29 @@ const UnifiedInbox = () => {
     const fetchAlerts = async ({ initial }) => {
         try {
             if (initial) setLoading(true);
-            const res   = await api.get('/siem/alerts');
-            const fresh = res.data || [];
+            // Pull SIEM alerts and active vulnerabilities in parallel — the
+            // SIEM-only stream missed scanner findings, so analysts were not
+            // seeing CRITICAL vulnerabilities surface in the Unified Inbox.
+            const [siemRes, vulnRes] = await Promise.allSettled([
+                api.get('/siem/alerts'),
+                vulnerabilityService.list({ status: 'open', page: 1, page_size: 200 }),
+            ]);
+
+            const siemAlerts = siemRes.status === 'fulfilled' ? (siemRes.value.data || []) : [];
+            const vulnItems = vulnRes.status === 'fulfilled'
+                ? (vulnRes.value.data?.items ?? vulnRes.value.data ?? [])
+                : [];
+            const vulnAlerts = (Array.isArray(vulnItems) ? vulnItems : [])
+                .filter((v) => v && v.severity)
+                .map(vulnToAlert);
+
+            // Most-recent first so newly-discovered criticals float to the top.
+            const fresh = [...siemAlerts, ...vulnAlerts].sort((a, b) => {
+                const ta = new Date(a['@timestamp'] || 0).getTime();
+                const tb = new Date(b['@timestamp'] || 0).getTime();
+                return tb - ta;
+            });
+
             if (initial) {
                 knownKeysRef.current = new Set(fresh.map(alertKey));
                 setNewCount(0);
@@ -136,11 +191,17 @@ const UnifiedInbox = () => {
                 if (added > 0) setNewCount((n) => n + added);
             }
             setAlerts(fresh);
-            setError(null);
+            // Only surface an error if BOTH feeds failed — a missing SIEM
+            // backend shouldn't blank out the vulnerability stream.
+            if (siemRes.status === 'rejected' && vulnRes.status === 'rejected') {
+                setError('Failed to load alerts from SIEM and scanner.');
+            } else {
+                setError(null);
+            }
             setLastUpdated(new Date());
         } catch (err) {
             console.error('Failed to fetch SIEM alerts:', err);
-            setError('Failed to load alerts from Elasticsearch.');
+            setError('Failed to load alerts.');
         } finally {
             if (initial) setLoading(false);
         }

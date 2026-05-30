@@ -43,6 +43,10 @@ const AssetDetailPanel = ({ node, onClose }) => {
         return <Monitor className="w-6 h-6 text-blue-400" />;
     };
 
+    // Display name: prefer node-level name → details.hostname → IP
+    const displayName = node.name || details.hostname || details.ip_address || 'Unknown Device';
+    const displayIP   = details.ip_address || node.ip || null;
+
     return (
         <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden h-full flex flex-col shadow-2xl animate-slide-in-right">
             {/* Header */}
@@ -52,11 +56,13 @@ const AssetDetailPanel = ({ node, onClose }) => {
                         {getIcon(details.device_type)}
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white tracking-wide">{details.hostname || details.ip_address}</h2>
+                        <h2 className="text-xl font-bold text-white tracking-wide">{displayName}</h2>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className="font-mono text-xs text-cyan-400 bg-cyan-900/20 px-2 py-0.5 rounded border border-cyan-800">
-                                {details.ip_address}
-                            </span>
+                            {displayIP && (
+                                <span className="font-mono text-xs text-cyan-400 bg-cyan-900/20 px-2 py-0.5 rounded border border-cyan-800">
+                                    {displayIP}
+                                </span>
+                            )}
                             {details.mac_vendor && (
                                 <span className="text-xs text-gray-400 flex items-center">
                                     <Info className="w-3 h-3 mr-1" />
@@ -112,54 +118,58 @@ const AssetDetailPanel = ({ node, onClose }) => {
                     <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
                         <Globe className="w-4 h-4" /> Identity
                     </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                            <span className="text-gray-500 block text-xs">OS Family</span>
-                            <span className="text-white font-medium">{details?.os_family || 'Unknown'}</span>
-                        </div>
-                        <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                            <span className="text-gray-500 block text-xs">OS Name</span>
-                            <span className="text-white font-medium break-words whitespace-normal text-xs" title={details?.os_name}>
-                                {details?.os_name || 'N/A'}
-                            </span>
-                        </div>
-                        <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                            <span className="text-gray-500 block text-xs">MAC Address</span>
-                            <span className="text-white font-mono">{details?.mac_address || 'Unknown'}</span>
-                        </div>
-                        <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                            <span className="text-gray-500 block text-xs">Uptime</span>
-                            <span className="text-white font-medium">{details?.uptime || 'N/A'}</span>
-                        </div>
-                        {details?.risk_score > 0 && (
-                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                                <span className="text-gray-500 block text-xs">Risk Score</span>
-                                <span className="font-bold" style={{ color: details.risk_score >= 75 ? '#ff0055' : details.risk_score >= 50 ? '#ff6a00' : '#ffaa00' }}>
-                                    {Math.round(details.risk_score)}%
-                                </span>
+                    {(() => {
+                        // Build only the fields that have real data so the panel
+                        // never shows "Unknown" or "N/A" for lab targets.
+                        const fields = [
+                            details?.os_family   && { label: 'OS Family',    value: details.os_family,   mono: false },
+                            details?.os_name     && { label: 'OS',           value: details.os_name,     mono: false, small: true },
+                            details?.mac_address && { label: 'MAC Address',  value: details.mac_address, mono: true  },
+                            details?.uptime      && { label: 'Uptime',       value: details.uptime,      mono: false },
+                            (details?.risk_score > 0) && {
+                                label: 'Risk Score',
+                                value: `${Math.round(details.risk_score)}%`,
+                                mono: false,
+                                color: details.risk_score >= 75 ? '#ff0055' : details.risk_score >= 50 ? '#ff6a00' : '#ffaa00',
+                            },
+                            details?.criticality && {
+                                label: 'Criticality',
+                                value: details.criticality,
+                                mono: false,
+                                color: details.criticality === 'CRITICAL' ? '#ff0055'
+                                     : details.criticality === 'HIGH'     ? '#ff6a00'
+                                     : details.criticality === 'MEDIUM'   ? '#ffaa00'
+                                     : '#00ff88',
+                            },
+                            details?.status && { label: 'Status', value: details.status, mono: false, capitalize: true },
+                            details?.zone   && { label: 'Zone',   value: details.zone,   mono: true  },
+                        ].filter(Boolean);
+
+                        if (fields.length === 0) {
+                            return (
+                                <div className="text-center py-5 text-gray-600 text-xs border border-dashed border-gray-700 rounded-lg">
+                                    No identity data available — run a scan to populate device details.
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                {fields.map(({ label, value, mono, small, color, capitalize }) => (
+                                    <div key={label} className="bg-gray-800/50 p-3 rounded border border-gray-700">
+                                        <span className="text-gray-500 block text-xs">{label}</span>
+                                        <span
+                                            className={`font-medium ${mono ? 'font-mono' : ''} ${small ? 'text-xs' : ''} ${capitalize ? 'capitalize' : ''} break-words whitespace-normal`}
+                                            style={{ color: color || 'white' }}
+                                            title={value}
+                                        >
+                                            {value}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
-                        )}
-                        {details?.criticality && (
-                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                                <span className="text-gray-500 block text-xs">Criticality</span>
-                                <span className="font-bold text-xs" style={{ color: details.criticality === 'CRITICAL' ? '#ff0055' : details.criticality === 'HIGH' ? '#ff6a00' : details.criticality === 'MEDIUM' ? '#ffaa00' : '#00ff88' }}>
-                                    {details.criticality}
-                                </span>
-                            </div>
-                        )}
-                        {details?.status && (
-                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                                <span className="text-gray-500 block text-xs">Status</span>
-                                <span className="text-white font-medium capitalize">{details.status}</span>
-                            </div>
-                        )}
-                        {details?.zone && (
-                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                                <span className="text-gray-500 block text-xs">Zone</span>
-                                <span className="text-white font-mono text-xs">{details.zone}</span>
-                            </div>
-                        )}
-                    </div>
+                        );
+                    })()}
                     {details?.description && (
                         <p className="mt-3 text-xs text-gray-400 bg-gray-800/30 rounded p-3 border border-gray-700 leading-relaxed">
                             {details.description}

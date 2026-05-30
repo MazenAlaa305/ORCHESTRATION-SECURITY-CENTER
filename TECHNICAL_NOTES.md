@@ -445,12 +445,12 @@ Walkthrough scenarios are demonstrated live during the demo; see the `demo/` fol
 
 | Layer | Tool | Location | Owner |
 |---|---|---|---|
-| Backend unit + integration | pytest | [backend/tests/](backend/tests/) | Yosef Ali |
-| Extended pytest suite | pytest | [all_tests/](all_tests/) | Yosef Ali |
-| API contract | Postman | [postman/](postman/) | Yosef Ali |
-| Frontend unit | Vitest | [frontend/src/tests/](frontend/src/tests/) | Mazin Alla |
-| End-to-end (browser) | Playwright | [tests/](tests/) | Mazin Alla |
-| System smoke | `backend/scripts/full_system_check.py` | scripts | Yosef Ali |
+| Backend unit + integration | pytest | [backend/tests/](backend/tests/) | Youssef Ali |
+| Extended pytest suite | pytest | [all_tests/](all_tests/) | Youssef Ali |
+| API contract | Postman | [postman/](postman/) | Youssef Ali |
+| Frontend unit | Vitest | [frontend/src/tests/](frontend/src/tests/) | Mazen Alaa |
+| End-to-end (browser) | Playwright | [tests/](tests/) | Mazen Alaa |
+| System smoke | `backend/scripts/full_system_check.py` | scripts | Youssef Ali |
 
 Run all: `python run_tests.py` then `python generate_test_report.py`.
 
