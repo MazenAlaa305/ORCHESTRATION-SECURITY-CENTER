@@ -197,6 +197,27 @@ def get_asset_detail(asset_id: int, db: Session = Depends(get_db)):
     }
 
 
+@router.post("/assets/deduplicate")
+def deduplicate_assets(db: Session = Depends(get_db)):
+    """
+    Collapse duplicate NetworkAsset rows (same physical device seen under
+    several IPs) into a single freshest-state node, then regenerate the
+    topology diagram. Safe to run repeatedly — a no-op when nothing overlaps.
+    """
+    from app.services.asset_dedup import collapse_duplicate_assets
+    from app.services.topology_generator import generate_and_cache
+
+    before = db.query(NetworkAsset).count()
+    removed = collapse_duplicate_assets(db)
+    db.commit()
+    generate_and_cache(db)
+    return {
+        "removed": removed,
+        "assets_before": before,
+        "assets_after": before - removed,
+    }
+
+
 @router.get("/assets/topology/mermaid")
 def get_topology_mermaid(force: bool = False, db: Session = Depends(get_db)):
     """

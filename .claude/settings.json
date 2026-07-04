@@ -41,7 +41,11 @@
       "Bash(cat \"C:\\\\Users\\\\omar\\\\AppData\\\\Local\\\\Temp\\\\fyp_ch3.md\" >> \"d:\\\\FINAL PROJECT\\\\the-dashboard-project-\\\\FYP_Documentation.md\" && wc -l \"d:\\\\FINAL PROJECT\\\\the-dashboard-project-\\\\FYP_Documentation.md\")",
       "Bash(git add *)",
       "Bash(git rm *)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "Bash(git commit -q -m ' *)",
+      "Bash(git push *)",
+      "PowerShell($root=\"D:\\\\Final year project\"; $files=@\\(\"scripts\\\\_common.ps1\",\"start-lite.ps1\",\"start-full.ps1\",\"stop-all.ps1\"\\); foreach\\($f in $files\\){ $p=Join-Path $root $f; $text=[System.IO.File]::ReadAllText\\($p, [System.Text.Encoding]::UTF8\\); $enc=New-Object System.Text.UTF8Encoding\\($true\\); [System.IO.File]::WriteAllText\\($p,$text,$enc\\) }; Write-Host \"re-encoded with BOM\"; foreach\\($f in $files\\){ $p=Join-Path $root $f; $errs=$null; [System.Management.Automation.Language.Parser]::ParseFile\\($p,[ref]$null,[ref]$errs\\)|Out-Null; if\\($errs\\){Write-Host \"FAIL $f\"; $errs|ForEach-Object{Write-Host \"  $\\($_.Message\\)\"}}else{Write-Host \"OK   $f\"} })",
+      "Bash(git update-index *)"
     ],
     "additionalDirectories": [
       "d:\\FINAL PROJECT\\the-dashboard-project-\\backend",

@@ -1,0 +1,26 @@
+# Normalise line endings so scripts stay runnable on every platform,
+# regardless of each contributor's core.autocrlf setting.
+
+# Default: let Git decide, normalising text to LF in the repo.
+* text=auto
+
+# Shell scripts MUST use LF — a CRLF in the shebang breaks `#!/usr/bin/env bash`.
+*.sh        text eol=lf
+*.bash      text eol=lf
+infra/**    text eol=lf
+
+# PowerShell / Windows batch keep CRLF.
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Binary assets — never touch.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.woff      binary
+*.woff2     binary

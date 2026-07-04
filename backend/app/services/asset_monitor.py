@@ -6,6 +6,11 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.scan import NetworkAsset, ActionItem, Vulnerability, VulnStatus
+from app.services.asset_dedup import (
+    find_existing_asset,
+    apply_freshest_state,
+    collapse_duplicate_assets,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -146,17 +151,22 @@ class AssetMonitor:
                 continue
                 
             current_ips.add(ip)
-            
+
             # Get current open ports from scan
             current_ports = ",".join(sorted([str(p.get('port')) for p in host_data.get('ports', []) if p.get('state') == 'open']))
-            
-            # Check if device exists in persistent inventory
-            existing_asset = db.query(NetworkAsset).filter(NetworkAsset.ip_address == ip).first()
-            
+
+            # Reconcile against the persistent inventory using a layered identity
+            # (IP → MAC → meaningful hostname) so a device that changed IP is
+            # matched onto its existing node instead of creating a duplicate.
+            mac      = host_data.get('mac')
+            hostname = host_data.get('hostnames')
+            existing_asset = find_existing_asset(db, ip, mac, hostname)
+
             if existing_asset:
                 # Device already known - check for changes
+                old_ip    = existing_asset.ip_address
                 old_ports = existing_asset.open_ports or ""
-                
+
                 # Port Change Detection
                 if current_ports != old_ports:
                     new_ports = set(current_ports.split(",")) - set(old_ports.split(","))
@@ -169,19 +179,34 @@ class AssetMonitor:
                         }
                         events.append(event)
                         logger.info(f"Port change detected on {ip}: {new_ports}")
-                
-                # Update last_seen and ports
-                existing_asset.last_seen = datetime.utcnow()
-                existing_asset.open_ports = current_ports
-                existing_asset.hostname = host_data.get('hostnames') or existing_asset.hostname
-                existing_asset.status = "active"
-                
+
+                # Merge the freshest observed state onto the existing node.
+                ip_changed = apply_freshest_state(
+                    existing_asset,
+                    ip=ip,
+                    mac=mac,
+                    hostname=hostname,
+                    os_name=host_data.get('os_name'),
+                    device_type=host_data.get('device_type'),
+                    open_ports=current_ports,
+                )
+
+                # Surface a DHCP move as an alert rather than a phantom new device.
+                if ip_changed:
+                    events.append({
+                        "type": "alert",
+                        "priority": "MEDIUM",
+                        "title": f"Device changed IP: {old_ip} → {ip}",
+                        "description": f"{hostname or mac or 'A known device'} moved from {old_ip} to {ip}.",
+                    })
+                    logger.info(f"Device IP change reconciled: {old_ip} -> {ip}")
+
             else:
                 # NEW DEVICE DETECTED!
                 new_asset = NetworkAsset(
                     ip_address=ip,
-                    mac_address=host_data.get('mac'),
-                    hostname=host_data.get('hostnames'),
+                    mac_address=mac,
+                    hostname=hostname,
                     os_name=host_data.get('os_name'),
                     device_type=host_data.get('device_type', 'unknown'),
                     first_seen=datetime.utcnow(),
@@ -189,12 +214,12 @@ class AssetMonitor:
                     open_ports=current_ports
                 )
                 db.add(new_asset)
-                
+
                 event = {
                     "type": "new_device",
                     "priority": "HIGH",
                     "title": f"New device discovered: {ip}",
-                    "description": f"A new device ({host_data.get('hostnames') or 'Unknown'}) has appeared on the network."
+                    "description": f"A new device ({hostname or 'Unknown'}) has appeared on the network."
                 }
                 events.append(event)
                 logger.info(f"New device discovered: {ip}")
@@ -210,7 +235,18 @@ class AssetMonitor:
                 asset_subnet = '.'.join(asset.ip_address.split('.')[:3])
                 if asset_subnet in scanned_subnets and asset.ip_address not in current_ips:
                     asset.status = "offline"
-        
+
+        # Collapse any pre-existing duplicate rows (same device seen under
+        # multiple IPs before reconciliation existed) into one node. Flush
+        # first so freshly-added NEW assets are visible to the grouping query.
+        try:
+            db.flush()
+            removed = collapse_duplicate_assets(db)
+            if removed:
+                logger.info("De-duplicated %d stale asset row(s)", removed)
+        except Exception as exc:
+            logger.warning("Asset de-duplication pass failed: %s", exc)
+
         # Create Action Items from events
         for event in events:
             action = ActionItem(
