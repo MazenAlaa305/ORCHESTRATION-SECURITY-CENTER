@@ -177,3 +177,50 @@ def test_returning_device_does_not_duplicate(db_session):
     assert assets[0].ip_address == "10.10.20.77"
     assert set(assets[0].open_ports.split(",")) == {"445", "3389"}
     _cleanup(db_session)
+
+
+def test_rescan_adds_new_device_reconciles_and_marks_offline(db_session):
+    """End-to-end for the auto-refresh contract behind the topology:
+      1. a device found only in the newest scan is ADDED,
+      2. a returning device is reconciled (no duplicate),
+      3. a device that vanished from a scanned subnet gets its LATEST
+         status flipped to 'offline',
+      4. the regenerated topology contains the newly discovered device.
+    """
+    from app.services.topology_generator import build_mermaid
+
+    _cleanup(db_session)
+
+    # ── Scan #1: two devices in the CORP subnet ───────────────────────────
+    scan_v1 = [
+        {"ip": "10.10.20.50", "mac": "aa:bb:cc:dd:ee:20", "hostnames": "lab_workstation",
+         "os_name": "Windows 10", "ports": [{"port": 3389, "state": "open"}]},
+        {"ip": "10.10.20.51", "mac": "aa:bb:cc:dd:ee:21", "hostnames": "lab_fileserver",
+         "os_name": "Ubuntu 22.04", "ports": [{"port": 445, "state": "open"}]},
+    ]
+    AssetMonitor.process_scan_results(db_session, scan_id="s1", scan_results=scan_v1)
+    assert db_session.query(NetworkAsset).count() == 2
+
+    # ── Scan #2: workstation returns, fileserver is gone, a NEW host appears ─
+    scan_v2 = [
+        {"ip": "10.10.20.50", "mac": "aa:bb:cc:dd:ee:20", "hostnames": "lab_workstation",
+         "os_name": "Windows 10", "ports": [{"port": 3389, "state": "open"}]},
+        {"ip": "10.10.20.60", "mac": "aa:bb:cc:dd:ee:22", "hostnames": "lab_database",
+         "os_name": "Debian 12", "ports": [{"port": 5432, "state": "open"}]},
+    ]
+    AssetMonitor.process_scan_results(db_session, scan_id="s2", scan_results=scan_v2)
+
+    by_ip = {a.ip_address: a for a in db_session.query(NetworkAsset).all()}
+    # 1) new device added, 2) no duplicates (3 rows: ws, fileserver, db)
+    assert set(by_ip) == {"10.10.20.50", "10.10.20.51", "10.10.20.60"}
+    # 3) latest status: workstation active, vanished fileserver offline, new db active
+    assert by_ip["10.10.20.50"].status == "active"
+    assert by_ip["10.10.20.51"].status == "offline"
+    assert by_ip["10.10.20.60"].status == "active"
+
+    # 4) regenerated topology shows the active devices incl. the new one
+    active = [a for a in by_ip.values() if a.status == "active"]
+    mermaid = build_mermaid(active)
+    assert "10.10.20.60" in mermaid   # new device present
+    assert "10.10.20.50" in mermaid   # returning device present
+    _cleanup(db_session)

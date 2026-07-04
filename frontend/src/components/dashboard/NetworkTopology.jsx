@@ -697,6 +697,11 @@ const NetworkTopology = ({ refresh, compact = false }) => {
     const [isFullscreen, setIsFullscreen] = useState(false);
     // Last successful refresh — drives the "updated Ns ago" badge in the UI.
     const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+    // Brief "Syncing…" indicator shown in the title bar while a post-scan
+    // auto-refresh is in flight, so the user actually SEES the topology
+    // re-generate after every scan instead of it silently changing.
+    const [isSyncing, setIsSyncing] = useState(false);
+    const syncTimerRef = useRef(null);
     // Ticks every 10s so the "updated Ns ago" label stays current without
     // re-rendering the entire force-graph on every animation frame.
     const [nowTick, setNowTick] = useState(Date.now());
@@ -795,8 +800,13 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 [...incomingIPs].some(ip => !cachedIPs.has(ip));
 
             if (topologyChanged) {
-                // Full rebuild — new nodes need layout positions
+                // Full rebuild — new/removed devices need fresh layout positions.
+                // Requirement 1: a device discovered in the latest scan appears
+                // here automatically. Stamp lastUpdatedAt so the "updated Ns ago"
+                // badge reflects the addition (the rebuild path used to skip it).
                 transformDataToGraph(assets);
+                setLastUpdatedAt(Date.now());
+                doFit();
                 return;
             }
 
@@ -806,13 +816,21 @@ const NetworkTopology = ({ refresh, compact = false }) => {
             assets.forEach(asset => {
                 const prev = cache[asset.ip_address];
                 if (!prev) return;
-                // Fields that matter for visual rendering
+                // Fields that matter for visual rendering OR for the detail
+                // panel/tooltip. Requirement 3: the node must always reflect the
+                // device's *latest status* — so a change to ports, last_seen,
+                // device type or hostname refreshes the node too, not just
+                // risk/severity changes.
                 const changed =
                     prev.vuln_count  !== asset.vuln_count  ||
                     prev.risk_score  !== asset.risk_score  ||
                     prev.criticality !== asset.criticality ||
                     prev.status      !== asset.status      ||
-                    prev.os_name     !== asset.os_name;
+                    prev.os_name     !== asset.os_name     ||
+                    prev.open_ports  !== asset.open_ports  ||
+                    prev.last_seen   !== asset.last_seen   ||
+                    prev.device_type !== asset.device_type ||
+                    prev.hostname    !== asset.hostname;
                 if (!changed) return;
 
                 // Match by IP first, then fall back to hostname — lab-imported
@@ -832,6 +850,10 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                 node.riskScore   = deriveEffectiveRisk(asset);
                 node.criticality = asset.criticality || node.criticality;
                 node.status      = asset.status      || node.status;
+                // Reflect a re-classified device type (icon) and a resolved
+                // hostname so the node's shape + label track the latest scan.
+                node.group       = determineGroup(asset);
+                if (asset.hostname) node.name = asset.hostname;
                 node.scanned     = true;
                 node.details     = normalizeDeviceDetails({ ...node.details, ...asset });
                 cache[asset.ip_address] = asset;
@@ -858,12 +880,31 @@ const NetworkTopology = ({ refresh, compact = false }) => {
         }
     }, []);
 
+    // Auto hard-refresh after a scan completes. Shows a visible "Syncing…"
+    // cue, then re-reads the canonical asset list so the topology adds new
+    // devices, drops none as duplicates (backend already reconciled them),
+    // and repaints every node's latest status. A second delayed pass guards
+    // against any Redis/commit lag between the scan finishing and the assets
+    // being queryable.
+    const refreshFromScan = useCallback(() => {
+        clearTimeout(syncTimerRef.current);
+        setIsSyncing(true);
+        Promise.resolve(patchGraphFromAssets()).finally(() => {
+            syncTimerRef.current = setTimeout(() => {
+                Promise.resolve(patchGraphFromAssets()).finally(() => setIsSyncing(false));
+            }, 1500);
+        });
+    }, [patchGraphFromAssets]);
+
     // Listen for scan-complete events — patch only changed nodes
     useEffect(() => {
-        const handler = () => patchGraphFromAssets();
+        const handler = () => refreshFromScan();
         window.addEventListener('dashboard:scan-complete', handler);
         return () => window.removeEventListener('dashboard:scan-complete', handler);
-    }, [patchGraphFromAssets]);
+    }, [refreshFromScan]);
+
+    // Clear any pending sync timer on unmount.
+    useEffect(() => () => clearTimeout(syncTimerRef.current), []);
 
     useEffect(() => { fetchData(); }, [refresh]);
 
@@ -1341,7 +1382,16 @@ const NetworkTopology = ({ refresh, compact = false }) => {
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" style={{ boxShadow:'0 0 6px #00ffff' }} />
                         <span className="text-[10px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Live Network Topology</span>
-                        {lastUpdatedAt && (
+                        {isSyncing ? (
+                            <span
+                                className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest whitespace-nowrap ml-2"
+                                style={{ color: '#00ffff' }}
+                                title="Re-generating topology from the latest scan"
+                            >
+                                <RefreshCw className="h-2.5 w-2.5 animate-spin" />
+                                Syncing…
+                            </span>
+                        ) : lastUpdatedAt && (
                             <span
                                 className="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap ml-2"
                                 style={{ color: 'rgba(0,255,255,0.55)' }}
