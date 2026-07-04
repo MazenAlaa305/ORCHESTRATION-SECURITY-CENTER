@@ -1,2 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings/?scan_id=0b7b2cd9-864e-4b36-b815-0a0a5ac593a1 "HTTP/1.1 307 Temporary Redirect"
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/findings?scan_id=0b7b2cd9-864e-4b36-b815-0a0a5ac593a1 "HTTP/1.1 200 OK"

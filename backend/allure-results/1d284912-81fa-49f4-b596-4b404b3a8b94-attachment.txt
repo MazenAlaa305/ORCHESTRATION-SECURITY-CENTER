@@ -1,1 +1,0 @@
-INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/dashboard/summary?scan_id=7e99698f-f3ec-4454-84c4-dd1395e996c2 "HTTP/1.1 200 OK"

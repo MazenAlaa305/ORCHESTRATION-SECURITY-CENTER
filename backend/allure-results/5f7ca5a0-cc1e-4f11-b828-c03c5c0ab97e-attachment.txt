@@ -1,1 +1,0 @@
-2026-05-08T21:49:22 [INFO] [rid=-] httpx: HTTP Request: POST http://testserver/api/v1/reports/5c9a25ec-bace-496a-a4b7-d8cabc98da3b/generate "HTTP/1.1 404 Not Found"

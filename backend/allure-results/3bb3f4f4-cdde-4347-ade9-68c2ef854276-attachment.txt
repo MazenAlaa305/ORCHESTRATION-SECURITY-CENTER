@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/auth/logout "HTTP/1.1 204 No Content"

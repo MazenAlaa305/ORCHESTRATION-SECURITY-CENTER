@@ -1,2 +1,0 @@
-2026-05-08T21:45:53 [INFO] [rid=-] httpx: HTTP Request: POST http://testserver/api/v1/targets/ "HTTP/1.1 200 OK"
-2026-05-08T21:45:53 [INFO] [rid=-] httpx: HTTP Request: DELETE http://testserver/api/v1/targets/06c0412a-8160-4f45-8c93-b210b549c284 "HTTP/1.1 403 Forbidden"

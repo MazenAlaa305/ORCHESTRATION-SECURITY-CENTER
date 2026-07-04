@@ -1,1 +1,0 @@
-2026-05-09T17:25:30 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/vulnerabilities/?scan_id=2f477e06-481b-46b8-9873-1b782bcb6646 "HTTP/1.1 200 OK"

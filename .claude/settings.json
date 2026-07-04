@@ -33,10 +33,19 @@
       "Bash(curl -sk https://localhost/ -m 5)",
       "Bash(docker compose *)",
       "Bash(echo \"LAB_EXIT=$?\")",
-      "PowerShell(Get-ChildItem \"d:\\\\Final year project\\\\frontend\\\\node_modules\\\\.vite\" -ErrorAction SilentlyContinue | Select-Object -First 3; Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -match 'node|vite' } | Select-Object Id, ProcessName, StartTime -First 5)"
+      "PowerShell(Get-ChildItem \"d:\\\\Final year project\\\\frontend\\\\node_modules\\\\.vite\" -ErrorAction SilentlyContinue | Select-Object -First 3; Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -match 'node|vite' } | Select-Object Id, ProcessName, StartTime -First 5)",
+      "Bash(curl -sk -m 5 https://localhost/api/v1/config/public)",
+      "Bash(curl -sk -m 5 https://localhost/api/v1/auth/me)",
+      "Bash(curl -skI -m 5 https://localhost/screenshots/dashboard.png)",
+      "PowerShell(docker compose up -d --build frontend)",
+      "Bash(cat \"C:\\\\Users\\\\omar\\\\AppData\\\\Local\\\\Temp\\\\fyp_ch3.md\" >> \"d:\\\\FINAL PROJECT\\\\the-dashboard-project-\\\\FYP_Documentation.md\" && wc -l \"d:\\\\FINAL PROJECT\\\\the-dashboard-project-\\\\FYP_Documentation.md\")",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(echo \"exit=$?\")"
     ],
     "additionalDirectories": [
-      "d:\\FINAL PROJECT\\the-dashboard-project-\\backend"
+      "d:\\FINAL PROJECT\\the-dashboard-project-\\backend",
+      "d:\\FINAL PROJECT\\the-dashboard-project-"
     ]
   }
 }

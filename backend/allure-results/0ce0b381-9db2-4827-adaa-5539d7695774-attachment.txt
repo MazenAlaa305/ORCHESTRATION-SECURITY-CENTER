@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/scans/7b203341-9a38-4936-8416-22b76ba1843e/audit/verify "HTTP/1.1 404 Not Found"

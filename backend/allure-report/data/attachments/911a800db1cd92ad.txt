@@ -1,3 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/targets/ "HTTP/1.1 200 OK"
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE http://testserver/api/v1/targets/ad4f1900-1850-4dbc-942b-2926f0b7b586 "HTTP/1.1 200 OK"
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/targets/ad4f1900-1850-4dbc-942b-2926f0b7b586 "HTTP/1.1 404 Not Found"

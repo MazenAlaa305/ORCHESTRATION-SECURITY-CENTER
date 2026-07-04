@@ -1,1 +1,0 @@
-2026-05-08T21:45:35 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/scans/879ba3db-6dd4-4a24-a720-dc5caf720ea0/audit/verify "HTTP/1.1 401 Unauthorized"

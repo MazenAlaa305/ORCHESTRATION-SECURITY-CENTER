@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/dashboard/kpi-snapshot?scan_id=6317ab1b-6d51-422a-b5ee-0524be2cba92 "HTTP/1.1 200 OK"

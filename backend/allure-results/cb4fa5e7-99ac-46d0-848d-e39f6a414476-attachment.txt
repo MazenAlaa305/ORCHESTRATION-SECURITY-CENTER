@@ -1,1 +1,0 @@
-2026-05-09T17:25:26 [INFO] [rid=-] httpx: HTTP Request: POST http://testserver/api/v1/rbac/users/f08748da-7724-4fe6-8da1-39532d68675f/disable "HTTP/1.1 200 OK"

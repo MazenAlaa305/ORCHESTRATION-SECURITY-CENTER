@@ -1,1 +1,0 @@
-[33mWARNING [0m app.core.crypto:crypto.py:37 CREDENTIAL_ENCRYPTION_KEY not set — using plaintext fallback (test/CI mode only).

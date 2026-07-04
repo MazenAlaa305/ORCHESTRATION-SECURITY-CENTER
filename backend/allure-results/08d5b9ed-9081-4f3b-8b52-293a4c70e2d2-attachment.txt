@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/scans/da980037-75db-4a0d-9ebe-40dc9cfeaa00/audit/verify "HTTP/1.1 200 OK"

@@ -1,2 +1,0 @@
-[32mINFO    [0m app.services.finding_dedup:finding_dedup.py:139 Dedup complete for scan f421981e-89d7-43e1-9a91-b818b1277236: 1 vulns processed, 1 new findings created
-[32mINFO    [0m app.services.finding_dedup:finding_dedup.py:139 Dedup complete for scan 39041c46-99b3-4685-a4a2-1b988b93dad0: 1 vulns processed, 0 new findings created

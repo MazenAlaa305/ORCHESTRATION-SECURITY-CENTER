@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/vulnerabilities/?scan_id=13d59d08-013a-4d60-b8e4-106b94e5e2b8 "HTTP/1.1 200 OK"

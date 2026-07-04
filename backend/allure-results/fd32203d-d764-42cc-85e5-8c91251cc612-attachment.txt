@@ -1,1 +1,0 @@
-2026-05-09T17:25:25 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/dashboard/kpi-snapshot "HTTP/1.1 200 OK"

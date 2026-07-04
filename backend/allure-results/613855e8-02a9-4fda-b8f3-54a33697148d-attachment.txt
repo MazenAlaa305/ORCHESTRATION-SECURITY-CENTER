@@ -1,1 +1,0 @@
-2026-05-09T17:25:17 [WARNING] [rid=-] app.services.intelligence_agent: GEMINI_API_KEY not set. IntelligenceAgent will use fallback responses.

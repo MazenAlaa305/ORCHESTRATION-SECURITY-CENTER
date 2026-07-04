@@ -1,2 +1,0 @@
-WARNING  app.services.ai_advisor:ai_advisor.py:21 GEMINI_API_KEY not set. Running in demo mode.
-INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/reports/a5fb787d-289c-4ae0-b898-10d8cfb9267c "HTTP/1.1 200 OK"

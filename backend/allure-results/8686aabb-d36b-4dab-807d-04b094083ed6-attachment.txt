@@ -1,1 +1,0 @@
-2026-05-09T17:25:30 [INFO] [rid=-] httpx: HTTP Request: PATCH http://testserver/api/v1/vulnerabilities/bulk "HTTP/1.1 401 Unauthorized"

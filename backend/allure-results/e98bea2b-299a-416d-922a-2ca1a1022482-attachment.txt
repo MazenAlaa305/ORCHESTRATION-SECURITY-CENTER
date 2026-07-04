@@ -1,2 +1,0 @@
-2026-05-08T21:45:47 [WARNING] [rid=b80e917bad88417aa58bac1cba2726cd] app.services.ai_advisor: GEMINI_API_KEY not set. Running in demo mode.
-2026-05-08T21:45:47 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/reports/97774415-a0b0-4754-8363-cfd6c8805077 "HTTP/1.1 200 OK"

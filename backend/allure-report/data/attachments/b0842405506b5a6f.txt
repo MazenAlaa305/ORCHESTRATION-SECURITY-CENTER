@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH http://testserver/api/v1/rbac/users/ab130425-7b6b-43db-bde5-f6cdd4886178/role "HTTP/1.1 200 OK"

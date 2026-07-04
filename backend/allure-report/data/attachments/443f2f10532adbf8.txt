@@ -1,2 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/targets/ "HTTP/1.1 200 OK"
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH http://testserver/api/v1/targets/de9ceffe-05dd-4c0e-8978-01d0b94f1182 "HTTP/1.1 200 OK"

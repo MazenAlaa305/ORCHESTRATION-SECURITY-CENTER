@@ -1,1 +1,0 @@
-WARNING  app.services.scan_reaper:scan_reaper.py:59 [ScanReaper] Reaped 3 orphaned scan(s) on startup — they were RUNNING/QUEUED for more than 5 minutes.

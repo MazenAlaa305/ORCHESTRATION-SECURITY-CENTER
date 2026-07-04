@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH http://testserver/api/v1/rbac/users/2c892afc-c597-4d0b-a1cc-99d1b0135866/role "HTTP/1.1 400 Bad Request"

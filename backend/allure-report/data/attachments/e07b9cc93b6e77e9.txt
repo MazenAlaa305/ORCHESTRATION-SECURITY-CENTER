@@ -1,2 +1,0 @@
-2026-05-08T21:45:44 [INFO] [rid=-] app.services.framework_tagger: framework_tagger: loaded 13 category mappings
-2026-05-08T21:45:44 [INFO] [rid=-] app.services.finding_dedup: Dedup complete for scan 55d80eba-e8cc-48e5-a88d-926d78e3a0a7: 1 vulns processed, 1 new findings created

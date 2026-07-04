@@ -1,1 +1,0 @@
-INFO     app.services.scan_reaper:scan_reaper.py:66 [ScanReaper] No orphaned scans found on startup.

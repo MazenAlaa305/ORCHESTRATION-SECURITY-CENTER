@@ -1,1 +1,0 @@
-2026-05-08T21:49:17 [WARNING] [rid=-] app.core.crypto: CREDENTIAL_ENCRYPTION_KEY not set — using plaintext fallback (test/CI mode only).

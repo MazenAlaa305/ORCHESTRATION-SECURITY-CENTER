@@ -1,8 +1,14 @@
 // Seed data for the About Us page. Sourced from the team's intake sheet.
 // Admin edits made through the page UI overlay this list via localStorage.
 
+// Team photos are bundled in the repo under frontend/public/team/ so they are
+// committed with the project and render for anyone who clones and runs it —
+// no external hosting or login required. Each file is named after the member's
+// id (e.g. /team/omar-kapil.jpg).
+
 // Google Drive "open?id=…" links can't be used as <img src>. Convert to the
 // thumbnail endpoint, which serves the file as an image with a size hint.
+// (Kept for the admin editor, which still accepts pasted Drive links.)
 export const driveImage = (idOrUrl, size = 480) => {
     if (!idOrUrl) return '';
     const match = String(idOrUrl).match(/[-\w]{25,}/);
@@ -27,7 +33,7 @@ export const DEFAULT_TEAM = [
         bio: 'Leads the team and owns end-to-end delivery across the stack.',
         email: 'omarkapil012@gmail.com',
         linkedin: 'https://www.linkedin.com/in/omarkapil',
-        photo: driveImage('1f76BOULr_HSzhrUcitL8r1epXccMQfU5'),
+        photo: '/team/omar-kapil.jpg',
     },
     {
         id: 'youssef-abdelhady',
@@ -36,7 +42,7 @@ export const DEFAULT_TEAM = [
         bio: 'Designs the AI advisor and threat-intelligence enrichment pipeline.',
         email: 'youssef3bhady04@gmail.com',
         linkedin: 'https://www.linkedin.com/in/youssef-abd-elhady-627a73307',
-        photo: driveImage('1jnz3fvgpYXvQC3Q7gKYa4IVg45NRzDW7'),
+        photo: '/team/youssef-abdelhady.jpg',
     },
     {
         id: 'omnia-helmy',
@@ -45,7 +51,7 @@ export const DEFAULT_TEAM = [
         bio: 'Builds the network graphs and dashboards that make scan data legible.',
         email: 'helmyomnia63@gmail.com',
         linkedin: 'https://www.linkedin.com/in/omnia-helmy-089a412b3',
-        photo: driveImage('1Zh2GHeCKtW1D1FAdHZve0vGJFfR2aKPf'),
+        photo: '/team/omnia-helmy.jpg',
     },
     {
         id: 'mohamed-shaban',
@@ -54,7 +60,7 @@ export const DEFAULT_TEAM = [
         bio: 'Chains Nmap, Nuclei and OpenVAS into the deterministic scan pipeline.',
         email: 'mohamed.r.shaban@icloud.com',
         linkedin: 'https://www.linkedin.com/in/mohamed-shaban-a460b4223',
-        photo: driveImage('1n3d1_OT3v_aCwuCL2N2cQBiqYt7BuQzX'),
+        photo: '/team/mohamed-shaban.jpg',
     },
     {
         id: 'omar-elshafey',
@@ -63,7 +69,7 @@ export const DEFAULT_TEAM = [
         bio: 'Owns risk scoring and the executive reporting that goes to stakeholders.',
         email: 'omartarekelshafey7@gmail.com',
         linkedin: 'https://www.linkedin.com/in/omar-elshafey/',
-        photo: driveImage('1OwfTc3p29-jSs-gMRQN7cC6IyhT1AP9S'),
+        photo: '/team/omar-elshafey.jpg',
     },
     {
         id: 'rahma-ibrahim',
@@ -72,7 +78,7 @@ export const DEFAULT_TEAM = [
         bio: 'Shapes the React frontend architecture and component system.',
         email: 'rahmaibrahimahmed2003@gmail.com',
         linkedin: '',
-        photo: driveImage('1GeIDE0jYTO17oIX6KZuxDMIA6KaquN6I'),
+        photo: '/team/rahma-ibrahim.jpg',
     },
     {
         id: 'mariz-ehab',
@@ -81,7 +87,7 @@ export const DEFAULT_TEAM = [
         bio: 'Builds the SIEM integration and real-time threat monitoring layer.',
         email: 'marizehab12@gmail.com',
         linkedin: 'https://www.linkedin.com/in/mariz-ehab-a7a32026a',
-        photo: driveImage('1trgp2YXUfbuSk1Vz537rE-KtzpF5NwpG'),
+        photo: '/team/mariz-ehab.jpg',
     },
     {
         id: 'reem-ameen',
@@ -90,7 +96,7 @@ export const DEFAULT_TEAM = [
         bio: 'Designs the FastAPI backend, data model and service contracts.',
         email: 'reemameen928@gmail.com',
         linkedin: 'https://www.linkedin.com/in/reem-ameen-mahmoud-a24775275',
-        photo: driveImage('1qOWhYIXuxXZjx2-eYs61u5dVdTmoC_ze'),
+        photo: '/team/reem-ameen.jpg',
     },
     {
         id: 'youssef-ali',
@@ -99,7 +105,7 @@ export const DEFAULT_TEAM = [
         bio: 'Owns API integration tests and end-to-end quality assurance.',
         email: 'youssefali5120@gmail.com',
         linkedin: 'https://www.linkedin.com/in/youssefalimaher/',
-        photo: driveImage('1r669IZgG4D42KHmdIB1osSbOLmY0wkm0'),
+        photo: '/team/youssef-ali.jpg',
     },
     {
         id: 'mazen-alaa',
@@ -117,6 +123,6 @@ export const DEFAULT_TEAM = [
         bio: 'Drives the OpenVAS scanning workflow and vulnerability triage.',
         email: 'shahdhussien400@gmail.com',
         linkedin: 'https://www.linkedin.com/in/shahd-al-fadali-820154276/',
-        photo: driveImage('1y-jv6vYr2RVGd4RPUHbIC7d8f7DLrW61'),
+        photo: '/team/shahd-baher.jpg',
     },
 ];

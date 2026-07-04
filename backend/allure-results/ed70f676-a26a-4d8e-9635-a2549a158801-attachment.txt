@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://testserver/api/v1/reports/17842f65-d6ad-4a59-bebe-5c36f9d03a38/verify "HTTP/1.1 401 Unauthorized"

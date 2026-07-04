@@ -57,3 +57,11 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Test / report artifacts (generated — should not be committed)
+allure-results/
+allure-report/
+test_reports/
+report.html
+backend/report.html
+.allure/

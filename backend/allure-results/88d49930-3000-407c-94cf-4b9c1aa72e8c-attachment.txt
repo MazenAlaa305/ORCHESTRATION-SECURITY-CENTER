@@ -1,1 +1,0 @@
-2026-05-08T21:45:46 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/reports/a28af941-6330-4c9a-ad5d-8a4c75169f92/verify "HTTP/1.1 401 Unauthorized"

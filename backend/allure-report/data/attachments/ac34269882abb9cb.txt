@@ -1,1 +1,0 @@
-2026-05-08T21:49:12 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/scans/6570db09-3f5b-4488-aeaf-3f63a3454306/audit/verify "HTTP/1.1 404 Not Found"

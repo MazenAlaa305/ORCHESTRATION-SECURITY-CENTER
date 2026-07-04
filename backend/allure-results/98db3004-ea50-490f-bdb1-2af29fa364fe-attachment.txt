@@ -1,1 +1,0 @@
-INFO     httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/rbac/users/dd23af40-36fa-40fd-af7e-53e104bb70e8/disable "HTTP/1.1 200 OK"

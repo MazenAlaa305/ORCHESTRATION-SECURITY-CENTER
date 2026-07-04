@@ -1,2 +1,0 @@
-2026-05-09T17:25:26 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/findings/?status=open "HTTP/1.1 307 Temporary Redirect"
-2026-05-09T17:25:26 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/findings?status=open "HTTP/1.1 200 OK"

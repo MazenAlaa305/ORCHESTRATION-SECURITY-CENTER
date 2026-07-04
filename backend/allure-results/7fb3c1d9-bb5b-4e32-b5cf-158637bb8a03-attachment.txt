@@ -1,7 +1,0 @@
-2026-05-08T21:45:43 [INFO] [rid=7a8adeba792946a983fe3f03333fbf43] alembic.runtime.plugins: setup plugin alembic.autogenerate.schemas
-2026-05-08T21:45:43 [INFO] [rid=7a8adeba792946a983fe3f03333fbf43] alembic.runtime.plugins: setup plugin alembic.autogenerate.tables
-2026-05-08T21:45:43 [INFO] [rid=7a8adeba792946a983fe3f03333fbf43] alembic.runtime.plugins: setup plugin alembic.autogenerate.types
-2026-05-08T21:45:43 [INFO] [rid=7a8adeba792946a983fe3f03333fbf43] alembic.runtime.plugins: setup plugin alembic.autogenerate.constraints
-2026-05-08T21:45:43 [INFO] [rid=7a8adeba792946a983fe3f03333fbf43] alembic.runtime.plugins: setup plugin alembic.autogenerate.defaults
-2026-05-08T21:45:43 [INFO] [rid=7a8adeba792946a983fe3f03333fbf43] alembic.runtime.plugins: setup plugin alembic.autogenerate.comments
-2026-05-08T21:45:43 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"

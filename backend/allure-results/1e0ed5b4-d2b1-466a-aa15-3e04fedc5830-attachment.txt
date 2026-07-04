@@ -1,1 +1,0 @@
-INFO     app.services.finding_dedup:finding_dedup.py:139 Dedup complete for scan 0c1918e2-e32d-4129-a7f6-48941fc9ad68: 0 vulns processed, 0 new findings created

@@ -1,2 +1,0 @@
-2026-05-08T21:49:20 [INFO] [rid=-] app.services.finding_dedup: Dedup complete for scan 7311adbd-abd6-40dc-9b3a-4e396b19e3e6: 1 vulns processed, 1 new findings created
-2026-05-08T21:49:20 [INFO] [rid=-] app.services.finding_dedup: Dedup complete for scan 30073d33-f64c-4be9-a567-c733fc930699: 1 vulns processed, 0 new findings created

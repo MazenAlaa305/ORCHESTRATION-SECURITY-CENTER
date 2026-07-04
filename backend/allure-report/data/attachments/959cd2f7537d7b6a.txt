@@ -1,1 +1,0 @@
-2026-05-08T21:45:43 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/config/public "HTTP/1.1 200 OK"

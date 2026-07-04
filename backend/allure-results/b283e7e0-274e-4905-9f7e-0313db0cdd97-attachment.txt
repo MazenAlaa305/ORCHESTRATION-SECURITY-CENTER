@@ -1,1 +1,0 @@
-2026-05-08T21:49:22 [INFO] [rid=-] httpx: HTTP Request: GET http://testserver/api/v1/reports/e16f99b4-cc09-4205-af3f-c83727c12def/meta "HTTP/1.1 404 Not Found"
