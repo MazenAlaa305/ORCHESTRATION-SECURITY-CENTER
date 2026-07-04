@@ -7,7 +7,7 @@ import { useEnvStore } from '../../stores/envStore';
 import { useActionGuard } from '../../hooks/useActionGuard';
 
 const TargetsManager = ({ onScanStarted }) => {
-    const { guard, isAnalyst, isAdmin } = useActionGuard();
+    const { guard, isAnalyst, isAdmin, role } = useActionGuard();
     const readOnly = !isAnalyst;     // viewer: every action button disabled
     const noDelete = !isAdmin;       // analyst: can scan + discover but not delete
     const [activeTab, setActiveTab] = useState('list'); // list, discover
@@ -43,13 +43,19 @@ const TargetsManager = ({ onScanStarted }) => {
 
     const handleDiscover = async (e) => {
         e.preventDefault();
-        if (!guard({ action: 'run target discovery' })) return;
+        // Asset discovery hits Subfinder + auto-creates targets — treated as a
+        // governance action on the inventory, so it's admin only (matches the
+        // backend's require_role(ADMIN) on /targets/discover).
+        if (!guard({ action: 'run asset discovery', level: 'admin' })) return;
         setDiscovering(true);
+        setDiscoveryResult(null);
         try {
             const response = await targetService.discover(discoveryDomain);
             setDiscoveryResult(response.data);
             fetchTargets();
         } catch (error) {
+            const detail = error?.response?.data?.detail || error?.message || 'Discovery failed';
+            setDiscoveryResult({ error: detail });
             console.error('Discovery failed:', error);
         } finally {
             setDiscovering(false);
@@ -114,10 +120,15 @@ const TargetsManager = ({ onScanStarted }) => {
                 <div className="flex gap-2">
                     <button
                         onClick={() => setActiveTab(activeTab === 'discover' ? 'list' : 'discover')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${activeTab === 'discover' ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-300 hover:text-white'}`}
+                        disabled={noDelete}
+                        title={noDelete ? 'Asset Discovery — admin only' : 'Open Asset Discovery'}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === 'discover' ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-300 hover:text-white'}`}
                     >
                         <Globe className="h-4 w-4" />
                         Asset Discovery
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/40">
+                            admin
+                        </span>
                     </button>
                     <button
                         onClick={() => setShowWizard(true)}
@@ -132,23 +143,61 @@ const TargetsManager = ({ onScanStarted }) => {
             {/* Discovery View */}
             {activeTab === 'discover' && (
                 <div className="bg-cyber-light p-6 rounded-xl border border-gray-700 animate-fade-in">
-                    <h4 className="text-lg font-semibold text-white mb-2">Automated Asset Discovery</h4>
-                    <p className="text-gray-400 text-sm mb-4">Enter a root domain to automatically find subdomains and add them as targets using Subfinder.</p>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h4 className="text-lg font-semibold text-white">Automated Asset Discovery</h4>
+                        {/* Permanent admin-only badge — surfaces the role requirement
+                            regardless of the signed-in user's actual role. */}
+                        <span
+                            className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded border bg-amber-500/10 text-amber-400 border-amber-500/40"
+                            title="This action is restricted to administrators because it modifies the target inventory."
+                        >
+                            <Shield className="h-2.5 w-2.5" />
+                            admin only
+                        </span>
+                    </div>
+                    <p className="text-gray-400 text-sm mb-2">Enter a root domain to automatically find subdomains and add them as targets using Subfinder.</p>
+                    {/* Permanent admin-only note — always visible right under
+                        the description, regardless of the signed-in role. */}
+                    <p className="text-xs font-bold text-amber-400 mb-4 flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5" />
+                        <span className="uppercase tracking-wider">Note:</span>
+                        <span className="font-mono normal-case tracking-normal">
+                            Asset Discovery is restricted to <span className="font-black uppercase">admin only</span>.
+                        </span>
+                    </p>
+
+                    {/* Prominent banner: shown to every non-admin so the
+                        permission boundary is impossible to miss. */}
+                    {noDelete && (
+                        <div className="mb-4 flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/40">
+                            <Shield className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                            <div className="text-sm">
+                                <p className="text-amber-300 font-bold uppercase tracking-wider text-xs mb-1">
+                                    Admin only
+                                </p>
+                                <p className="text-amber-200/80">
+                                    You're signed in as <span className="font-mono uppercase">{role}</span>. Asset Discovery
+                                    modifies the target inventory and is restricted to administrators.
+                                    Ask an admin to run this for you.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <form onSubmit={handleDiscover} className="flex gap-2">
                         <input
                             type="text"
                             value={discoveryDomain}
                             onChange={(e) => setDiscoveryDomain(e.target.value)}
-                            placeholder={readOnly ? 'Read-only — admin / analyst only' : 'example.com'}
-                            disabled={readOnly}
+                            placeholder={noDelete ? 'Read-only — admin only' : 'example.com'}
+                            disabled={noDelete}
                             className="flex-1 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                            required={!readOnly}
+                            required={!noDelete}
                         />
                         <button
                             type="submit"
-                            disabled={discovering || readOnly}
-                            title={readOnly ? 'admin / analyst only' : undefined}
+                            disabled={discovering || noDelete}
+                            title={noDelete ? 'admin only' : undefined}
                             className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 min-w-[140px] justify-center"
                         >
                             {discovering ? (
@@ -161,31 +210,47 @@ const TargetsManager = ({ onScanStarted }) => {
                             )}
                         </button>
                     </form>
-                    {readOnly && (
+                    {noDelete && (
                         <p className="text-[9px] font-mono text-amber-400/70 uppercase tracking-widest mt-2">
-                            admin / analyst only
+                            admin only — asset discovery modifies the target inventory
                         </p>
                     )}
 
                     {discoveryResult && (
                         <div className="mt-6 bg-gray-900 rounded-lg p-4 border border-gray-800">
-                            <div className="flex items-center gap-2 text-green-400 mb-2">
-                                <CheckCircle className="h-4 w-4" />
-                                <span className="font-semibold">Discovery Complete!</span>
-                            </div>
-                            <div className="space-y-1 text-sm text-gray-300">
-                                <p>Found <span className="text-white font-bold">{discoveryResult.total_found}</span> subdomains.</p>
-                                <p>Created <span className="text-white font-bold">{discoveryResult.new_targets_created}</span> new targets.</p>
-                            </div>
-                            {discoveryResult.new_targets?.length > 0 && (
-                                <div className="mt-3">
-                                    <p className="text-xs uppercase text-gray-500 font-bold mb-2">New Targets Added:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {discoveryResult.new_targets.map(t => (
-                                            <span key={t} className="px-2 py-1 bg-gray-800 rounded text-xs text-cyan-400 border border-gray-700">{t}</span>
-                                        ))}
+                            {discoveryResult.error ? (
+                                <div className="flex items-start gap-2 text-red-400">
+                                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                    <div>
+                                        <span className="font-semibold block">Discovery failed</span>
+                                        <p className="text-sm text-red-300 mt-1">{discoveryResult.error}</p>
+                                        <p className="text-xs text-gray-500 mt-2">Tip: enter a registrable root domain such as <span className="text-cyan-400">example.com</span> (not a URL, IP, or CIDR range).</p>
                                     </div>
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-2 text-green-400 mb-2">
+                                        <CheckCircle className="h-4 w-4" />
+                                        <span className="font-semibold">Discovery Complete!</span>
+                                        {discoveryResult.source && (
+                                            <span className="text-[10px] uppercase tracking-wider text-gray-500 ml-2">via {discoveryResult.source}</span>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1 text-sm text-gray-300">
+                                        <p>Found <span className="text-white font-bold">{discoveryResult.total_found}</span> subdomains.</p>
+                                        <p>Created <span className="text-white font-bold">{discoveryResult.new_targets_created}</span> new targets.</p>
+                                    </div>
+                                    {discoveryResult.new_targets?.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-xs uppercase text-gray-500 font-bold mb-2">New Targets Added:</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {discoveryResult.new_targets.map(t => (
+                                                    <span key={t} className="px-2 py-1 bg-gray-800 rounded text-xs text-cyan-400 border border-gray-700">{t}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}

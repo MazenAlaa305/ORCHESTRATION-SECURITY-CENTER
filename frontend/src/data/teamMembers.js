@@ -108,7 +108,7 @@ export const DEFAULT_TEAM = [
         bio: 'Writes the end-to-end test suite that gates every release.',
         email: 'mazenalaa188@gmail.com',
         linkedin: 'https://www.linkedin.com/in/mazen-alaael-din-ba5407235/',
-        photo: driveImage('1LB8z06oynwoz4OGWDQUY_iXpiCbK83eP'),
+        photo: '/team/mazen-alaa.jpg',
     },
     {
         id: 'shahd-baher',

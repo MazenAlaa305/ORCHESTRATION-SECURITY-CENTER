@@ -167,7 +167,15 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
             const previous = (data?.updated || []).map(r => ({ id: r.id, status: r.previous_status }));
             clearSelection();
             fetchVulnerabilities();
-            // Refresh KPI counts (In Progress card, etc.)
+            // Refresh KPI counts (Security Health, In Progress, etc.). Push the
+            // snapshot directly into the realtime store so the Health card
+            // updates even if the global event listener races.
+            try {
+                const { data: kpi } = await dashboardService.getKpiSnapshot();
+                rtDispatch({ type: 'INIT_SNAPSHOT', payload: kpi });
+            } catch (kpiErr) {
+                console.error('KPI refresh failed:', kpiErr);
+            }
             window.dispatchEvent(new CustomEvent('dashboard:refresh-kpi'));
 
             // Undo: revert each row to its previous status. 10s window per spec §5.11.
@@ -313,11 +321,12 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
 
     const minRank = minSeverity ? SEV_RANK[minSeverity] : -1;
 
+    const explicitClosedFilter = ['fixed', 'false_positive'].includes(filter.status);
     const displayed = deduped
         .filter(v => {
             const sev = (v.severity || 'info').toLowerCase();
             if (minRank >= 0 && (SEV_RANK[sev] ?? 0) < minRank) return false;
-            if (hideClosed && ['fixed', 'false_positive'].includes(v.status)) return false;
+            if (hideClosed && !explicitClosedFilter && ['fixed', 'false_positive'].includes(v.status)) return false;
             if (filter.severity && sev !== filter.severity) return false;
             if (filter.status && (v.status || '') !== filter.status) return false;
             if (search) {
@@ -384,13 +393,16 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
         );
     }
 
-    // Build severity counts
+    // Severity-distribution health bar: count only *active* findings so the
+    // gauge reflects current risk. Fixed / False Positive don't add to the bar.
+    const activeVulns = vulnerabilities.filter(v => !['fixed', 'false_positive'].includes(v.status));
     const sevCounts = {};
-    vulnerabilities.forEach(v => {
+    activeVulns.forEach(v => {
         const s = (v.severity || 'info').toLowerCase();
         sevCounts[s] = (sevCounts[s] || 0) + 1;
     });
-    const total = vulnerabilities.length || 1;
+    const activeTotal = activeVulns.length;
+    const total = activeTotal || 1;
 
     return (
         <div className="space-y-4 animate-fade-in">
@@ -399,7 +411,12 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 <div className="glass-card p-4 flex flex-col gap-2">
                     <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Severity Distribution</span>
-                        <span className="text-[10px] font-mono text-gray-600">{vulnerabilities.length} total</span>
+                        <span className="text-[10px] font-mono text-gray-600">
+                            {activeTotal} active
+                            {activeTotal !== vulnerabilities.length && (
+                                <span className="text-gray-700"> / {vulnerabilities.length} total</span>
+                            )}
+                        </span>
                     </div>
                     <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
                         {SEV_ORDER.map(sev => {
@@ -482,6 +499,7 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                 >
                     <option value="">All Statuses</option>
                     <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
                     <option value="fixed">Fixed</option>
                     <option value="false_positive">False Positive</option>
                 </select>
@@ -592,18 +610,26 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                     )}
                 </div>
 
-                {/* Sort buttons */}
+                {/* Sort control */}
                 <div className="flex items-center gap-1 ml-auto">
                     <span className="text-[9px] text-gray-600 uppercase tracking-widest font-black">Sort:</span>
-                    {['severity','confidence','type'].map(f => (
-                        <button key={f} onClick={() => toggleSort(f)}
-                            className={`flex items-center gap-0.5 px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${
-                                sortField === f ? 'text-cyber-accent bg-cyber-accent/10' : 'text-gray-600 hover:text-white'
-                            }`}
-                        >
-                            {f} <SortIcon field={f} />
-                        </button>
-                    ))}
+                    <select
+                        value={sortField}
+                        onChange={(e) => setSortField(e.target.value)}
+                        className="px-2 py-1 bg-black/40 border border-white/10 rounded text-cyber-accent text-[10px] font-bold uppercase focus:outline-none focus:border-cyber-accent/40 transition-colors cursor-pointer"
+                        title="Sort findings by"
+                    >
+                        <option value="severity">Severity</option>
+                        <option value="confidence">Confidence</option>
+                        <option value="type">Type</option>
+                    </select>
+                    <button
+                        onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                        className="flex items-center justify-center w-7 h-7 rounded border border-white/10 bg-black/40 text-cyber-accent hover:border-cyber-accent/40 transition-colors"
+                        title={sortDir === 'asc' ? 'Ascending — click to flip' : 'Descending — click to flip'}
+                    >
+                        {sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </button>
                 </div>
                 <span className="text-gray-600 text-xs font-mono">
                     {displayed.length}/{vulnerabilities.length} findings
@@ -829,7 +855,15 @@ const VulnerabilitiesPanel = ({ scanId = null, refresh = 0 }) => {
                                         try {
                                             await vulnerabilityService.updateWorkflow(vuln.id, { status: newStatus });
                                             fetchVulnerabilities();
-                                            // Refresh KPI counts so In Progress card updates immediately
+                                            // Pull a fresh KPI snapshot and push it into the realtime
+                                            // store directly — relying on the global event alone has
+                                            // proved racy, leaving Security Health stale.
+                                            try {
+                                                const { data: kpi } = await dashboardService.getKpiSnapshot();
+                                                rtDispatch({ type: 'INIT_SNAPSHOT', payload: kpi });
+                                            } catch (kpiErr) {
+                                                console.error('KPI refresh failed:', kpiErr);
+                                            }
                                             window.dispatchEvent(new CustomEvent('dashboard:refresh-kpi'));
                                         } catch (err) {
                                             console.error('Status update failed:', err);

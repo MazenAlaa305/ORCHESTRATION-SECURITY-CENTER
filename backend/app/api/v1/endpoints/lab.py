@@ -470,7 +470,7 @@ async def seed_lab_vulnerabilities(
     """
     from sqlalchemy import delete
     from app.models.scan import (
-        Scan, ScanStatus, Vulnerability, SeverityLevel, VulnStatus, Target,
+        Scan, ScanStatus, Vulnerability, SeverityLevel, VulnStatus, Target, Report,
     )
 
     # Identify demo scan(s) by the sentinel risk_score (62.0) +
@@ -486,10 +486,13 @@ async def seed_lab_vulnerabilities(
     demo_scan_ids = [row[0] for row in demo_scan_ids_res.all()]
 
     if reset:
-        # Wipe vulns first (FK is non-cascading) then the demo scans.
+        # Wipe vulns and reports first (FK is non-cascading) then the demo scans.
         if demo_scan_ids:
             await db.execute(
                 delete(Vulnerability).where(Vulnerability.scan_id.in_(demo_scan_ids))
+            )
+            await db.execute(
+                delete(Report).where(Report.scan_id.in_(demo_scan_ids))
             )
             await db.execute(
                 delete(Scan).where(Scan.id.in_(demo_scan_ids))

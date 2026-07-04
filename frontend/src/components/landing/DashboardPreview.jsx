@@ -22,7 +22,7 @@ export default function DashboardPreview() {
                     One screen. The whole picture.
                 </h2>
                 <p className="mt-4 text-white/65 leading-relaxed">
-                    A purpose-built command center — designed for the analyst on call at 2am.
+                    A purpose-built command center that gives security teams full visibility, in real time.
                 </p>
             </div>
 
@@ -153,7 +153,7 @@ function MockSidebar() {
                 <div className="flex items-center gap-2">
                     <div className="h-5 w-5 rounded-full bg-cyber-accent/15 ring-1 ring-cyber-accent/30 flex items-center justify-center text-[8px] font-black text-cyber-accent">A</div>
                     <div className="min-w-0">
-                        <div className="text-[8px] font-bold text-white truncate">Admin Cat</div>
+                        <div className="text-[8px] font-bold text-white truncate">Admin</div>
                         <div className="text-[6px] text-white/40 uppercase tracking-widest">admin</div>
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Lock, User, Mail, Loader2, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, User, Mail, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function SignUpPage() {
@@ -70,6 +70,18 @@ export default function SignUpPage() {
                      backgroundImage: 'linear-gradient(rgba(77,189,177,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(77,189,177,0.6) 1px, transparent 1px)',
                      backgroundSize: '40px 40px'
                  }} />
+
+            <Link to="/"
+                  className="fixed top-6 left-6 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-[0.25em] font-black transition-all hover:gap-2.5"
+                  style={{
+                      color: '#4dbdb1',
+                      background: 'rgba(77,189,177,0.06)',
+                      border: '1px solid rgba(77,189,177,0.2)',
+                      backdropFilter: 'blur(12px)',
+                  }}>
+                <ArrowLeft className="w-3 h-3" />
+                Back to Home
+            </Link>
 
             <div className="relative z-10 w-full max-w-md mx-4">
                 <div className="flex flex-col items-center mb-8">
