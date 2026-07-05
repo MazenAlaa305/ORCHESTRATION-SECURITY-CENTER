@@ -203,7 +203,17 @@ const ScanHistory = ({ refresh }) => {
             window.URL.revokeObjectURL(url);
         } catch (e) {
             console.error('Report generation failed', e);
-            alert('Report generation failed. Check that the backend is running.');
+            // Surface the real cause rather than a blanket "backend down" — a 403
+            // (viewer role) or 404 (deleted scan) previously looked identical to a
+            // network failure, which made the feature feel silently broken.
+            const status = e?.response?.status;
+            const detail = e?.response?.data?.detail;
+            let msg;
+            if (status === 403)       msg = detail || 'Your role cannot generate per-scan reports (analyst or admin required).';
+            else if (status === 404)  msg = 'Scan or report not found — it may have been deleted.';
+            else if (!e?.response)     msg = 'Cannot reach the backend. Check that the API is running and try again.';
+            else                       msg = detail || `Report generation failed (HTTP ${status}).`;
+            alert(msg);
         } finally {
             setGeneratingId(null);
         }
@@ -450,6 +460,7 @@ const ScanHistory = ({ refresh }) => {
             {/* Risk-breakdown drawer — opens via row "Explain" button */}
             <RiskBreakdownDrawer
                 scanId={explainScanId}
+                vulnCount={data.items.find(s => s.id === explainScanId)?.vulnerabilities_count ?? null}
                 onClose={() => setExplainScanId(null)}
             />
         </div>

@@ -27,7 +27,7 @@ const sevColor = (sev) => SEV_COLOR[(sev || 'info').toLowerCase()] || SEV_COLOR.
  *   scanId   — string, the scan to explain. Falsy → drawer is closed.
  *   onClose  — close handler
  */
-export default function RiskBreakdownDrawer({ scanId, onClose }) {
+export default function RiskBreakdownDrawer({ scanId, vulnCount = null, onClose }) {
     const { data, isLoading, error } = useQuery({
         queryKey: ['risk-breakdown', scanId],
         queryFn: () => dashboardService.getRiskBreakdown(scanId).then(r => r.data),
@@ -152,11 +152,23 @@ export default function RiskBreakdownDrawer({ scanId, onClose }) {
                     {!isLoading && !error && breakdown.length === 0 && (
                         <div className="px-5 py-8 flex flex-col items-center text-center text-gray-500 gap-2">
                             <Info className="h-8 w-8 text-gray-600" />
-                            <p className="text-xs">No breakdown available for this scan.</p>
-                            <p className="text-[10px] text-gray-600 max-w-xs">
-                                Breakdown is populated by UnifiedRiskEngine at scan completion.
-                                Older scans may not have one stored.
-                            </p>
+                            {vulnCount === 0 ? (
+                                <>
+                                    <p className="text-xs text-gray-300 font-semibold">No vulnerabilities found</p>
+                                    <p className="text-[10px] text-gray-600 max-w-xs">
+                                        This scan completed cleanly with zero findings, so there is
+                                        nothing to break down. A score of 0 is the expected result.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-xs">No breakdown available for this scan.</p>
+                                    <p className="text-[10px] text-gray-600 max-w-xs">
+                                        Breakdown is populated by UnifiedRiskEngine at scan completion.
+                                        Older scans may not have one stored.
+                                    </p>
+                                </>
+                            )}
                         </div>
                     )}
 

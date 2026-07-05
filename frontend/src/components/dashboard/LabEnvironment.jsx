@@ -24,6 +24,7 @@ const PROTOCOL_ICONS = {
 const StatusBadge = ({ status }) => {
     const config = {
         running:   { icon: CheckCircle, color: 'text-green-400', label: 'Running' },
+        offline:   { icon: XCircle,     color: 'text-red-400',   label: 'Offline' },
         not_found: { icon: XCircle,     color: 'text-red-400',   label: 'Offline' },
         unknown:   { icon: AlertTriangle, color: 'text-yellow-400', label: 'Unknown' },
     };

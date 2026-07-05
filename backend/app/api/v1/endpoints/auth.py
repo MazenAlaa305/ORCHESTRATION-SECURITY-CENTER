@@ -194,6 +194,11 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     user.last_login_at = datetime.utcnow()
     db.commit()
 
+    # Record the login in the audit trail so the User Management → Audit Log
+    # populates during normal use (previously only rare user-management actions
+    # were logged, leaving the audit log empty).
+    log_action(db, actor=user, action="USER_LOGIN", target_id=user.id, detail=user.email)
+
     token = create_access_token(subject=user.email, role=user.role.value)
     return TokenResponse(
         access_token=token,

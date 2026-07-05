@@ -320,6 +320,34 @@ services:
           cpus: '0.25'
           memory: 128M
 
+  lab_bastion:
+    image: linuxserver/openssh-server:latest
+    container_name: lab_bastion
+    hostname: bastion.sme-lab.local
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - SUDO_ACCESS=false
+      - PASSWORD_ACCESS=false
+      - USER_NAME=admin
+    ports:
+      - "2222:2222"
+    networks:
+      mgmt:
+        ipv4_address: 10.10.40.30
+      lab_network:
+    labels:
+      lab.zone: "mgmt"
+      lab.persona: "bastion-host"
+      lab.description: "Hardened bastion host — patched, key-only SSH (MFA-enforced), no exposed vulnerabilities."
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 48M
+
   # lab_wazuh_agent:
   #   image: wazuh/wazuh-agent:4.7.2
   #   container_name: lab_wazuh_agent

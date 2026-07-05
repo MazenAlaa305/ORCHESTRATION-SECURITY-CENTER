@@ -49,7 +49,9 @@
       "Bash(npx vitest *)",
       "Bash(python -m pytest tests/test_asset_dedup.py -q)",
       "Bash(python -m pytest tests/test_asset_dedup.py -q -p no:warnings)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "PowerShell(docker compose --profile full restart)",
+      "PowerShell(docker compose -f docker-compose.lab.yml --profile full-lab restart)"
     ],
     "additionalDirectories": [
       "d:\\FINAL PROJECT\\the-dashboard-project-\\backend",
