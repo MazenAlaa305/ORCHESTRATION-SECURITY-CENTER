@@ -2,7 +2,7 @@
 
 This document is the **authoritative team plan**: each member's role, the exact files and folders they own, the critical points they must keep in mind, recent updates affecting their area, and an onboarding Q&A.
 
-Project codename: **Found 404** · Helwan Institute of Technology · 11-member team.
+Project: **Orchestration Security Center** · Helwan International Technological University · 11-member team.
 
 ---
 
