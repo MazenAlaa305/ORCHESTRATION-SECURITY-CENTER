@@ -38,17 +38,17 @@ Screenshots below are captured from the final project presentation.
 |---|---|---|
 | ![Presentation title slide](docs/screenshots/presentation-title.png) | ![Login page slide](docs/screenshots/presentation-login.png) | ![Network topology slide](docs/screenshots/presentation-topology.png) |
 
-| Full report | Analyst profile |
-|---|---|
-| ![Report generation slide](docs/screenshots/presentation-report.png) | ![Analyst profile slide](docs/screenshots/presentation-profile.png) |
-
-| Command center | SIEM | Vulnerabilities |
+| Full report | Analyst profile | Command center |
 |---|---|---|
-| ![Command center slide](docs/screenshots/presentation-command-center.png) | ![SIEM slide](docs/screenshots/presentation-siem.png) | ![Vulnerabilities slide](docs/screenshots/presentation-vulnerabilities.png) |
+| ![Report generation slide](docs/screenshots/presentation-report.png) | ![Analyst profile slide](docs/screenshots/presentation-profile.png) | ![Command center slide](docs/screenshots/presentation-command-center.png) |
 
-| Command center navbar | SIEM alerts | Vulnerabilities deep dive |
+| Command center navbar | SIEM | SIEM alerts |
 |---|---|---|
-| ![Command center navbar slide](docs/screenshots/presentation-command-center-navbar.png) | ![SIEM alerts slide](docs/screenshots/presentation-siem-alerts.png) | ![Vulnerabilities deep dive slide](docs/screenshots/presentation-vulnerabilities-deep-dive.png) |
+| ![Command center navbar slide](docs/screenshots/presentation-command-center-navbar.png) | ![SIEM slide](docs/screenshots/presentation-siem.png) | ![SIEM alerts slide](docs/screenshots/presentation-siem-alerts.png) |
+
+| Vulnerabilities | Vulnerabilities deep dive | Vulnerabilities details |
+|---|---|---|
+| ![Vulnerabilities slide](docs/screenshots/presentation-vulnerabilities.png) | ![Vulnerabilities deep dive slide](docs/screenshots/presentation-vulnerabilities-deep-dive.png) | ![Vulnerabilities details slide](docs/screenshots/presentation-vulnerabilities-details.png) |
 
 ## How It Works
 
