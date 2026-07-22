@@ -42,6 +42,14 @@ Screenshots below are captured from the final project presentation.
 |---|---|
 | ![Report generation slide](docs/screenshots/presentation-report.png) | ![Analyst profile slide](docs/screenshots/presentation-profile.png) |
 
+| Command center | SIEM | Vulnerabilities |
+|---|---|---|
+| ![Command center slide](docs/screenshots/presentation-command-center.png) | ![SIEM slide](docs/screenshots/presentation-siem.png) | ![Vulnerabilities slide](docs/screenshots/presentation-vulnerabilities.png) |
+
+| Command center navbar | SIEM alerts | Vulnerabilities deep dive |
+|---|---|---|
+| ![Command center navbar slide](docs/screenshots/presentation-command-center-navbar.png) | ![SIEM alerts slide](docs/screenshots/presentation-siem-alerts.png) | ![Vulnerabilities deep dive slide](docs/screenshots/presentation-vulnerabilities-deep-dive.png) |
+
 ## How It Works
 
 ```text
