@@ -32,29 +32,23 @@ The project focuses on deterministic orchestration: scanner decisions are based 
 
 ## Screenshots
 
-<div align="center">
-  <img src="docs/screenshots/presentation-title.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-login.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-command-center.png" alt="" width="300" />
-</div>
+Screenshots below are captured from the final project presentation.
 
-<div align="center">
-  <img src="docs/screenshots/presentation-command-center-navbar.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-topology.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-siem.png" alt="" width="300" />
-</div>
+| Title | Login | Command center |
+|---|---|---|
+| ![Presentation title slide](docs/screenshots/presentation-title.png) | ![Login page slide](docs/screenshots/presentation-login.png) | ![Command center slide](docs/screenshots/presentation-command-center.png) |
 
-<div align="center">
-  <img src="docs/screenshots/presentation-siem-alerts.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-vulnerabilities.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-vulnerabilities-deep-dive.png" alt="" width="300" />
-</div>
+| Command center navbar | Topology | SIEM |
+|---|---|---|
+| ![Command center navbar slide](docs/screenshots/presentation-command-center-navbar.png) | ![Network topology slide](docs/screenshots/presentation-topology.png) | ![SIEM slide](docs/screenshots/presentation-siem.png) |
 
-<div align="center">
-  <img src="docs/screenshots/presentation-vulnerabilities-details.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-report.png" alt="" width="300" />
-  <img src="docs/screenshots/presentation-profile.png" alt="" width="300" />
-</div>
+| SIEM alerts | Vulnerabilities | Vulnerabilities deep dive |
+|---|---|---|
+| ![SIEM alerts slide](docs/screenshots/presentation-siem-alerts.png) | ![Vulnerabilities slide](docs/screenshots/presentation-vulnerabilities.png) | ![Vulnerabilities deep dive slide](docs/screenshots/presentation-vulnerabilities-deep-dive.png) |
+
+| Vulnerabilities details | Full report | Analyst profile |
+|---|---|---|
+| ![Vulnerabilities details slide](docs/screenshots/presentation-vulnerabilities-details.png) | ![Report generation slide](docs/screenshots/presentation-report.png) | ![Analyst profile slide](docs/screenshots/presentation-profile.png) |
 
 ## How It Works
 
